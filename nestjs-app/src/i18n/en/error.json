@@ -1,0 +1,6 @@
+{
+  "model_not_found": "Model not found",
+  "too_many_attempts_try_again_later": "Too many attempts. Try again later.",
+  "status_not_allowed": "Status not allowed",
+  "diff_dates_max_30_day": "The date range should not exceed 30 days."
+}

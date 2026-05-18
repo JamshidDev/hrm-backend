@@ -1,0 +1,241 @@
+// Department DTO'lari. Laravel: HR/DepartmentController + 5 ta resource.
+//
+// Endpointlar:
+//   - GET    /departments          (index — DepartmentWithJoinResource)
+//   - GET    /departments/list     (DepartmentListResource)
+//   - GET    /departments/levels   (enum)
+//   - GET    /departments/{id}     (show + children — DepartmentShowResource)
+//   - GET    /departments-tree     (full tree — DepartmentTreeResource)
+//   - POST   /departments          (basic — NestedSet rebalance Laravel'da)
+//   - PUT    /departments/{id}
+//   - DELETE /departments/{id}
+
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
+import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
+import { Exists } from '@/common/validators/exists.validator';
+
+export class QueryDepartmentDto extends SearchPaginationQueryDto {
+  @ApiPropertyOptional({ example: '1,2' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
+}
+
+export class CreateDepartmentDto {
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Exists('organizations', 'id')
+  organization_id!: number;
+
+  @ApiProperty({ example: 'Boshqarma' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name!: string;
+
+  @ApiPropertyOptional({ example: 'Управление' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name_ru?: string;
+
+  @ApiPropertyOptional({ example: 'Management' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name_en?: string;
+
+  @ApiProperty({ example: 1, description: '1..14 — DepartmentLevelEnum' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  level!: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  parent_id?: number;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class UpdateDepartmentDto extends CreateDepartmentDto {}
+
+// ========== RESPONSE ==========
+
+export class DepartmentLevelDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Boshqaruv hodimlari' })
+  name!: string;
+}
+
+// OrganizationListResource minimal.
+export class DepartmentOrgMinDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Tashkilot', nullable: true })
+  name!: string | null;
+
+  @ApiProperty({ example: false })
+  group!: boolean;
+}
+
+// DepartmentListResource minimal — used as `parent` field inside DepartmentWithJoin.
+export class DepartmentParentMinDto {
+  @ApiProperty({ example: 4 })
+  id!: number;
+
+  @ApiProperty({ example: 'Ijro intizomi va nazorati bo‘limi' })
+  name!: string;
+
+  @ApiProperty({ example: 4 })
+  level!: number;
+}
+
+// DepartmentResource (show endpoint): {id, name, level, name_ru, name_en, comment, organization}.
+export class DepartmentItemDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Boshqarma' })
+  name!: string;
+
+  @ApiProperty({ type: DepartmentLevelDto })
+  level!: DepartmentLevelDto;
+
+  @ApiProperty({ example: 'Управление', nullable: true })
+  name_ru!: string | null;
+
+  @ApiProperty({ example: 'Management', nullable: true })
+  name_en!: string | null;
+
+  @ApiProperty({ example: '...', nullable: true })
+  comment!: string | null;
+
+  @ApiProperty({ type: DepartmentOrgMinDto, nullable: true })
+  organization!: DepartmentOrgMinDto | null;
+}
+
+// DepartmentWithJoinResource (index endpoint) — extends DepartmentItem with parent/worker_rate/children flag.
+export class DepartmentWithJoinDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Boshqaruv apparati' })
+  name!: string;
+
+  @ApiProperty({ type: DepartmentLevelDto })
+  level!: DepartmentLevelDto;
+
+  @ApiProperty({ type: DepartmentParentMinDto, nullable: true })
+  parent!: DepartmentParentMinDto | null;
+
+  @ApiProperty({ example: 10 })
+  worker_rate!: number;
+
+  @ApiProperty({ example: null, nullable: true })
+  name_ru!: string | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  name_en!: string | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  comment!: string | null;
+
+  @ApiProperty({ type: DepartmentOrgMinDto, nullable: true })
+  organization!: DepartmentOrgMinDto | null;
+
+  @ApiProperty({ example: false })
+  children!: boolean;
+}
+
+// DepartmentListResource — minimal (Laravel: id+name+level int).
+export class DepartmentListMinimalDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Boshqarma' })
+  name!: string;
+
+  @ApiProperty({ example: 1 })
+  level!: number;
+}
+
+export class DepartmentListResponseDto {
+  @ApiProperty({ example: 1 })
+  current_page!: number;
+
+  @ApiProperty({ example: 10 })
+  per_page!: number;
+
+  @ApiProperty({ example: 50 })
+  total!: number;
+
+  @ApiProperty({ type: [DepartmentWithJoinDto] })
+  data!: DepartmentWithJoinDto[];
+}
+
+export class DepartmentListMinResponseDto {
+  @ApiProperty({ example: 1 })
+  current_page!: number;
+
+  @ApiProperty({ example: 50 })
+  per_page!: number;
+
+  @ApiProperty({ example: 200 })
+  total!: number;
+
+  @ApiProperty({ type: [DepartmentListMinimalDto] })
+  data!: DepartmentListMinimalDto[];
+}
+
+// Show response.
+export class DepartmentShowResponseDto {
+  @ApiProperty({ type: DepartmentItemDto })
+  department!: DepartmentItemDto;
+
+  @ApiProperty({ type: [DepartmentItemDto] })
+  children!: DepartmentItemDto[];
+}
+
+// Tree node.
+export class DepartmentTreeNodeDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Boshqarma' })
+  name!: string;
+
+  @ApiProperty({ type: DepartmentLevelDto })
+  level!: DepartmentLevelDto;
+
+  @ApiProperty({ example: null, nullable: true })
+  parent_id!: number | null;
+
+  @ApiProperty({ type: () => [DepartmentTreeNodeDto] })
+  children!: DepartmentTreeNodeDto[];
+}

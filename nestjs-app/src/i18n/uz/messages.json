@@ -1,0 +1,435 @@
+{
+  "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
+  "invalid_credentials_password": "Foydalanuvchi nomi yoki parol to'g'riligini tekshiring",
+  "user_block": "Sizning profilingiz tizim ma'muriyati tomonidan vaqtincha cheklab qo'yildi.",
+  "token_is_expired": "Token muddati tugagan.",
+  "not_found": "Ma'lumot topilmadi",
+  "server_error": "Tizimda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring.",
+  "successfully_stored": "Muvaffaqqiyatli qo'shildi",
+  "successfully_updated": "Muvaffaqqiyatli yangilandi",
+  "successfully_deleted": "Muvaffaqqiyatli o'chirildi",
+  "role_related": "Rol foydalanuvchilarga yoki ruxsatlarga biriktirilgan; o'chirib bo'lmaydi",
+  "permission_related": "Ruhsat rolega muvaffaqiyatli biriktirildi",
+  "user_not_found": "Foydalanuvchi tizimda topilmadi yoki mavjud emas",
+  "permission_detach_forbidden_from_role": "Role orqali biriktirilgan permissionni userdan alohida olib tashlab bo'lmaydi.",
+  "role_successfully_assigned": "messages.role_successfully_assigned",
+  "errors": {
+    "organization_not_allowed_permission": "Sizda, ushbu ma'lumotnini o'zgartirishi huquqi mavjud emas!"
+  },
+  "permission_denied": "Sizda bu amalni bajarish uchun ruxsat yo'q",
+  "education": {
+    "level": {
+      "one": "Oliy",
+      "two": "O‘rta maxsus",
+      "three": "O‘rta"
+    },
+    "types": {
+      "one": "Oliy ta'lim muassasasi",
+      "two": "Professional ta'lim muassasasi",
+      "three": "Umumta'lim maktablari",
+      "four": "Akademik litsey",
+      "five": "Kasb-hunar kolleji",
+      "six": "Boshqalar"
+    }
+  },
+  "organization_levels": {
+    "one": "Departament",
+    "two": "Boshqarma",
+    "three": "Kompaniya",
+    "four": "Korxona"
+  },
+  "schedules": {
+    "daily": "5 kunlik",
+    "weekly": "6 kunlik",
+    "shift": "Smena"
+  },
+  "work_day": {
+    "types": {
+      "d": "Kunduzgi",
+      "n": "Kechki"
+    }
+  },
+  "holidays": {
+    "types": {
+      "one": "Bayram kunlari",
+      "two": "Dam olish kuni"
+    }
+  },
+  "contract": {
+    "employment_contract_indefinite": "Mehnat shartnomasi (Nomuayyan)",
+    "employment_contract_fixed": "Mehnat shartnomasi (Muayyan)",
+    "civil_labor_contract": "Fuqarolik-huquqiy shartnomasi",
+    "employment_contract_part_time": "Mehnat shartnomasi (O‘rindosh)",
+    "employment_contract_remote": "Mehnat shartnomasi (Masofadan turib ishlash)",
+    "employment_contract_seasonal": "Mehnat shartnomasi (Mavsumiy ishlarni bajarish)",
+    "minimeze_employment_contract_indefinite": "Asosiy",
+    "minimeze_employment_contract_fixed": "Muayyan",
+    "minimeze_civil_labor_contract": "FXSH",
+    "minimeze_employment_contract_part_time": "O‘rindosh",
+    "minimeze_employment_contract_remote": "Masofaviy",
+    "minimeze_employment_contract_seasonal": "Mavsumiy",
+    "status": {
+      "active": "Aktiv",
+      "finished": "Yakullangan",
+      "process": "Jarayonda"
+    }
+  },
+  "position_categories": {
+    "b": "Boshqaruv xodimlari",
+    "m": "Mutaxassis xodimlar",
+    "t": "Texnik xodimlar",
+    "ich": "Ishlab chiqarish xodimlari",
+    "xk": "Xizmat ko'rsatish xodimlari"
+  },
+  "confirmation": {
+    "status": {
+      "process": "Jarayonda",
+      "read": "O‘qilgan",
+      "success": "Tasdiqlangan",
+      "rejected": "Rad etilgan",
+      "deleted": "O‘chirilgan"
+    },
+    "signature_methods": {
+      "digital": "Elektron imzo orqali",
+      "biometric": "Qo'lda imzo qo'yish orqali",
+      "button": "Tugmani bosish orqali",
+      "not_confirmed": "Imzolanmagan"
+    }
+  },
+  "command": {
+    "finished": {
+      "types": {
+        "one": "Birinchi marta pensiyaga chiqishi munosabati bilan bir martalik pul mukofoti",
+        "two": "Ishlab berilmagan kunlari uchun ish haqidan ushlab qolish",
+        "three": "Foydalanilmagan mehnat ta'tillari uchun pulli kompensatsiya to‘lash"
+      }
+    },
+    "employment": {
+      "position_assignment": "Lavozimga tayinlash",
+      "indefinite_hiring": "Nomuayyan muddatga ishga qabul qilish",
+      "fixed_term_hiring": "Muddatli ishga qabul qilish",
+      "competitive_hiring": "Tanlov asosida ishga qabul qilish",
+      "position_commencement": "Lavozimga kirishganlik",
+      "temporary_replacement": "Vaqtincha ishda yo‘q bo‘lgan xodim o‘rniga ishga qabul qilish",
+      "part_time_hiring": "O‘rindoshlik asosida ishga qabul qilish",
+      "reinstatement": "Avvalgi asosiy ishiga tiklash"
+    },
+    "transfer": {
+      "job_transfer": "Boshqa ishga o‘tkazish to‘g‘risida",
+      "relocation_due_to_employer": "Ish beruvchining boshqa joyga ko‘chishi munosabati bilan joyning o‘zgarishi",
+      "temporary_assignment": "Xodimning boshqa ish beruvchiga vaqtincha xizmat safariga yuborilishi",
+      "contractual_location_change": "Mehnat shartnomasida shart qilib ko‘rsatilgan ish joyining o‘zgarishi",
+      "working_conditions_change": "Mehnat shartlarining o‘zgarishi"
+    },
+    "termination": {
+      "mutual_agreement": "Taraflarning kelishuviga ko‘ra mehnat shartnomasini bekor qilish",
+      "contract_expiry": "Muddati tugashi munosabati bilan mehnat shartnomasini bekor qilish",
+      "employee_initiative": "Xodimning tashabbusiga ko‘ra mehnat shartnomasini bekor qilish",
+      "employer_initiative": "Ish beruvchining tashabbusiga ko‘ra mehnat shartnomasini bekor qilish",
+      "refusal_to_continue": "Ishni davom ettirishni rad etganda mehnat shartnomasini bekor qilish",
+      "refusal_new_conditions": "Yangi shartlarda davom ettirishni rad etganda mehnat shartnomasini bekor qilish",
+      "refusal_relocation": "Boshqa joyga ishlash uchun ko‘chishni rad etganda mehnat shartnomasini bekor qilish",
+      "medical_reasons": "Tibbiy xulosaga ko‘ra mehnat shartnomasini bekor qilish",
+      "force_manure": "Taraflarning ixtiyoriga bog‘liq bo‘lmagan holatlarda mehnat shartnomasini bekor qilish"
+    },
+    "vacation": {
+      "granting_leave": "Mehnat ta’tilini berish",
+      "rescheduling_leave": "Mehnat ta’tilini ko‘chirish",
+      "extending_leave": "Mehnat ta’tilini uzaytirish",
+      "recalling_from_leave": "Mehnat ta’tilidan chaqirib olish",
+      "recalling_with_compensation": "Mehnat ta’tilidan chaqirib olish (pullik kompensatsiya)",
+      "splitting_leave": "Mehnat ta’tilini qismlarga bo‘lish",
+      "additional_paid_leave": "Haq to‘lanadigan qo‘shimcha ta’til",
+      "maternity_leave": "Homiladorlik va tug‘ish ta’tili",
+      "childcare_leave_2": "Bolani parvarishlash ta’tili (2 yoshgacha)",
+      "childcare_leave_3": "Bolani parvarishlash ta’tili (3 yoshgacha)",
+      "early_return_childcare": "Bolani parvarishlash ta’tilidan ishga chiqish",
+      "creative_leave": "Ijodiy ta’til",
+      "study_leave": "O‘quv ta’tili",
+      "partial_paid_leave": "Ish haqi qisman saqlangan ta’til",
+      "fully_paid_leave": "Ish haqi saqlangan ta’til",
+      "unpaid_leave": "Ish haqi saqlanmagan ta’til"
+    },
+    "business_trip": {
+      "sixty_one": "Xizmat safariga yuborish (boshqa ish beruvchiga)",
+      "sixty_two": "Xizmat safariga yuborish"
+    },
+    "others": {
+      "seventy_one": "Rag’batlantirish to‘g‘risida",
+      "seventy_two": "Intizomiy jazo choralarini qo‘llash to‘g‘risida",
+      "seventy_three": "Moddiy yordam berish to‘g‘risida"
+    }
+  },
+  "application": {
+    "user": {
+      "uncertain": "Nomuayyan",
+      "certain": "Muayyan",
+      "temporary": "O'rindosh"
+    },
+    "types": {
+      "one": "Doimiy ishga kirish yuzasidan",
+      "two": "Muddatli ishga kirish yuzasidan",
+      "three": "Navbatdan oldin yillik mehnat taʼtili berish yuzasidan ariza",
+      "four": "Ish haqi saqlanmagan holda taʼtil berish toʻgʻrisida",
+      "five": "Ish haqi qisman saqlangan holda taʼtil berish toʻgʻrisida",
+      "six": "Boshqa ishga oʻtkazish toʻgʻrisida",
+      "seven": "Boshqa ishga oʻtkazishga rozilik toʻgʻrisida",
+      "eight": "O‘quv ta’tilini berish toʻgʻrisida",
+      "nine": "Moddiy yordam berish toʻgʻrisida",
+      "ten": "Mehnat shartnomasini bekor qilish toʻgʻrisida"
+    }
+  },
+  "contract_changes": {
+    "employment_terms_change": "Mehnat shartnomasi shartlarining o‘zgarishi",
+    "civil_contract_extension": "Fuqarolik-huquqiy shartnoma muddatini uzaytirish",
+    "civil_contract_activity_change": "Fuqarolik-huquqiy shartnomadagi faoliyat yo‘nalishini o‘zgartirish",
+    "civil_contract_acceptance": "Fuqarolik-huquqiy shartnoma bo‘yicha bajarilgan ishlarni qabul qilish-topshirish",
+    "civil_contract_termination_agreement": "Fuqarolik-huquqiy shartnomasini muddatidan oldin bekor qilish haqida kelishuv",
+    "civil_contract_termination_notice": "Fuqarolik-huquqiy shartnomasini muddatidan oldin bekor qilish haqida xabarnoma",
+    "civil_contract_termination_warning": "Fuqarolik-huquqiy tusdagi shartnomani muddatidan avval bekor qilish haqida ogohlantirish xati",
+    "civil_contract_termination": "Fuqarolik-huquqiy shartnomasini bekor qilish",
+    "contract_termination": "Mehnat shartnomasini bekor qilish",
+    "employee_transfer": "Xodimning boshqa ishga o‘tkazilishi",
+    "employer_relocation": "Ish beruvchining boshqa joyga ko‘chishi munosabati bilan joyning o‘zgarishi",
+    "temporary_assignment": "Xodimning boshqa ish beruvchiga vaqtincha xizmat safariga yuborilishi",
+    "workplace_change": "Mehnat shartnomasida shart qilib ko‘rsatilgan ish joyining o‘zgarishi"
+  },
+  "export": {
+    "export_completed": "Eksport muvaffaqqiyatli tugadi.",
+    "types": {
+      "workers": "Xodimlar ma'lumotlarini excelga yuklash",
+      "late_come": "Turniket ma'lumotlarini excelga yuklash",
+      "zip": "Xodimlar ma'lumotnomalarini arxivlab yuklash",
+      "exam_results": "Imtihon natijalarini yuklash",
+      "exam_not_passed_workers": "Imtihon topshirmagan xodimlar",
+      "turnstile_absent_workers": "Ishga kelmagan xodimlar",
+      "turnstile_late_workers": "Kech qolgan xodimlar",
+      "turnstile_early_leave_workers": "Erta ketgan xodimlar",
+      "turnstile_work_durations": "Norma soatni bajarmaganlar",
+      "pensioners": "Pensionerlar",
+      "relatives": "Xodimlarning qarindoshlari",
+      "statement_with_codes_by_organizations": "Oylik hisobotda tanlangan shifrlar korxonalar kesimida",
+      "statement_with_codes_by_workers": "Oylik hisobotda tanlangan shifrlar xodimlar kesimida",
+      "statement_multiple_workers": "Birdan ortiq tashkilotda ishlayotganlar",
+      "statement_with_codes": "Oylik hisobot(Shifr) Oylar kesimida",
+      "statement_with_organizations": "Oylik hisobot(Shifr) Korxonalar kesimida",
+      "devices": "Barcha qurilmalar",
+      "online_devices": "Onlayn qurilmalar",
+      "offline_devices": "Offlayn qurilmalar",
+      "last_sync_devices": "Sinxronizatsiyalash vaqtlari qurilmalar kesimida",
+      "current_in_workers": "Xozirda ishdagi xodimlar",
+      "current_out_workers": "Xozirda ishxonada bo'lmagan xodimlar",
+      "daily_attendance": "Kirish Chiqish hodisalari",
+      "turnstile_come": "Ishga kelgan xodimlar",
+      "turnstile_not_come": "Ishga kelmagan xodimlar",
+      "vacation_workers": "Ta'tildagi xodimlar",
+      "statements_by_positions": "Tegishli lavozimdagi xodimlar oylar kesimida",
+      "incentive": "Rag'batlantirishlar",
+      "disciplinary": "Intizomiy jazolar",
+      "report_export_by_education": "Xodimlarning yoshi, ma'lumoti, nogironligi",
+      "notIncludedScheduleWorkers": "Grafik tuzilmagan xodimlar",
+      "turnstile_schedule_timesheet": "Grafik bo'yicha tabel",
+      "statement_with_codes_by_year": "Shifrlar bo'yicha xodimlar, oylar kesimida"
+    },
+    "event_types": {
+      "in": "Kirish",
+      "out": "Chiqish"
+    },
+    "headers": {
+      "terminal": "Terminal",
+      "worker_position": "Xodim lavozimi",
+      "organization": "Tashkilot",
+      "organization_code": "Tashkilot kodi",
+      "position": "Lavozimi",
+      "worker": "Xodim",
+      "total": "Jami",
+      "pin": "JSHSHIR",
+      "event_time": "Hodisa vaqti",
+      "event_type": "Hodisa turi",
+      "index": "№",
+      "exam": "Imtihon",
+      "topic": "Mavzu",
+      "created": "Boshlagan vaqti",
+      "ended": "Tugatgan vaqti",
+      "result": "Natija",
+      "tests_count": "Testlar soni",
+      "percent": "Foiz",
+      "salary": "Oylik maosh"
+    },
+    "success": "Eksport muvaffaqqiyatli boshlandi"
+  },
+  "job": {
+    "statuses": {
+      "done": "Tayyor",
+      "process": "Jarayonda",
+      "error": "Xatolik"
+    }
+  },
+  "department": {
+    "level": {
+      "center": "Boshqaruv hodimlari",
+      "department": "Departament",
+      "management": "Boshqarma",
+      "dept": "Bo‘linma",
+      "sex": "Sex",
+      "sector": "Sektor",
+      "group": "Guruh",
+      "station": "Bekat",
+      "bureau": "Byuro",
+      "branch": "Tarmoq",
+      "brigade": "Brigada",
+      "establishment": "Muassasa",
+      "plot": "Hudud",
+      "central": "Markaz"
+    }
+  },
+  "economist": {
+    "changed": {
+      "confirm_statuses": {
+        "new": "Yangi",
+        "process": "Jarayonda",
+        "done": "Tasdiqlandi",
+        "reject": "Rad etildi"
+      },
+      "change_statuses": {
+        "created": "Yaratildi",
+        "updated": "Yangilandi",
+        "deleted": "O'chirildi"
+      }
+    }
+  },
+  "political_party": {
+    "two": "Xalq demokratik partiyasi",
+    "three": "OʻzLiDeP partiyasi",
+    "four": "Adolat partiyasi",
+    "five": "Milliy tiklanish partiyasi"
+  },
+  "military_status": {
+    "one": "Yaroqli",
+    "two": "Yaroqsiz",
+    "three": "O‘tamagan"
+  },
+  "academic_degree": {
+    "one": "Fan doktori",
+    "two": "Fan nomzodi",
+    "three": "Fan doktori (DSc)",
+    "four": "Fan nomzodi (PhD)"
+  },
+  "academic_title": {
+    "one": "Dotsent",
+    "two": "Professor",
+    "three": "Katta ilmiy xodim",
+    "four": "Akademik"
+  },
+  "organization_documents": {
+    "one": "Buyruq",
+    "two": "Nizom",
+    "three": "Boshqa turdagi hujjatlar"
+  },
+  "vacations": {
+    "types": {
+      "one": "Mehnat ta'tili",
+      "two": "Homiladorlik va tug'ish ta'tili",
+      "three": "Bolani parvarishlash ta'tili",
+      "four": "O'quv ta'tili",
+      "five": "Ijodiy ta'tili",
+      "six": "Ish haqi saqlanmaydigan ta'til",
+      "seven": "Ish haqi qisman saqlanadigan ta'til",
+      "eight": "Boshqa turdagi ta'til"
+    }
+  },
+  "vacancy": {
+    "levels": {
+      "one": "Ariza topshirish",
+      "two": "Hujjatlarni baholash",
+      "three": "Suhbat",
+      "four": "Tibbiy ko'rik",
+      "five": "Onlayn test",
+      "six": "Arizani yakunlash",
+      "seven": "Tugatilgan"
+    },
+    "work_types": {
+      "one": "To'liq"
+    }
+  },
+  "confirmation_worker": {
+    "level": {
+      "director": "Rahbar",
+      "confirmatory": "Tasdiqlovchi"
+    }
+  },
+  "contract_command": {
+    "status": {
+      "not_created": "Yaratilmagan",
+      "formed": "Shakllantirildi",
+      "not_mandatory": "Majburiy emas"
+    }
+  },
+  "family": {
+    "one": "Otasi",
+    "two": "Onasi",
+    "three": "Akasi",
+    "four": "Opasi",
+    "five": "Turmush o'rtog'i",
+    "six": "Ukasi",
+    "seven": "Singlisi",
+    "eight": "O'g'li",
+    "nine": "Qizi",
+    "ten": "Qaynotasi",
+    "eleven": "Qaynonasi",
+    "twelve": "Qaynakasi",
+    "thirteen": "Qaynopasi",
+    "fourteen": "Qaynukasi",
+    "fifteen": "Qaynsingli"
+  },
+  "work": {
+    "hours": {
+      "daytime_evening": "Kunduzgi ish soatlari",
+      "night": "Tungi ish soatlari",
+      "weekend_holiday": "Dam olish va bayram kunlari ishlash",
+      "overtime": "Qoʻshimcha ish soatlari",
+      "reduced_for_students": "Ish vaqti qisqartirilgan (o‘qiydiganlar uchun)",
+      "reduced_by_law": "Qonun asosida qisqartirilgan ish soatlari",
+      "unworked_admin": "Maʼmuriyat tashabbusi bilan toʻliq bajarilmagan soatlar"
+    },
+    "trip": {
+      "business": "Xizmat safarida"
+    },
+    "leave": {
+      "annual_paid": "Yillik asosiy toʻlanadigan ta’til",
+      "additional_paid": "Qo‘shimcha toʻlanadigan ta’til",
+      "study_paid": "O‘qish bo‘yicha toʻlanadigan ta’til",
+      "unpaid_study": "O‘qish bo‘yicha toʻlanmaydigan ta’til",
+      "maternity": "Homiladorlik va tug‘ish ta’tili",
+      "partial_childcare": "Qisman to‘lanadigan bola parvarishi ta’tili",
+      "unpaid_childcare": "To‘lanmaydigan bola parvarishi ta’tili",
+      "unpaid_admin_permission": "Maʼmuriyat ruxsati bilan to‘lanmaydigan ta’til",
+      "unpaid_legal": "Qonun bilan ruxsat etilgan to‘lanmaydigan ta’til"
+    },
+    "disability": {
+      "temporary": "Vaqtincha mehnatga layoqatsizlik",
+      "unpaid": "To‘lanmaydigan mehnatga layoqatsizlik"
+    },
+    "downtime": {
+      "not_workers_fault": "Ishchini aybi bilan bo‘lmagan turib qolishlar"
+    },
+    "absence": {
+      "full_day_legal": "Qonun asosida to‘liq kun ishlamagan",
+      "unexcused": "Sababsiz ishga kelmagan (pragullik)",
+      "unclear": "Aniqlanmagan sabablarga ko‘ra yo‘qlik"
+    },
+    "days": {
+      "official_holiday": "Dam olish va bayram kunlari"
+    },
+    "strike": {
+      "legal": "Qonuniy ish tashlash"
+    }
+  },
+  "does_not_delete_current_photo": "Asosiy rasmni o'chirish mumkin emas",
+  "already_exists": "Bunday yozuv allaqachon mavjud",
+  "successfully_exported": "Eksport navbatga qo'shildi",
+  "signature": {
+    "success": "Imzo muvaffaqqiyatli qo'yildi"
+  },
+  "you_cannot_delete_a_document_that_has_been_approved": "Tasdiqlangan hujjatni o'chirib bo'lmaydi"
+}

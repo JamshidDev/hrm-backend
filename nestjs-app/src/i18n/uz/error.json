@@ -1,0 +1,6 @@
+{
+  "model_not_found": "Model topilmadi",
+  "too_many_attempts_try_again_later": "Juda ko'p urinishlar bo'ldi. Iltimos, keyinroq qayta urinib ko'ring.",
+  "status_not_allowed": "Bu holat uchun amal ruxsat etilmagan",
+  "diff_dates_max_30_day": "Sana oralig'i 30 kundan oshmasligi kerak."
+}

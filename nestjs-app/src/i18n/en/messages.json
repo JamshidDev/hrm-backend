@@ -1,0 +1,435 @@
+{
+  "invalid_credentials": "Such user was not found in the system. Please verify the entered information...",
+  "invalid_credentials_password": "Check if the username or password is correct.",
+  "user_block": "Your profile has been temporarily restricted by the system administration.",
+  "token_is_expired": "The token has expired.",
+  "not_found": "Data not found",
+  "server_error": "A system error has occurred. Please try again later.",
+  "successfully_stored": "Successfully added",
+  "successfully_updated": "Successfully updated",
+  "successfully_deleted": "Successfully deleted",
+  "role_related": "The role has assigned permissions or users; cannot be deleted",
+  "permission_related": "Permission successfully assigned to the role",
+  "user_not_found": "User not found or does not exist",
+  "permission_detach_forbidden_from_role": "A permission granted through a role cannot be detached directly from the user.",
+  "role_successfully_assigned": "messages.role_successfully_assigned",
+  "errors": {
+    "organization_not_allowed_permission": "You do not have permission the right to change this information.!"
+  },
+  "permission_denied": "You don't have permission to perform this action",
+  "education": {
+    "level": {
+      "one": "Higher",
+      "two": "Secondary specialized",
+      "three": "Secondary",
+      "four": "Incomplete higher",
+      "five": "Incomplete secondary"
+    },
+    "types": {
+      "one": "Higher education institution",
+      "two": "Professional education institution",
+      "three": "General education schools",
+      "four": "Academic lyceum",
+      "five": "Vocational college",
+      "six": "Others"
+    }
+  },
+  "organization_levels": {
+    "one": "Department",
+    "two": "Management",
+    "three": "Company",
+    "four": "Organization"
+  },
+  "schedules": {
+    "daily": "5-day workweek",
+    "weekly": "6-day workweek",
+    "shift": "Shift work"
+  },
+  "work_day": {
+    "types": {
+      "d": "Day shift",
+      "n": "Night shift"
+    }
+  },
+  "holidays": {
+    "types": {
+      "one": "Public holidays",
+      "two": "Weekend"
+    }
+  },
+  "contract": {
+    "status": {
+      "active": "Active",
+      "finished": "Finished",
+      "process": "In process"
+    },
+    "employment_contract_indefinite": "Employment contract (Indefinite)",
+    "employment_contract_fixed": "Employment contract (Fixed-term)",
+    "civil_labor_contract": "Civil-law contract",
+    "employment_contract_part_time": "Employment contract (Part-time)",
+    "employment_contract_remote": "Employment contract (Remote work)",
+    "employment_contract_seasonal": "Employment contract (Seasonal work)",
+    "minimeze_employment_contract_indefinite": "Indefinite",
+    "minimeze_employment_contract_fixed": "Fixed-term",
+    "minimeze_civil_labor_contract": "CEC",
+    "minimeze_employment_contract_part_time": "Part-time",
+    "minimeze_employment_contract_remote": "Remote",
+    "minimeze_employment_contract_seasonal": "Seasonal"
+  },
+  "position_categories": {
+    "b": "Management staff",
+    "m": "Specialist staff",
+    "t": "Technical staff",
+    "ich": "Production staff",
+    "xk": "Service staff"
+  },
+  "confirmation": {
+    "status": {
+      "process": "Process",
+      "read": "Read",
+      "success": "Approved",
+      "rejected": "Rejected",
+      "deleted": "Deleted"
+    },
+    "signature_methods": {
+      "digital": "By digital signature",
+      "biometric": "By handwritten signature",
+      "button": "By pressing a button",
+      "not_confirmed": "Not signed"
+    }
+  },
+  "command": {
+    "finished": {
+      "types": {
+        "one": "One-time monetary award for the first-time retirement",
+        "two": "Deduction from salary for unworked days",
+        "three": "Payment of monetary compensation for unused leave days"
+      }
+    },
+    "employment": {
+      "position_assignment": "Appointment to a position",
+      "indefinite_hiring": "Hiring for an indefinite period",
+      "fixed_term_hiring": "Hiring for a fixed term",
+      "competitive_hiring": "Hiring based on competition",
+      "position_commencement": "Commencement of duties",
+      "temporary_replacement": "Hiring to replace a temporarily absent employee",
+      "part_time_hiring": "Hiring on a part-time basis",
+      "reinstatement": "Reinstatement to a previous position"
+    },
+    "transfer": {
+      "job_transfer": "Transfer to another position",
+      "relocation_due_to_employer": "Relocation due to employer’s move",
+      "temporary_assignment": "Temporary assignment to another employer",
+      "contractual_location_change": "Change of workplace as per employment contract",
+      "working_conditions_change": "Change of working conditions"
+    },
+    "termination": {
+      "mutual_agreement": "Termination of the employment contract by mutual agreement",
+      "contract_expiry": "Termination of the employment contract due to expiration",
+      "employee_initiative": "Termination of the employment contract at the employee's request",
+      "employer_initiative": "Termination of the employment contract at the employer's request",
+      "refusal_to_continue": "Termination of the employment contract due to refusal to continue work",
+      "refusal_new_conditions": "Termination of the employment contract due to refusal of new conditions",
+      "refusal_relocation": "Termination of the employment contract due to refusal to relocate",
+      "medical_reasons": "Termination of the employment contract due to medical reasons",
+      "force_manure": "Termination of the employment contract due to circumstances beyond control"
+    },
+    "vacation": {
+      "granting_leave": "Granting leave",
+      "rescheduling_leave": "Rescheduling leave",
+      "extending_leave": "Extending leave",
+      "recalling_from_leave": "Recalling from leave",
+      "recalling_with_compensation": "Recalling from leave with monetary compensation",
+      "splitting_leave": "Splitting leave into parts",
+      "additional_paid_leave": "Additional paid leave",
+      "maternity_leave": "Maternity leave",
+      "childcare_leave_2": "Childcare leave (up to 2 years old)",
+      "childcare_leave_3": "Childcare leave (up to 3 years old)",
+      "early_return_childcare": "Return from childcare leave",
+      "creative_leave": "Creative leave",
+      "study_leave": "Study leave",
+      "partial_paid_leave": "Partially paid leave",
+      "fully_paid_leave": "Fully paid leave",
+      "unpaid_leave": "Unpaid leave"
+    },
+    "business_trip": {
+      "sixty_one": "Sending on a business trip to another employer",
+      "sixty_two": "Sending on a business trip"
+    },
+    "others": {
+      "seventy_one": "On Incentives",
+      "seventy_two": "On Disciplinary Measures",
+      "seventy_three": "On Financial Assistance"
+    }
+  },
+  "application": {
+    "user": {
+      "uncertain": "Indefinite",
+      "certain": "Fixed-term",
+      "temporary": "Part-time"
+    },
+    "types": {
+      "one": "Regarding permanent employment",
+      "two": "Regarding fixed-term employment",
+      "three": "Application for early annual leave",
+      "four": "Request for unpaid leave",
+      "five": "Request for partially paid leave",
+      "six": "Request for transfer to another job",
+      "seven": "Consent for transfer to another job",
+      "eight": "Request for study leave",
+      "nine": "Request for financial assistance",
+      "ten": "Request for termination of employment contract"
+    }
+  },
+  "contract_changes": {
+    "employment_terms_change": "Change of employment contract terms",
+    "civil_contract_extension": "Extension of civil contract term",
+    "civil_contract_activity_change": "Change of activity in civil contract",
+    "civil_contract_acceptance": "Acceptance of work under civil contract",
+    "civil_contract_termination_agreement": "Agreement on early termination of civil contract",
+    "civil_contract_termination_notice": "Notice of early termination of civil contract",
+    "civil_contract_termination_warning": "Warning letter on early termination of civil contract",
+    "civil_contract_termination": "Termination of civil contract",
+    "contract_termination": "Termination contract",
+    "employee_transfer": "Transfer of employee to another job",
+    "employer_relocation": "Change of location due to employer relocation",
+    "temporary_assignment": "Temporary assignment of employee to another employer",
+    "workplace_change": "Change of workplace specified in the employment contract"
+  },
+  "export": {
+    "export_completed": "Export completed successfully.",
+    "types": {
+      "workers": "Export employee data to Excel",
+      "late_come": "Upload turnstile data to excel",
+      "zip": "Export employee references as archive",
+      "exam_results": "Upload exam results",
+      "exam_not_passed_workers": "Exam not passed workers",
+      "turnstile_absent_workers": "Absent workers",
+      "turnstile_late_workers": "Late workers",
+      "turnstile_early_leave_workers": "Early leave workers",
+      "turnstile_work_durations": "Those who did not complete the standard hours",
+      "pensioners": "Pensioners",
+      "relatives": "Workers with relatives",
+      "statement_with_codes_by_organizations": "Statements with codes by organizations",
+      "statement_with_codes_by_workers": "Statement with codes by workers",
+      "statement_multiple_workers": "Multiple workers statement",
+      "statement_with_codes": "Monthly report (Code) By month",
+      "statement_with_organizations": "Monthly report (Code) By organizations",
+      "devices": "All devices",
+      "online_devices": "Online devices",
+      "offline_devices": "Offline devices",
+      "last_sync_devices": "Synchronization times by device",
+      "current_in_workers": "Employees currently at work",
+      "current_out_workers": "Employees currently not at the workplace",
+      "daily_attendance": "Check-in and check-out events",
+      "turnstile_come": "Employees who came to work",
+      "turnstile_not_come": "Employees who did not come to work",
+      "vacation_workers": "Employees on vacation",
+      "statements_by_positions": "Employees in the relevant position in months",
+      "incentive": "Incentives",
+      "disciplinary": "Disciplinary actions",
+      "report_export_by_education": "Age, education, disability of employees",
+      "notIncludedScheduleWorkers": "Employees without a fixed work schedule",
+      "turnstile_schedule_timesheet": "Table by graph",
+      "statement_with_codes_by_year": "Annual report (decryption) by month"
+    },
+    "event_types": {
+      "in": "In",
+      "out": "Out"
+    },
+    "headers": {
+      "terminal": "Terminal",
+      "worker_position": "Worker position",
+      "organization": "Organization",
+      "organization_code": "Organization code",
+      "worker": "Worker",
+      "total": "Total",
+      "pin": "Pin",
+      "position": "Position",
+      "event_time": "Event time",
+      "event_type": "Event type",
+      "index": "№",
+      "exam": "Exam",
+      "topic": "Topic",
+      "created": "Start Time",
+      "ended": "End Time",
+      "result": "Result",
+      "tests_count": "Total tests",
+      "percent": "Percent",
+      "salary": "Salary"
+    },
+    "success": "Export started successfully"
+  },
+  "job": {
+    "statuses": {
+      "done": "Ready",
+      "process": "In progress",
+      "error": "Error"
+    }
+  },
+  "department": {
+    "level": {
+      "center": "Management staff",
+      "department": "Department",
+      "management": "Administration",
+      "dept": "Division",
+      "sex": "Workshop",
+      "sector": "Sector",
+      "group": "Group",
+      "station": "Station",
+      "bureau": "Bureau",
+      "branch": "Branch",
+      "brigade": "Brigade",
+      "establishment": "Institution",
+      "plot": "Plot",
+      "central": "Central"
+    }
+  },
+  "economist": {
+    "changed": {
+      "confirm_statuses": {
+        "new": "New",
+        "process": "In progress",
+        "done": "Approved",
+        "reject": "Rejected"
+      },
+      "change_statuses": {
+        "created": "Created",
+        "updated": "Updated",
+        "deleted": "Deleted"
+      }
+    }
+  },
+  "political_party": {
+    "two": "People's Democratic Party",
+    "three": "UzLiDeP Party",
+    "four": "Adolat Party",
+    "five": "Milliy Tiklanish Party"
+  },
+  "military_status": {
+    "one": "Fit for service",
+    "two": "Unfit for service",
+    "three": "Not served"
+  },
+  "academic_degree": {
+    "one": "Doctor of Science",
+    "two": "Candidate of Science",
+    "three": "Doctor of Science (DSc)",
+    "four": "Doctor of Philosophy (PhD)"
+  },
+  "academic_title": {
+    "one": "Associate Professor",
+    "two": "Professor",
+    "three": "Senior Researcher",
+    "four": "Academician"
+  },
+  "organization_documents": {
+    "one": "Order",
+    "two": "Regulation",
+    "three": "Other types of documents"
+  },
+  "vacations": {
+    "types": {
+      "one": "Paid vacation",
+      "two": "Maternity leave",
+      "three": "Childcare leave",
+      "four": "Study leave",
+      "five": "Creative leave",
+      "six": "Unpaid leave",
+      "seven": "Partially paid leave",
+      "eight": "Other type of leave"
+    }
+  },
+  "vacancy": {
+    "levels": {
+      "one": "Application submission",
+      "two": "Document evaluation",
+      "three": "Interview",
+      "four": "Medical examination",
+      "five": "Online test",
+      "six": "Application completion",
+      "seven": "Completed"
+    },
+    "work_types": {
+      "one": "Full"
+    }
+  },
+  "confirmation_worker": {
+    "level": {
+      "director": "Leader",
+      "confirmatory": "Confirmatory"
+    }
+  },
+  "contract_command": {
+    "status": {
+      "not_created": "Not created",
+      "formed": "Formed",
+      "not_mandatory": "Not mandatory"
+    }
+  },
+  "family": {
+    "one": "Father",
+    "two": "Mother",
+    "three": "Older brother",
+    "four": "Older sister",
+    "five": "Spouse",
+    "six": "Younger brother",
+    "seven": "Younger sister",
+    "eight": "Son",
+    "nine": "Daughter",
+    "ten": "Father-in-law",
+    "eleven": "Mother-in-law",
+    "twelve": "Brother (husband's/wife's)",
+    "thirteen": "Sister (husband's/wife's)",
+    "fourteen": "young. Brother (husband's/wife's)",
+    "fifteen": "young. Sister (husband's/wife's)"
+  },
+  "work": {
+    "hours": {
+      "daytime_evening": "Daytime and evening work hours",
+      "night": "Night work hours",
+      "weekend_holiday": "Work on weekends and holidays",
+      "overtime": "Overtime work hours",
+      "reduced_for_students": "Reduced working hours for students",
+      "reduced_by_law": "Reduced working hours by law",
+      "unworked_admin": "Unworked hours by administrative initiative"
+    },
+    "trip": {
+      "business": "Business trip"
+    },
+    "leave": {
+      "annual_paid": "Annual paid leave",
+      "additional_paid": "Additional paid leave",
+      "study_paid": "Paid study leave",
+      "unpaid_study": "Unpaid study leave",
+      "maternity": "Maternity leave",
+      "partial_childcare": "Partially paid childcare leave",
+      "unpaid_childcare": "Unpaid childcare leave",
+      "unpaid_admin_permission": "Unpaid leave with administrative permission",
+      "unpaid_legal": "Unpaid leave as required by law"
+    },
+    "disability": {
+      "temporary": "Temporary disability",
+      "unpaid": "Unpaid disability"
+    },
+    "downtime": {},
+    "absence": {
+      "full_day_legal": "Full-day absences with salary retention",
+      "unexcused": "Unexcused absences (no valid reason)",
+      "unclear": "Unexplained absences"
+    },
+    "days": {
+      "official_holiday": "Weekends and holidays"
+    },
+    "strike": {
+      "legal": "Legal strike"
+    }
+  },
+  "does_not_delete_current_photo": "Unable to delete main image",
+  "already_exists": "This entry already exists",
+  "successfully_exported": "Export queued",
+  "signature": {
+    "success": "Signature successfully recorded"
+  },
+  "you_cannot_delete_a_document_that_has_been_approved": "Cannot delete an approved document"
+}

@@ -1,0 +1,754 @@
+// Admin user management service. Laravel: App\Services\AdminUserService.
+
+import { Injectable } from '@nestjs/common';
+import { eq, and, inArray, ilike, count, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
+import * as jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
+import { InjectDb } from '@/db/drizzle.module';
+import type { DataSource } from '@/db/types';
+import {
+  users,
+  organizations,
+  roles,
+  permissions,
+  model_has_roles,
+  model_has_permissions,
+  role_has_permissions,
+  personal_access_tokens,
+} from '@/db/schema';
+import { BusinessException } from '@/common/exceptions/business.exception';
+import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
+import { paginate } from '@/common/pagination/paginate.util';
+import { SanctumService } from '@/modules/auth/sanctum.service';
+import {
+  AdminUserMapper,
+  type UserPermissionItem,
+} from '@/modules/admin/users/admin-user.mapper';
+import type {
+  QueryAdminUserRoleDto,
+  AssignAdminUserRoleDto,
+  AttachAdminUserPermissionDto,
+  BlockAdminUserDto,
+  CheckAdminUserTokenDto,
+  DetachAdminUserPermissionDto,
+  DetachAdminUserRoleDto,
+  QueryAdminUserDirectPermissionDto,
+  AdminUserDirectPermissionListResponseDto,
+  GenerateAdminUserTokenDto,
+  QueryAdminUserDto,
+  AdminUserListResponseDto,
+} from '@/modules/admin/users/dto/admin-user.dto';
+
+const USER_TYPE = 'App\\Models\\User';
+
+@Injectable()
+export class AdminUserService {
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly i18n: I18nService,
+    private readonly config: ConfigService,
+    private readonly minio: MinioService,
+    private readonly sanctum: SanctumService,
+    private readonly ctx: RequestContext,
+  ) {}
+
+  async findAll(filters: QueryAdminUserDto): Promise<AdminUserListResponseDto> {
+    const perPage = filters.per_page ?? 10;
+    const page = filters.page ?? 1;
+
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter(Boolean)
+      : null;
+    const search = filters.search?.trim();
+
+    const lang = this.ctx.lang;
+
+    // phone bigint — ilike to'g'ridan-to'g'ri ishlamaydi. Search bo'lsa, avval
+    // builder API orqali CAST'lab user_id'larni topamiz, so'ng relational query'da
+    // shu id'lar bilan filter qo'yamiz.
+    let searchUserIds: number[] | null = null;
+    if (search) {
+      const matches = await this.db
+        .select({ id: users.id })
+        .from(users)
+        .where(ilike(sql`CAST(${users.phone} AS TEXT)`, `%${search}%`));
+      searchUserIds = matches.map((m) => m.id);
+      // Hech qanday natija topilmasa — bo'sh javob, query'larni ishlatish shart emas.
+      if (searchUserIds.length === 0) {
+        return {
+          current_page: page,
+          per_page: perPage,
+          total: 0,
+          data: [],
+        };
+      }
+    }
+
+    // Paginate util — count + list parallel.
+    const result = await paginate({
+      db: this.db,
+      countTable: users,
+      countWhere: this.buildUserCountWhere(orgIds, search),
+      query: ({ limit, offset }) =>
+        this.db.query.users.findMany({
+          where: this.buildUserWhere(orgIds, searchUserIds),
+          with: {
+            worker: {
+              columns: {
+                id: true,
+                first_name: true,
+                last_name: true,
+                middle_name: true,
+                pin: true,
+                photo: true,
+              },
+            },
+            organization: {
+              columns: {
+                id: true,
+                name: true,
+                name_en: true,
+                name_ru: true,
+                group: true,
+              },
+            },
+            roles: { columns: { id: true, name: true } },
+          },
+          orderBy: { id: 'desc' },
+          limit,
+          offset,
+        }),
+      page,
+      perPage,
+      // Mapper async ishlatib bo'lmaydi (paginate sync), shuning uchun raw qaytaramiz va keyin map.
+      mapper: (u) => u,
+    });
+
+    // permissions_count + photo URL — har user uchun parallel.
+    const userIds = result.data.map((u) => u.id);
+    const permCounts = await this.fetchPermissionCounts(userIds);
+
+    const data = await Promise.all(
+      result.data.map(async (u) =>
+        AdminUserMapper.toItem({
+          user: u,
+          workerPhotoUrl: u.worker
+            ? await this.minio.fileUrl(u.worker.photo)
+            : null,
+          permissionsCount: permCounts[u.id] ?? 0,
+          lang,
+        }),
+      ),
+    );
+
+    return {
+      current_page: result.current_page,
+      per_page: result.per_page,
+      total: result.total,
+      data,
+    };
+  }
+
+  async findAllWithDirectPermissions(
+    filters: QueryAdminUserDirectPermissionDto,
+  ): Promise<AdminUserDirectPermissionListResponseDto> {
+    const perPage = filters.per_page ?? 10;
+    const page = filters.page ?? 1;
+
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter(Boolean)
+      : null;
+    const search = filters.search?.trim();
+
+    // Faqat direct permissioni bor user'lar (model_has_permissions).
+    const directUserIdsRows = await this.db
+      .selectDistinct({ id: model_has_permissions.model_id })
+      .from(model_has_permissions)
+      .where(
+        and(
+          eq(model_has_permissions.model_type, USER_TYPE),
+          filters.permission_id
+            ? eq(model_has_permissions.permission_id, filters.permission_id)
+            : undefined,
+        ),
+      );
+    const directUserIds = directUserIdsRows.map((r) => r.id);
+
+    if (directUserIds.length === 0) {
+      return { current_page: page, per_page: perPage, total: 0, data: [] };
+    }
+
+    const userList = await this.db.query.users.findMany({
+      where: {
+        id: { in: directUserIds },
+        ...(orgIds ? { organization_id: { in: orgIds } } : {}),
+        ...(search ? { phone: { ilike: `%${search}%` } as never } : {}),
+      },
+      with: {
+        worker: {
+          columns: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            middle_name: true,
+            photo: true,
+          },
+        },
+        organization: {
+          columns: {
+            id: true,
+            name: true,
+            name_en: true,
+            name_ru: true,
+            group: true,
+          },
+        },
+        roles: { columns: { id: true, name: true } },
+        direct_permissions: { columns: { id: true, name: true } },
+      },
+      orderBy: { id: 'desc' },
+      limit: perPage,
+      offset: (page - 1) * perPage,
+    });
+
+    const lang = this.ctx.lang;
+    const data = await Promise.all(
+      userList.map(async (u) =>
+        AdminUserMapper.toDirectPermissionItem({
+          user: u,
+          workerPhotoUrl: u.worker
+            ? await this.minio.fileUrl(u.worker.photo)
+            : null,
+          lang,
+        }),
+      ),
+    );
+
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: directUserIds.length,
+      data,
+    };
+  }
+
+  async block(uuid: string, dto: BlockAdminUserDto): Promise<void> {
+    const user = await this.findUserByUuid(uuid);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ status: dto.status })
+        .where(eq(users.id, user.id));
+      // Bloklanganda barcha tokenlarni o'chirish.
+      await tx
+        .delete(personal_access_tokens)
+        .where(
+          and(
+            eq(personal_access_tokens.tokenable_type, USER_TYPE),
+            eq(personal_access_tokens.tokenable_id, user.id),
+          ),
+        );
+    });
+  }
+
+  async remove(id: number): Promise<void> {
+    const user = await this.db.query.users.findFirst({
+      where: { id },
+      columns: { id: true },
+    });
+    if (!user) {
+      throw new BusinessException(404, this.i18n.t('messages.user_not_found'));
+    }
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+
+  async getUserRoles(uuid: string) {
+    const user = await this.findUserByUuid(uuid);
+
+    const rows = await this.db
+      .select({
+        role_id: roles.id,
+        role_name: roles.name,
+        org_id: organizations.id,
+        org_name: organizations.name,
+      })
+      .from(model_has_roles)
+      .innerJoin(roles, eq(model_has_roles.role_id, roles.id))
+      .leftJoin(
+        organizations,
+        eq(model_has_roles.organization_id, organizations.id),
+      )
+      .where(
+        and(
+          eq(model_has_roles.model_type, USER_TYPE),
+          eq(model_has_roles.model_id, user.id),
+        ),
+      );
+
+    return rows.map((r) => ({
+      id: r.role_id,
+      name: r.role_name,
+      organization: { id: r.org_id ?? null, name: r.org_name ?? null },
+    }));
+  }
+
+  async detachUserRole(
+    uuid: string,
+    dto: DetachAdminUserRoleDto,
+  ): Promise<void> {
+    const user = await this.findUserByUuid(uuid);
+
+    await this.db
+      .delete(model_has_roles)
+      .where(
+        and(
+          eq(model_has_roles.model_id, user.id),
+          eq(model_has_roles.role_id, dto.role_id),
+          eq(model_has_roles.organization_id, dto.organization_id),
+        ),
+      );
+  }
+
+  async assignRoleToUser(dto: AssignAdminUserRoleDto): Promise<void> {
+    const user = await this.findUserByUuid(dto.uuid);
+
+    const role = await this.db.query.roles.findFirst({
+      where: { id: dto.role_id },
+      columns: { id: true, name: true },
+    });
+    if (!role) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    if (role.name === 'Admin') {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.errors.organization_not_allowed_permission'),
+      );
+    }
+
+    const existing = await this.db.query.model_has_roles.findFirst({
+      where: {
+        model_type: USER_TYPE,
+        model_id: user.id,
+        role_id: dto.role_id,
+        organization_id: dto.organization_id,
+      },
+    });
+
+    if (!existing) {
+      await this.db.transaction(async (tx) => {
+        await tx.insert(model_has_roles).values({
+          model_type: USER_TYPE,
+          model_id: user.id,
+          role_id: dto.role_id,
+          organization_id: dto.organization_id,
+        });
+        await tx
+          .update(users)
+          .set({ organization_id: dto.organization_id })
+          .where(eq(users.id, user.id));
+      });
+    }
+  }
+
+  async getRoles(filters: QueryAdminUserRoleDto) {
+    const perPage = filters.per_page ?? 10;
+    const page = filters.page ?? 1;
+
+    return paginate({
+      db: this.db,
+      countTable: roles,
+      countWhere: undefined,
+      query: ({ limit, offset }) =>
+        this.db.query.roles.findMany({
+          with: { permissions: { columns: { id: true, name: true } } },
+          limit,
+          offset,
+        }),
+      page,
+      perPage,
+      mapper: (r) => ({
+        id: r.id,
+        name: r.name,
+        permissions: r.permissions.map((p) => ({ id: p.id, name: p.name })),
+      }),
+    });
+  }
+
+  async loginAsUser(
+    uuid: string,
+  ): Promise<{ access_token: string; message: string }> {
+    const user = await this.findUserByUuid(uuid);
+    const accessToken = await this.sanctum.createToken(user.id, 'web');
+    return {
+      access_token: accessToken,
+      message: this.i18n.t('auth.login_success'),
+    };
+  }
+
+  getTokenForAdmin(dto: GenerateAdminUserTokenDto): { token: string } {
+    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const adminUuid = this.ctx.user_or_fail.uuid;
+    const secret = this.config.get<string>('JWT_SECRET') ?? 'dev-secret';
+
+    const token = jwt.sign(
+      { expires, token: dto.user_uuid, uuid: adminUuid },
+      secret,
+      { algorithm: 'HS256' },
+    );
+    return { token };
+  }
+
+  async checkTokenForAdmin(
+    dto: CheckAdminUserTokenDto,
+  ): Promise<{ access_token: string }> {
+    const secret = this.config.get<string>('JWT_SECRET') ?? 'dev-secret';
+
+    let payload: { expires?: string; token?: string; uuid?: string };
+    try {
+      payload = jwt.verify(dto.token, secret, {
+        algorithms: ['HS256'],
+      }) as never;
+    } catch {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.token_is_expired'),
+      );
+    }
+
+    if (!payload.expires || new Date(payload.expires) < new Date()) {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.token_is_expired'),
+      );
+    }
+
+    const target = payload.token
+      ? await this.db.query.users.findFirst({
+          where: { uuid: payload.token },
+          columns: { id: true },
+        })
+      : null;
+    if (!target || target.id !== this.ctx.user_or_fail.id) {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.token_is_expired'),
+      );
+    }
+
+    const admin = payload.uuid
+      ? await this.db.query.users.findFirst({
+          where: { uuid: payload.uuid },
+          columns: { id: true },
+        })
+      : null;
+
+    if (!admin) {
+      throw new BusinessException(404, this.i18n.t('messages.user_not_found'));
+    }
+    const accessToken = await this.sanctum.createToken(admin.id, 'web');
+    return { access_token: accessToken };
+  }
+
+  // Combined permissions: direct + via roles, dedupe + group by role/org.
+  async getUserPermissions(uuid: string): Promise<UserPermissionItem[]> {
+    const user = await this.findUserByUuid(uuid);
+
+    // 1. Direct permissions.
+    const directRows = await this.db
+      .select({ id: permissions.id, name: permissions.name })
+      .from(model_has_permissions)
+      .innerJoin(
+        permissions,
+        eq(model_has_permissions.permission_id, permissions.id),
+      )
+      .where(
+        and(
+          eq(model_has_permissions.model_type, USER_TYPE),
+          eq(model_has_permissions.model_id, user.id),
+        ),
+      );
+
+    // 2. User roles (with organization).
+    const userRoleRows = await this.db
+      .select({
+        role_id: roles.id,
+        role_name: roles.name,
+        org_id: organizations.id,
+        org_name: organizations.name,
+      })
+      .from(model_has_roles)
+      .innerJoin(roles, eq(model_has_roles.role_id, roles.id))
+      .leftJoin(
+        organizations,
+        eq(model_has_roles.organization_id, organizations.id),
+      )
+      .where(
+        and(
+          eq(model_has_roles.model_type, USER_TYPE),
+          eq(model_has_roles.model_id, user.id),
+        ),
+      );
+
+    // 3. Permissions via roles.
+    const roleIds = [...new Set(userRoleRows.map((r) => r.role_id))];
+    const rolePermRows = roleIds.length
+      ? await this.db
+          .select({
+            role_id: role_has_permissions.role_id,
+            perm_id: permissions.id,
+            perm_name: permissions.name,
+          })
+          .from(role_has_permissions)
+          .innerJoin(
+            permissions,
+            eq(role_has_permissions.permission_id, permissions.id),
+          )
+          .where(inArray(role_has_permissions.role_id, roleIds))
+      : [];
+
+    // 4. Build map: permission_id → { id, name, direct, via_role, detachable, roles[] }
+    const map = new Map<number, UserPermissionItem>();
+
+    // Direct
+    for (const p of directRows) {
+      map.set(p.id, {
+        id: p.id,
+        name: p.name,
+        direct: true,
+        via_role: false,
+        detachable: true,
+        roles: [],
+      });
+    }
+
+    // Via roles (group by role+org)
+    for (const rp of rolePermRows) {
+      const role = userRoleRows.find((r) => r.role_id === rp.role_id);
+      if (!role) continue;
+
+      const item = map.get(rp.perm_id);
+      if (!item) {
+        map.set(rp.perm_id, {
+          id: rp.perm_id,
+          name: rp.perm_name,
+          direct: false,
+          via_role: true,
+          detachable: false,
+          roles: [
+            {
+              id: role.role_id,
+              name: role.role_name,
+              organization: {
+                id: role.org_id ?? null,
+                name: role.org_name ?? null,
+              },
+            },
+          ],
+        });
+      } else {
+        item.via_role = true;
+        item.detachable = false;
+        item.roles.push({
+          id: role.role_id,
+          name: role.role_name,
+          organization: {
+            id: role.org_id ?? null,
+            name: role.org_name ?? null,
+          },
+        });
+      }
+    }
+
+    // 5. Unique role+org per permission, sort by name.
+    const result = Array.from(map.values())
+      .map((p) => {
+        const seen = new Set<string>();
+        const uniqueRoles = p.roles.filter((r) => {
+          const key = `${r.id}-${r.organization.id ?? ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        return { ...p, roles: uniqueRoles };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return result;
+  }
+
+  async attachPermission(
+    uuid: string,
+    dto: AttachAdminUserPermissionDto,
+  ): Promise<void> {
+    const user = await this.findUserByUuid(uuid);
+
+    // Mavjud direct permissionlarni topib, faqat yangi'larni qo'shamiz.
+    const existing = await this.db
+      .select({ permission_id: model_has_permissions.permission_id })
+      .from(model_has_permissions)
+      .where(
+        and(
+          eq(model_has_permissions.model_type, USER_TYPE),
+          eq(model_has_permissions.model_id, user.id),
+          inArray(model_has_permissions.permission_id, dto.permission_ids),
+        ),
+      );
+    const existingIds = new Set(existing.map((e) => e.permission_id));
+    const toInsert = dto.permission_ids.filter((id) => !existingIds.has(id));
+
+    if (toInsert.length > 0) {
+      await this.db.insert(model_has_permissions).values(
+        toInsert.map((pid) => ({
+          permission_id: pid,
+          model_type: USER_TYPE,
+          model_id: user.id,
+        })),
+      );
+    }
+  }
+
+  async detachPermission(
+    uuid: string,
+    dto: DetachAdminUserPermissionDto,
+  ): Promise<void> {
+    const user = await this.findUserByUuid(uuid);
+
+    // Role orqali biriktirilgan permissionlarni alohida olib tashlab bo'lmaydi.
+    const userRoleIds = await this.db
+      .select({ role_id: model_has_roles.role_id })
+      .from(model_has_roles)
+      .where(
+        and(
+          eq(model_has_roles.model_type, USER_TYPE),
+          eq(model_has_roles.model_id, user.id),
+        ),
+      );
+
+    const blockedPerms =
+      userRoleIds.length > 0
+        ? await this.db
+            .select({ id: permissions.id, name: permissions.name })
+            .from(role_has_permissions)
+            .innerJoin(
+              permissions,
+              eq(role_has_permissions.permission_id, permissions.id),
+            )
+            .where(
+              and(
+                inArray(
+                  role_has_permissions.role_id,
+                  userRoleIds.map((r) => r.role_id),
+                ),
+                inArray(role_has_permissions.permission_id, dto.permission_ids),
+              ),
+            )
+        : [];
+
+    if (blockedPerms.length > 0) {
+      const uniqueIds = [...new Set(blockedPerms.map((p) => p.id))];
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.permission_detach_forbidden_from_role'),
+        {
+          permission_ids: uniqueIds,
+          permissions: uniqueIds.map((id) => ({
+            id,
+            name: blockedPerms.find((p) => p.id === id)?.name ?? null,
+          })),
+        },
+      );
+    }
+
+    // Direct permissionlarni o'chiramiz.
+    await this.db
+      .delete(model_has_permissions)
+      .where(
+        and(
+          eq(model_has_permissions.model_type, USER_TYPE),
+          eq(model_has_permissions.model_id, user.id),
+          inArray(model_has_permissions.permission_id, dto.permission_ids),
+        ),
+      );
+  }
+
+  // ---- Helper'lar ----
+
+  private async findUserByUuid(
+    uuid: string,
+  ): Promise<{ id: number; uuid: string }> {
+    const user = await this.db.query.users.findFirst({
+      where: { uuid },
+      columns: { id: true, uuid: true },
+    });
+    if (!user) {
+      throw new BusinessException(404, this.i18n.t('messages.user_not_found'));
+    }
+    return user;
+  }
+
+  private async fetchPermissionCounts(
+    userIds: number[],
+  ): Promise<Record<number, number>> {
+    const result: Record<number, number> = {};
+    if (userIds.length === 0) return result;
+
+    const rows = await this.db
+      .select({
+        model_id: model_has_permissions.model_id,
+        c: count(),
+      })
+      .from(model_has_permissions)
+      .where(
+        and(
+          eq(model_has_permissions.model_type, USER_TYPE),
+          inArray(model_has_permissions.model_id, userIds),
+        ),
+      )
+      .groupBy(model_has_permissions.model_id);
+
+    for (const r of rows) result[r.model_id] = Number(r.c);
+    return result;
+  }
+
+  private buildUserWhere(
+    orgIds: number[] | null,
+    searchUserIds: number[] | null,
+  ): Record<string, unknown> | undefined {
+    const conditions: Record<string, unknown> = {};
+    if (orgIds && orgIds.length > 0) {
+      conditions.organization_id = { in: orgIds };
+    }
+    // Phone bigint bo'lgani uchun search avval builder API orqali ID'larga
+    // o'tkaziladi (`findAll` ichida) va bu yerga `searchUserIds` sifatida keladi.
+    if (searchUserIds && searchUserIds.length > 0) {
+      conditions.id = { in: searchUserIds };
+    }
+    if (Object.keys(conditions).length === 0) return undefined;
+    return conditions;
+  }
+
+  private buildUserCountWhere(
+    orgIds: number[] | null,
+    search: string | undefined,
+  ) {
+    const parts: ReturnType<typeof eq>[] = [];
+    if (orgIds && orgIds.length > 0) {
+      parts.push(inArray(users.organization_id, orgIds));
+    }
+    if (search) {
+      parts.push(ilike(sql`CAST(${users.phone} AS TEXT)`, `%${search}%`));
+    }
+    if (parts.length === 0) return undefined;
+    return parts.length === 1 ? parts[0] : and(...parts);
+  }
+}
