@@ -1,0 +1,77 @@
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+.next/
+.nuxt/
+.turbo/
+.tsbuildinfo
+
+# pnpm
+.pnpm-store/
+.pnpm-debug.log*
+
+# PHP / Laravel
+laravel-app/vendor/
+laravel-app/storage/*.key
+laravel-app/storage/logs/*.log
+laravel-app/storage/framework/cache/*
+laravel-app/storage/framework/sessions/*
+laravel-app/storage/framework/testing/*
+laravel-app/storage/framework/views/*
+laravel-app/storage/app/public/*
+laravel-app/bootstrap/cache/*.php
+laravel-app/.phpunit.cache/
+laravel-app/.phpunit.result.cache
+laravel-app/Homestead.json
+laravel-app/Homestead.yaml
+laravel-app/auth.json
+laravel-app/.env.backup
+laravel-app/.env.production
+
+# Composer
+laravel-app/composer.phar
+
+# DB dumps / backups
+*.dump
+*.sql.gz
+*.sql.bz2
+hrm_backup.dump
+
+# Misc
+*.tmp
+*.temp
+*.bak
+*.cache
+.cache/
+*.tgz
+*.zip
