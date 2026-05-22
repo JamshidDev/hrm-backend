@@ -1,0 +1,11 @@
+{
+    "name": "Economist",
+    "alias": "economist",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Economist\\Providers\\EconomistServiceProvider"
+    ],
+    "files": []
+}

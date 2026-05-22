@@ -1,0 +1,11 @@
+{
+    "name": "Turnstile",
+    "alias": "turnstile",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Turnstile\\Providers\\TurnstileServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,2894 @@
+[
+    {
+        "id": 1,
+        "name": "Toshkent temir yo'l muhandislari instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 2,
+        "name": "Toshkent transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 3,
+        "name": "Toshkent temir yo'l texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 4,
+        "name": "Samarqand temir yo'l texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 5,
+        "name": "Samarqand avtomobil va yo'llar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 6,
+        "name": "Abu Rayhon Beruniy nomidagi Toshkent davlat texnika universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 7,
+        "name": "Toshkent axborot texnologiyalar universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 8,
+        "name": "Toshkent davlat agrar universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 9,
+        "name": "Toshkent davlat iqtisodiyot universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 10,
+        "name": "Хоvos transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 11,
+        "name": "Samarkand davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 12,
+        "name": "Buxoro davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 13,
+        "name": "Farg‘ona davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 14,
+        "name": "Toshkent davlat texnika universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 15,
+        "name": "Urganch avtomobil yo`llari kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 16,
+        "name": "Furqat ijtimoiy-iqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 17,
+        "name": "Qarshi davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 18,
+        "name": "Qarshi transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 19,
+        "name": "Qarshi kompyuter texnologiyalari va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 20,
+        "name": "Qarshi politexnika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 21,
+        "name": "Qarshi bank kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 22,
+        "name": "Qarshi shahar 1-son kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 23,
+        "name": "Qarshi shahar 38-son hunar-texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 24,
+        "name": "Qarshi sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 25,
+        "name": "Qarshi qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 26,
+        "name": "Qarshi pedagogika kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 27,
+        "name": "Qarshi qishloq xo‘jalik texnnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 28,
+        "name": "Qarshi qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 29,
+        "name": "Qarshi davlat universiteti qoshidagi 2-son akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 30,
+        "name": "Qarshi iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 31,
+        "name": "Qarshi muhandislik iqtisodiyot instituti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 32,
+        "name": "Qarshi davlat universiteti biznes maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 33,
+        "name": "Qarshi shahar kooperativ texnikumi ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 34,
+        "name": "Qarshi muhandislik iqtisodiyot instituti biznes maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 35,
+        "name": "Qarshi muhandislik iqtisodiyot instituti qoshidagi 3-sonli akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 36,
+        "name": "Qarshi agrobiznes va tadbirkorlik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 37,
+        "name": "Qarshi tuman 39-son umumiy o'rta ta'lim maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 38,
+        "name": "Qarshi maishiy xizmat ko'rsatish kasb-hunar kolleji ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 39,
+        "name": "Toshkent axborot texnologiyalari universiteti Qarshi filiali",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 40,
+        "name": "Qarshi davlat universiteti qoshidagi Shaxrisabz akademik litseyi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 41,
+        "name": "Qarshi Abu Ali ibn Sino nomidagi jamoat salomatligi texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 42,
+        "name": "Qarshi olimpiya zahiralari kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 43,
+        "name": "Toshkent pedagogika kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 44,
+        "name": "Akmal Ikromov nomidagi Toshkent temir yo‘l transporti muhandislari instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 45,
+        "name": "Islom Karimov nomidagi Toshkent Davlat Texnika Universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 46,
+        "name": "Mehnat Qizil Bayroq ordenli Toshkent temir yo'l injenerlari instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 47,
+        "name": "Toshkent aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 48,
+        "name": "Toshkent aviasozlik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 49,
+        "name": "Toshkent moliya instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 50,
+        "name": "Toshkent avtomobil va yo'llar kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 51,
+        "name": "Toshkent arxitektura va qurilish instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 52,
+        "name": "Toshkent avtomobil yoʻllari instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 53,
+        "name": "Toshkent avtomobil yo`llarini loyihalash, qurish va ekspluatasiyasi instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 54,
+        "name": "Toshkent avtomobil va yo'llar texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 55,
+        "name": "Toshkent davlat transport universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 56,
+        "name": "Toshkent xalq xo'jaligi instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 57,
+        "name": "Xalqlar do'stligi ordenli Beruniy nomidagi Toshkent politexnika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 58,
+        "name": "Toshkent yuridik kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 59,
+        "name": "Toshkent irrigatsiya va qishloq xo'jaligini mexanizatsiyalash muhandislari instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 60,
+        "name": "Toshkent politexnika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 61,
+        "name": "V.I. Lenin nomidagi mehnat qizil bayroq ordeni Toshkent Davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 62,
+        "name": "Toshkent temir yo'l muhandislari instituti qoshidagi 2-sonli akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 63,
+        "name": "Toshkent agrosanoat va biznes kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 64,
+        "name": "Toshkent oliy harbiy-texnik bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 65,
+        "name": "Toshkent politexnika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 66,
+        "name": "Toshkent 13-son kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 67,
+        "name": "Toshkent axborot texnologiyalari instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 68,
+        "name": "Toshkent irrigatsiya va qishloq xo‘jaligini mexanizatsiyalash muhandislari instituti“ Milliy tadqiqot universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 69,
+        "name": "Toshkent irrigatsiya va melioratsiya instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 70,
+        "name": "Toshkent shahar 30-sonli hunar-texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 71,
+        "name": "Toshkent axborot texnologiyalari kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 72,
+        "name": "Toshkent bank hisob-kredit kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 73,
+        "name": "Toshkent davlat pedagogika universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 74,
+        "name": "Toshkent tumani qishloq xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 75,
+        "name": "Toshkent geologiya qidiruv texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 75,
+        "name": "Toshkent to'qimachilik va yengil sanoat instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 76,
+        "name": "Toshkent gidrometeorologiya texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 77,
+        "name": "Toshkent birlashgan texnika maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 78,
+        "name": "Toshkent davlat pedagogika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 79,
+        "name": "Ohangaron tumani 2-son kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 80,
+        "name": "Toshkent davlat agrar universiteti Nukus filiali",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 81,
+        "name": "Toshkent turizm kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 82,
+        "name": "Toshkent kimyo-texnologiya instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 83,
+        "name": "Toshkent Xamza temir yo'l kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 84,
+        "name": "Toshkent suv xo‘jaligi va melioratsiya kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 85,
+        "name": "Toshkent madaniyat kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 86,
+        "name": "O'zbekiston davlat san'at va madaniyat instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 87,
+        "name": "Toshkent davlat madaniyat instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 88,
+        "name": "Toshkent industriya pedagogika texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 89,
+        "name": "Toshkent tijorat va tadbirkorlik kasb-hunar kolleji ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 90,
+        "name": "Toshkent huquqshunoslik texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 91,
+        "name": "Toshkent davlat aviatsiya instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 92,
+        "name": "Farg'ona ijtimoiy iqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 93,
+        "name": "Kogon shahar kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 94,
+        "name": "Qo'qon kompyuter texnologiyalari kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 95,
+        "name": "\"SAYXON\" qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 96,
+        "name": "Toshkent viloyati 4-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 97,
+        "name": "Chinoz tuman xizmat ko'rsatish va iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 98,
+        "name": "Samarqand temir yo'l transporti kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 99,
+        "name": "Buxoro oziq-ovqat va yengil sanoat texnologiyasi instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 100,
+        "name": "Buxoro avtomobil va yo'llar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 101,
+        "name": "Buxoro kommunal xo’jaligi kasb-hunar kolleji ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 102,
+        "name": "Farg'ona politexnika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 103,
+        "name": "Sharg'un qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 104,
+        "name": "Farg'ona politexnika texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 105,
+        "name": "Andijon mashinasozlik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 106,
+        "name": "Buxoro muhandislik-texnologiya instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 107,
+        "name": "Jizzax tuman maishiy xizmat va iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 108,
+        "name": "Mirzo Ulug'bek nomidagi O'zbekiston Milliy universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 109,
+        "name": "Boʻston ijtimoiy-iqtisodiy kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 110,
+        "name": "Buxoro iqtisodiyot va bank kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 111,
+        "name": "Paxtachi qishloq xo‘jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 112,
+        "name": "Yashnobod temir yo‘l kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 113,
+        "name": "Samarqand industrial texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 114,
+        "name": "Beruniy qishloq va suv xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 115,
+        "name": "Bulung'ur qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 116,
+        "name": "G'allaorol iqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 117,
+        "name": "Navoiy davlat konchilik instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 117,
+        "name": "Navoiy davlat konchilik va texnologiyalar universiteti akademik litseyi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 119,
+        "name": "Navoiy davlat konchilik instituti huzuridagi 2-sonli akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 120,
+        "name": "Navoiy davlat konchilik instituti huzuridagi Uchquduq sanoat texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 121,
+        "name": "Navoiy davlat konchilik va texnologiyalar universiteti Zarafshon sanoat texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 122,
+        "name": "Guliston kompyuter va axborot texnologiyalari kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 123,
+        "name": "Qorako'l iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 124,
+        "name": "Bekobod shahar sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 125,
+        "name": "Konimex qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 126,
+        "name": "Kogon qishloq xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 127,
+        "name": "Kogon sanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 128,
+        "name": "Alisher Navoiy nomidagi Samarqand davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 129,
+        "name": "Andijon kichik va o'rta biznes kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 130,
+        "name": "Andijon aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 131,
+        "name": "Andijon avtomobil yo'llari qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 132,
+        "name": "Dexqonobod qishloq xo'jaligi va xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 133,
+        "name": "Andijon mashinasozlik instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 134,
+        "name": "Andijon axborot texnologiyalari kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 135,
+        "name": "Andijon davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 136,
+        "name": "Andijon moliya va iqtisodiyet kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 137,
+        "name": "Andijon industrial pedagogika texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 138,
+        "name": "Andijon sanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 139,
+        "name": "Farg‘ona agrosanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 140,
+        "name": "Navoiy tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 141,
+        "name": "Muborak industrial texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 142,
+        "name": "Samarqand agroiqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 143,
+        "name": "Samarqand axborot kommunikatsiya texnologiyalari va sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 144,
+        "name": "Samarqand Qishloq Xo'jaligi Instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 145,
+        "name": "Samarqand davlat arxitektura-qurilish universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 146,
+        "name": "Samarqand davlat arxitektura-qurilish instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 147,
+        "name": "Yangiyo'l iqtisodiyot va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 148,
+        "name": "Peshku sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 149,
+        "name": "Navbahor agroiqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 150,
+        "name": "Jizzax transport, aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 151,
+        "name": "Oltiariq maishiy xizmat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 152,
+        "name": "Qo'yliq maishiy xizmat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 153,
+        "name": "Kogon shahar 5-son kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 154,
+        "name": "Olmazor qishloq xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 155,
+        "name": "G'allaorol sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 156,
+        "name": "Qo‘qon temir yo‘l transporti kasb-hunar kolleji ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 157,
+        "name": "Qo'ng'irot neft va gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 158,
+        "name": "Mirobod sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 159,
+        "name": "Bulung'ur sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 160,
+        "name": "Nukus transport texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 161,
+        "name": "Yangiyer qurilish va kommunal xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 162,
+        "name": "O'rta CHirchiq pedagogika va xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 163,
+        "name": "Qiziltepa agroservis va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 164,
+        "name": "Qiziltepa qurilish va uy-joy kommunal xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 165,
+        "name": "Qiziltepa yengil sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 166,
+        "name": "Qiziltepa maishiy xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 167,
+        "name": "Qiziltepa agroiqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 168,
+        "name": "Qiziltepa 3-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 169,
+        "name": "Toshkent iqtisodiyot va servis kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 170,
+        "name": "Toshkent temir yo'l naqliyoti muhandislari oliygohi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 171,
+        "name": "Toshkent qurilish va milliy hunarmandchilik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 172,
+        "name": "Toshkent qurilish texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 173,
+        "name": "Toshkent mehmonxona kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 174,
+        "name": "Toshkent davlat sharqshunoslik universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 173,
+        "name": "Toshkent davlat sharqshunoslik instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 174,
+        "name": "Toshkent davlat sharqshunoslik instituti akademik litseyi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 175,
+        "name": "P.F.Borovskiy nomli Toshkent shahar tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 176,
+        "name": "Toshkent kommunal qurilish texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 177,
+        "name": "Toshkent radiotexnika va avtomatika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 178,
+        "name": "Toshkent davlat tibbiyot Instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 179,
+        "name": "Urganch avtomobil va yo`llar texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 180,
+        "name": "Nukus temir yo'l transporti kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 181,
+        "name": "Navoiy olimpiya zaxiralari kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 182,
+        "name": "Yangiyer tumani 14-sonli o'rta ta'lim maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 183,
+        "name": "Ohangaron shahar sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 184,
+        "name": "Karmana oziq-ovqat sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 185,
+        "name": "Piskent agrosanoat va iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 186,
+        "name": "Oqoltin ijtimoiy-iqtisodiy kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 187,
+        "name": "Samaqand temir yo'l transporti kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 188,
+        "name": "Qumqo'rg'on qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 189,
+        "name": "Dang'ara qishloq xo‘jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 190,
+        "name": "Navoiy industrial iqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 191,
+        "name": "Ishtixon pedagogika kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 192,
+        "name": "Buxoro irrigatsiya va melioratsiya kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 193,
+        "name": "Buxoro politexnika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 194,
+        "name": "Paxtachi avtomobil va yo‘llar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 195,
+        "name": "Termiz transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 196,
+        "name": "Dang'ara agrosanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 197,
+        "name": "Pop kon metallurgiya va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 198,
+        "name": "Jondor sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 199,
+        "name": "Charxin ijtimoiy-iqtisodiy kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 200,
+        "name": "Xovos transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 201,
+        "name": "Guliston maktabgacha ta'lim va xizmat ko'rsatish kasb-xunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 202,
+        "name": "Boyovut qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 203,
+        "name": "Guliston qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 204,
+        "name": "G'ijduvon qurilish va kommunal xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 205,
+        "name": "G'ijduvon qurilish va milliy hunarmandchilik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 206,
+        "name": "Nukus politexnika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 207,
+        "name": "Dang'ara sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 208,
+        "name": "Qo‘qon neft va gaz sanoati kasb-hunar kolleji ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 209,
+        "name": "Samarqand qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 210,
+        "name": "Muzrabot iqtisodiyot va xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 211,
+        "name": "Navoiy texnika-iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 212,
+        "name": "O'rta Osiyo temir yo'lining Toshkent tibbiyot bilim yurti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 213,
+        "name": "Ziyovuddin qurilish va kommunal xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 214,
+        "name": "Qung'irot neft va gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 215,
+        "name": "Mirzaobod Ijtimoiy Iqtisodiy kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 216,
+        "name": "Samarqand oliy harbiy avtomobil qo'mondonlik-muhandislik bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 217,
+        "name": "Parkent agrosanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 218,
+        "name": "Jizzax politexnika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 219,
+        "name": "Qo'ng'irot sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 220,
+        "name": "Oltiariq sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 221,
+        "name": "Dashtabod transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 222,
+        "name": "Tursunhodjayeva nomidagi Toshkent tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 223,
+        "name": "Termiz iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 224,
+        "name": "Termiz davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 225,
+        "name": "O'rtachirchiq agrosanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 226,
+        "name": "Angren ko‘mir sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 227,
+        "name": "Angren kompyuter va axborot texnologiyasi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 228,
+        "name": "Andijon muhandislik iqtisodiyot instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 229,
+        "name": "Andijon davlat tibbiyot instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 230,
+        "name": "Andijon davlat tibbiyot instituti qoshidagi 2-son akademik litseyi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 231,
+        "name": "Berdaq nomidagi Qoraqalpoq Davlat Universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 232,
+        "name": "Toshkent pediatriya tibbiyot instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 233,
+        "name": "Toshkent pediatriya tibbiyot instituti Nukus filiali",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 234,
+        "name": "Qo'qon servis va tadbirkorlik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 235,
+        "name": "Qo'qon temir yo'l texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 236,
+        "name": "To'rtko'l sanoat transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 237,
+        "name": "O'rtachirchiq qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 238,
+        "name": "Nukus sanoat va xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 239,
+        "name": "Nukus kompyuter va axborot texnologiyalari kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 240,
+        "name": "Nukus avtomobil-yo'l texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 241,
+        "name": "Nukus melioratsiya va suv xo'jaligi kasb hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 242,
+        "name": "Kogon maktabgacha ta'lim va xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 243,
+        "name": "Buxoro yuridik va maishiy xizmat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 244,
+        "name": "Pop qishloq xo‘jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 245,
+        "name": "Termiz arxitektura va qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 246,
+        "name": "Olmaliq qurilish va uy-joy kommunal xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 247,
+        "name": "Qo'qon avtotransport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 248,
+        "name": "Toshkent temir yo'l transporti bilim yurti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 249,
+        "name": "Xovos temir yo'l texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 250,
+        "name": "Dang'ara transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 251,
+        "name": "G'ijduvon sanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 252,
+        "name": "Farg'ona transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 253,
+        "name": "Qorovul-bozor sanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 254,
+        "name": "Boysun transport va aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 255,
+        "name": "Qorako'l sanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 256,
+        "name": "Toshken davlat transport universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 257,
+        "name": "Urganch sanoat-transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 258,
+        "name": "Kattaqo'rg'on transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 259,
+        "name": "Koson sanoat-transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 260,
+        "name": "Pop transport va aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 261,
+        "name": "To‘rtko‘l sanoat transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 262,
+        "name": "G‘uzor transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 263,
+        "name": "Yangiyo'l transport va xizmat ko'rsatish kasib-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 264,
+        "name": "Zangiota transport va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 265,
+        "name": "Toshkent temir yo'l transporti bilimgohi",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 266,
+        "name": "Xo'jayli transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 267,
+        "name": "Ashxobod temir yo'l transporti texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 268,
+        "name": "Kakaydi transport va aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 269,
+        "name": "Beruniy qurilish va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 270,
+        "name": "Zomin maishiy xizmat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 271,
+        "name": "Parkent transport va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 272,
+        "name": "M.Ulug'bek transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 273,
+        "name": "Yuqori Chirchiq transport va iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 274,
+        "name": "Rossiya Davlat transport universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 275,
+        "name": "Furqat agrosanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 276,
+        "name": "Bo'ka agrosanoat va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 277,
+        "name": "Oltinsoy transport va aloqa kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 278,
+        "name": "Oqqo'rg'on transport va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 279,
+        "name": "Uchko'prik transport va qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 280,
+        "name": "Qonliko‘l sanoat transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 281,
+        "name": "Xalqobod transport va xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 282,
+        "name": "Oxangaron transport va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 283,
+        "name": "Gala-Osiyo qurilish va transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 284,
+        "name": "Sergeli politexnika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 285,
+        "name": "Buxoro yengil sanoat va pedagogika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 286,
+        "name": "Muborak sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 287,
+        "name": "Yashnabod temir yo'l kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 288,
+        "name": "Vobkent qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 289,
+        "name": "Piskent qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 290,
+        "name": "O'rta-Chirchiq iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 291,
+        "name": "Kogon maishiy xizmat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 292,
+        "name": "Qo‘qon qishloq xo‘jaligi texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 293,
+        "name": "Mirzacho'l komunal qurilish texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 294,
+        "name": "Buxoro kooperativ texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 295,
+        "name": "Bo'ka qishloq xo'jaligini mexanizatsiyalash texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 296,
+        "name": "Olot qishloq xojaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 297,
+        "name": "Sirdaryo qishloq xo'jaligini mexaniatsiyalash texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 298,
+        "name": "Andijon elektro mexanika texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 299,
+        "name": "Samarqand gidromeliratsiya texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 300,
+        "name": "Toshkent moliya va iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 301,
+        "name": "Qo'qon davlat pedagogika instituti ",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 302,
+        "name": "Guliston tumani iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 303,
+        "name": "Qamashi qishloq xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 302,
+        "name": "Gulbahor sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 303,
+        "name": "Gulbahor qishloq xo‘jalik kasb hunar-kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 304,
+        "name": "Guliston Davlat Universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 305,
+        "name": "Qoraqalpoq Davlat Universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 306,
+        "name": "Namangan muhandislik-pedagogika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 307,
+        "name": "Mirobod kompyuter texnologiyalari kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 308,
+        "name": "Mirobod qurilish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 309,
+        "name": "Mirobod yengil sanoat va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 310,
+        "name": "Namangan muhandislik-iqtisodiyot instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 311,
+        "name": "Farg'ona sanoat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 312,
+        "name": "Toshkent axborot texnologiyalari Universiteti qoshidagi akademik littsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 313,
+        "name": "Toshkent axborot texnologiyalari Universiteti Urganch filiali",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 314,
+        "name": "Toshkent axborot texnologiyalari Universiteti  Farg'ona filiali",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 315,
+        "name": "Toshkent axborot texnologiyalari Universiteti  Nukus filiali",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 316,
+        "name": "Yangiariq qurilish transport kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 317,
+        "name": "Toshkent tibbiyot akademiyasi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 318,
+        "name": "Toshkent davlat yuridik instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 319,
+        "name": "Toshkent elektromexanika texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 320,
+        "name": "Toshkent elektromexanika aloqa instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 321,
+        "name": "Kogon shahar 29-son kasb-hunar bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 322,
+        "name": "P.F.Borovskiy nomli tibbiyot bilim yurti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 323,
+        "name": "Imperator Aleksandr I nomidagi Sankt-Peterburg davlat temir yo‘l universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 324,
+        "name": "Mirobod maishiy xizmat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 325,
+        "name": "Mirobod qurilish kasb-hunar kolledji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 326,
+        "name": "Mirobod transoprt kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 327,
+        "name": "O‘rta Osiyo temir yo‘l Toshkent mashinistlarni tayorlov texnik maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 328,
+        "name": "\"O'zbekiston Temir yo'llari\" Davlat xissadorlik kompaniyasi Temir yo'l texnika maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 329,
+        "name": "Qozog‘iston temir yo‘llari universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 330,
+        "name": "Mirzo Ulug‘bek transport kasb-xunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 331,
+        "name": "Mirzacho'l kommunal kurilish texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 332,
+        "name": "Qarshi temir yo‘l bilim yurti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 333,
+        "name": "Ashxabad temir yo‘l texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 334,
+        "name": "O'zbekiston temir yo'llari DATK qoshidagi kadrlar malakasini oshirish, tayyorlash va qayta tayyorlash yo'l markazi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 335,
+        "name": "DTSh Temir yo'l texnika maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 336,
+        "name": "Kogon shahar 10-son kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 337,
+        "name": "Xo'jayli 39-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 338,
+        "name": "Taxiatosh 4-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 339,
+        "name": "Taxiatosh 3-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 340,
+        "name": "Taxiatosh 20-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 341,
+        "name": "Yangiyo'l 9-kasb hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 342,
+        "name": " Farg‘ona 6-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 343,
+        "name": " Uchqo‘rg‘on avtotransport kasb-hunar maktabi ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 344,
+        "name": "\"Sredaztransstroy\" maxsus kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 345,
+        "name": "Chirchiq 1-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 346,
+        "name": "Xo'jayli 1-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 348,
+        "name": "Qo‘qon 2-sonli o‘rta-maxus texnika kasb-hunar maktabi ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 349,
+        "name": "Toshkent 14-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 350,
+        "name": "Toshkent 22-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 351,
+        "name": "Toshkent 30-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 352,
+        "name": "Xo'jayli 33-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 353,
+        "name": "Xo'jayli 36-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 354,
+        "name": "Qo'ngirot 56-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 355,
+        "name": "Pop 6-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 356,
+        "name": "Qashqadaryo 6-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 357,
+        "name": "Andijon 1-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 358,
+        "name": "Andijon 118-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 359,
+        "name": "Bekobod 4-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 360,
+        "name": "Bekobod 21-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 361,
+        "name": "Bekobod 11-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 362,
+        "name": "Angren 14-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 363,
+        "name": "Boysun kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 364,
+        "name": "G'ijduvon 8-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 365,
+        "name": "Kogon 10-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 366,
+        "name": "Chinoz agrasanoat kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 367,
+        "name": "Dang'ara 11-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 368,
+        "name": "Dang'ara 35-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 369,
+        "name": "Ellikqal’a 24-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 370,
+        "name": "Marg'ilon 18-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 371,
+        "name": "Marg'ilon 32-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 372,
+        "name": "G`uzor 13-kasb hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 373,
+        "name": "G'ijduvon 1-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 374,
+        "name": "Qarshi 1-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 375,
+        "name": "Koson 4-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 376,
+        "name": "Pop 4-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 377,
+        "name": "Qiziltepa 3-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 378,
+        "name": "Xazirchi 1-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 379,
+        "name": "Olmaliq shahar kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 380,
+        "name": "Olmaliq 7-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 381,
+        "name": "Ohangaron shaxar kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 382,
+        "name": "O'rtachirchiq 1-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 383,
+        "name": "Parkent 19-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 384,
+        "name": "Toshkent 6-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 385,
+        "name": "Xovos 1-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 386,
+        "name": "Xovos 4-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 387,
+        "name": "Toshkent 33-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 388,
+        "name": "Toshkent 12-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 389,
+        "name": "Toshkent 1-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 390,
+        "name": "Toshkent 2-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 391,
+        "name": "Toshkent 20-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 392,
+        "name": "Toshkent 4-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 393,
+        "name": "Toshkent 21-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 394,
+        "name": "Toshkent 18-sonli kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 395,
+        "name": "Buxoro neft va gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 396,
+        "name": "Urgench neft gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 397,
+        "name": "Oltiariq neft va gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 398,
+        "name": "Qorako'l neft va gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 399,
+        "name": "G'uzor neft-gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 400,
+        "name": "Ivano-Frankovsk Milliy Neft va Gaz Texnik Universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 401,
+        "name": "\"Uzbekneftegaz\" Milliy xolding kompaniyasi texnik ishlab chiqarish kursi  ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 402,
+        "name": "Qumqo'rgon neft va gaz sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 403,
+        "name": "Volgograd gaz va neft ishlab chiqarish texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 404,
+        "name": "Toshkent neft va gaz sanaoti  kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 405,
+        "name": "Termiz qurilish va uy-joy kommunal xo'jaligi kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 406,
+        "name": "Taxiatosh 27-sonli o'rta kasb-hunar maktabi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 407,
+        "name": "Taxiatosh energetika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 408,
+        "name": "Taxiatosh iqtisodiot kasb-hunat kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 409,
+        "name": "Taxiatosh pedagogika kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 410,
+        "name": "1-Respublika tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 411,
+        "name": "2-Respublika tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 412,
+        "name": "Boevut qishlok xo'jalik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 413,
+        "name": "Yangiyo`l tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 414,
+        "name": "M.S.Tursunxojayeva nomli tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 415,
+        "name": "Angren iqtisodiyot va tadbirkorlik kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 416,
+        "name": "Angren kompyuter va axborot texnologiyasi kasb-hunar  kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 417,
+        "name": "Andijon qishloq xo'jaligi instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 418,
+        "name": "Andijon qishloq xo'jaligi texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 419,
+        "name": "Andijon qishloq xo`jaligi instituti qoshidagi Kuyganyor akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 420,
+        "name": "Andijon tibbiyot bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 421,
+        "name": "Andijon tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 422,
+        "name": "Angren politexnika kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 423,
+        "name": "Angren kimyo sanoati kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 424,
+        "name": "Namangan muhandislik va texnologiya instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 425,
+        "name": "Namangan muxandislik pedagogika instituti qoshidagi 2-sonli akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 426,
+        "name": "Namangan qishloq xo'jaligini mexanizatsiyalash texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 427,
+        "name": "Namangan Davlat Universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 428,
+        "name": "Namangan Davlat Universiteti qoshidagi 2-sonli akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 429,
+        "name": "Samarqand davlat pedagogika instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 430,
+        "name": "Samarqand Davlat universiteti qoshidagi 2-sonli akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 431,
+        "name": "Samarqand Davlat universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 432,
+        "name": "Samarqand davlat chet tillar instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 433,
+        "name": "Samarqand davlat tibbiyot universiteti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 434,
+        "name": "Samarqand Davlat tibbiyot instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 435,
+        "name": "Samarqand Davlat Tibbiyot instituti qoshidagi akademik litsey",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 436,
+        "name": "Samarqand tayanch tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 437,
+        "name": "Samarqand temir yo'l instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 438,
+        "name": "Samarqand tibbiyot bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 439,
+        "name": "Samarqand 6-sonli kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 440,
+        "name": "Samarqand temir yo'l kasb-hunar litseyi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 441,
+        "name": "Samarqand Siyob tibbiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 442,
+        "name": "Samarqand veterinariya meditsinasi instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 443,
+        "name": "Samarqand 180-sonli kasb-hunar texnika bilim yurtini",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 444,
+        "name": "Samarqand 50-sonli kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 445,
+        "name": "Samarqand iqtisodiyot va servis instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 446,
+        "name": "Samarqand kooperativ instituti",
+        "education": 1,
+        "city_id": 1
+    },
+    {
+        "id": 447,
+        "name": "Samarqand kooperativ tijorat kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 448,
+        "name": "Samarqand kooperativ texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 449,
+        "name": "Samarqand maishiy xizmat ko'rsatish kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 450,
+        "name": "Samarqand ozik-ovqat texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 451,
+        "name": "Samarqand oziq-ovqat kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 452,
+        "name": "Samarqand pedagogika kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 453,
+        "name": "Samarqand iqtisodiyot kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 454,
+        "name": "Samarqand kompyuter texnologiyalari kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 455,
+        "name": "Samarqand olimpiya zaxiralari kasb-hunar kolleji ",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 456,
+        "name": "Samarqand 108-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 457,
+        "name": "Samarqand 150-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 458,
+        "name": "Samarqand 15-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 459,
+        "name": "Samarqand 26-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 460,
+        "name": "Samarqand 32-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 461,
+        "name": "Samarqand 38-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 462,
+        "name": "Samarqand 40-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 463,
+        "name": "Samarqand 5-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 464,
+        "name": "Samarqand 50-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 465,
+        "name": "Samarqand 6-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 466,
+        "name": "Samarqand 1-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 467,
+        "name": "Samarqand 34-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 468,
+        "name": "Samarqand 36-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 469,
+        "name": "Samarqand 172-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 470,
+        "name": "Nurobod 41-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 471,
+        "name": "Ishtixon 51-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 472,
+        "name": "Bulung'ur 45-sonli o'rta kasb-hunar texnika bilim yurti",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 473,
+        "name": "Samarqand moliya-iqtisodiyot kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 474,
+        "name": "Samarqand moliya texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 475,
+        "name": "Samarqand bank kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 476,
+        "name": "Samarqand meva sabzavodchilik texnikumi",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 477,
+        "name": "Samarqand huquqshunoslik kolleji",
+        "education": 2,
+        "city_id": 1
+    },
+    {
+        "id": 478,
+        "name": "Uchko'prik agrosanoat va servis kasb-hunar kolleji",
+        "education": 2,
+        "city_id": 1
+    }
+]

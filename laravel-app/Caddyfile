@@ -1,0 +1,12 @@
+{
+    auto_https off
+}
+
+http://:80 {
+    tls off
+    root * /app/public
+    php_server {
+        worker /app/public/index.php
+    }
+    file_server
+}

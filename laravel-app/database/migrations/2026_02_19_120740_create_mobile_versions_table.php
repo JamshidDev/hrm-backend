@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+
+    public function up(): void
+    {
+        Schema::create('mobile_versions', function (Blueprint $table) {
+            $table->id();
+            $table->string('platform'); // ios | android
+            $table->string('latest_version');
+            $table->string('min_supported_version');
+            $table->boolean('force_update')->default(false);
+            $table->string('store_url')->nullable();
+            $table->string('download_url')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+    }
+
+
+    public function down(): void
+    {
+        Schema::dropIfExists('mobile_versions');
+    }
+};

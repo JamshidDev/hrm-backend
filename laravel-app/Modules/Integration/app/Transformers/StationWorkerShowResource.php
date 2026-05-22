@@ -1,0 +1,22 @@
+<?php
+
+namespace Modules\Integration\Transformers;
+
+use App\Helpers\Helper;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class StationWorkerShowResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id'          => $this->id,
+            'photo'       => Helper::fileUrl($this->photo),
+            'last_name'   => $this->last_name,
+            'first_name'  => $this->first_name,
+            'middle_name' => $this->middle_name,
+            'phone' => $this->phone?->phone
+        ];
+    }
+}

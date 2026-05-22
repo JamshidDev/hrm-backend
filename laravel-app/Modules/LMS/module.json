@@ -1,0 +1,11 @@
+{
+    "name": "LMS",
+    "alias": "lms",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\LMS\\Providers\\LMSServiceProvider"
+    ],
+    "files": []
+}

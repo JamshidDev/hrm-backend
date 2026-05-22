@@ -1,0 +1,5 @@
+version: '3'
+services:
+  laravel.test:
+    volumes:
+      - /home/vo/frontend:/var/www/html/hrm_front

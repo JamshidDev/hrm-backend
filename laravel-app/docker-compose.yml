@@ -1,0 +1,17 @@
+services:
+    app:
+        build: .
+        container_name: hrm-app
+        ports:
+            - "8085:80"
+        volumes:
+            - .:/app
+            - ./Caddyfile:/etc/caddy/Caddyfile
+        environment:
+            SERVER_NAME: ":80"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+
+networks:
+    appnet:
+        driver: bridge

@@ -1,0 +1,7182 @@
+[
+    {
+        "id": 1,
+        "name": "ofis rahbari",
+        "category": 1
+    },
+    {
+        "id": 2,
+        "name": "ofis rahbarining o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 3,
+        "name": "transformatsiya jarayonlarini muvofiqlashtirish bo‘yicha 1-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 4,
+        "name": "transformatsiya jarayonlarini muvofiqlashtirish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 5,
+        "name": "bo‘lim boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 6,
+        "name": "boshqaruv raisi birinchi o'rinbosarining sanoat, ishlab chiqarish va xalqaro munosabatlar bo'yicha maslahatchisi",
+        "category": 2
+    },
+    {
+        "id": 7,
+        "name": "transformatsiya jarayonlarini muvofiqlashtirish bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 8,
+        "name": "boshqarma boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 9,
+        "name": "boshqarma boshlig‘i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 10,
+        "name": "korrupsiyaga qarshi kurashish bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 11,
+        "name": "hisobotlarni to‘plash bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 12,
+        "name": "kotibiyat boshlig‘i - boshqaruv raisi o‘rinbosari lavozimiga tenglashtirilgan boshqaruv raisining maslahatchisi",
+        "category": 1
+    },
+    {
+        "id": 13,
+        "name": "kotibiyat boshlig‘i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 14,
+        "name": "ijro nazorati bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 15,
+        "name": "jismoniy va yuridik shaxslar murojaatlari bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 16,
+        "name": "devonxona boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 17,
+        "name": "nazorat va ijro intizomi bo‘yicha 1-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 18,
+        "name": "nazorat va ijro intizomi bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 19,
+        "name": "ijro intizomi bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 20,
+        "name": "ijro intizomi bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 21,
+        "name": "departament boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 22,
+        "name": "logistika va marketing bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 23,
+        "name": "logistikani rivojlantirish, korxona va qo‘shma korxonalar bilan ishlash bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 24,
+        "name": "brend-marketing bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 25,
+        "name": "xalqaro logistika bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 26,
+        "name": "mijozlar bilan ishlash bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 27,
+        "name": "departament boshlig‘ining birinchi o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 28,
+        "name": "logistika va marketing bo‘yicha yetakchi mutaxassis",
+        "category": 2
+    },
+    {
+        "id": 29,
+        "name": "O‘zbekiston va Qozog‘iston logistik markazi qo‘shma korxonasini ochish masalalari bo‘yicha o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 30,
+        "name": "departament boshlig‘i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 31,
+        "name": "xalqaro tashkilotlar bilan hamkorlik bo‘yicha mutaxassis vazifasini bajaruvchisi",
+        "category": 2
+    },
+    {
+        "id": 32,
+        "name": "xalqaro uchrashuvlarni tashkil etish va protokol bo‘yicha 2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 33,
+        "name": "xalqaro tashkilotlar bilan hamkorlik bo‘yicha 2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 34,
+        "name": "xalqaro uchrashuvlarni tashkil etish va protokol bo‘yicha 1-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 35,
+        "name": "xalqaro uchrashuvlarni tashkil etish va protokol bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 36,
+        "name": "ikki va ko'p tomonlama hamkorlik bo‘yicha 2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 37,
+        "name": "investitsiya loyihalarni amalga oshirish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 38,
+        "name": "loyihalarni investitsiyadan keyin monitoringi bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 39,
+        "name": "bo‘lim boshlig‘i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 40,
+        "name": "asosiy ko‘rsatkichlarni prognozlash va bajarilishini tahlil qilish bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 41,
+        "name": "tarif siyosati bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 42,
+        "name": "daromad va xarajatlarni rejalashtirish iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 43,
+        "name": "mеhnat va ish haqi bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 44,
+        "name": "xaridlarni rejalashtirish va monitoring bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 45,
+        "name": "daromad va xarajatlarni rejalashtirish yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 46,
+        "name": "daromad va xarajatlarni rejalashtirish bosh iqtisodchi",
+        "category": 1
+    },
+    {
+        "id": 47,
+        "name": "kredit va tashqi savdo operatsiyalari buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 48,
+        "name": "buxgalteriya hisobini rivojlantirinsh va monitoring qilish bo‘yicha buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 49,
+        "name": "hisob-kitob bank operatsiyalari bo‘yicha buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 50,
+        "name": "xulosa va tahlil bo‘yicha yetakchi buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 51,
+        "name": "kredit va tashqi savdo operatsiyalarini hisobga olish bo‘yicha 1-toifali buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 52,
+        "name": "xulosa-tahlil bo‘yicha yetakchi buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 53,
+        "name": "hisob-kitob bank operatsiyalari bo‘yicha bosh buxgalter o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 54,
+        "name": "buxgalteriya hisobini rivojlantirish va monitoring qilish bo‘yicha 1-toifali buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 55,
+        "name": "hisob-kitob bank operatsiyalari bo‘yicha bosh buxgalteri",
+        "category": 1
+    },
+    {
+        "id": 56,
+        "name": "hisob-kitob bank operatsiyalari bo‘yicha yetakchi buxgalteri",
+        "category": 1
+    },
+    {
+        "id": 57,
+        "name": "buxgalteriya hisobi metodologiyasi bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 58,
+        "name": "buxgalteriya hisobini rivojlantirish va monitoring qilish bo‘yicha 2-toifali buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 59,
+        "name": "mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 60,
+        "name": "aktivlar hisobini yuritish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 61,
+        "name": "kadastr bo‘yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 62,
+        "name": "davlat kadastri bo‘yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 63,
+        "name": "korporativ munosabatlar bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 64,
+        "name": "korporativ munosabatlar bo‘yicha 2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 65,
+        "name": "ta'minot bo‘yicha yetakchi iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 66,
+        "name": "tashqi iqtisodiy shartnomalarni rasmiylashtirish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 67,
+        "name": "ta'minot va texnik butlash bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 68,
+        "name": "ta'minot va texnik butlash bo‘yicha 2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 69,
+        "name": "kadrlar bo‘yicha 1-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 70,
+        "name": "yetakchi buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 71,
+        "name": "1-toifali buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 72,
+        "name": "omborxona mudiri o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 73,
+        "name": "omborchisi",
+        "category": 3
+    },
+    {
+        "id": 74,
+        "name": "yuklovchisi",
+        "category": 4
+    },
+    {
+        "id": 75,
+        "name": "yuk tashuvchi avtomobil haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 76,
+        "name": "yengil avtomobil haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 77,
+        "name": "bosh buxgalteri",
+        "category": 1
+    },
+    {
+        "id": 78,
+        "name": "xaridlarni tashkillashtirish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 79,
+        "name": "elektron xaridlarni o‘tkazish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 80,
+        "name": "buxgalteriya hisobi bo‘yicha yetakchi buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 81,
+        "name": "xaridlarni tashkillashtirish bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 82,
+        "name": "omborxona mudiri",
+        "category": 1
+    },
+    {
+        "id": 83,
+        "name": "boshqarma boshlig‘ining birinchi o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 84,
+        "name": "boshqaruv raisi",
+        "category": 2
+    },
+    {
+        "id": 85,
+        "name": "boshqaruv raisining transformatsiya, raqamlashtirish va moliya bo‘yicha birinchi o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 86,
+        "name": "boshqaruv raisining temir yo‘l obyektlarini ta'mirlash va qurish bo‘yicha o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 87,
+        "name": "boshqaruv raisining rejim va kadrlar bo‘yicha o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 88,
+        "name": "Temir yo‘llar xamdo‘stligi tashkiloti Qo‘mitasidagi \"O‘TY\" AJ vakili",
+        "category": 1
+    },
+    {
+        "id": 89,
+        "name": "boshqaruv raisining moliya va iqtisodiy masalalar bo‘yicha maslahatchisi",
+        "category": 2
+    },
+    {
+        "id": 90,
+        "name": "boshqaruv raisining o‘ta muhim obyektlar hamda ijtimoiy masalalar bo‘yicha masalahatchisi",
+        "category": 2
+    },
+    {
+        "id": 91,
+        "name": "boshqaruv raisining ma'naviy-ma'rifiy ishlar samaradorligini oshirish, davlat tili to‘g‘risidagi qonun hujjatlariga rioya etilishini ta'minlash masalalari bo‘yicha maslahatchisi",
+        "category": 2
+    },
+    {
+        "id": 92,
+        "name": "boshqaruv raisining raqamlashtirish bo‘yicha maslahatchisi",
+        "category": 2
+    },
+    {
+        "id": 93,
+        "name": "boshqaruv raisining tashishlar va logistika bo‘yicha o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 94,
+        "name": "bosh muhandisi",
+        "category": 1
+    },
+    {
+        "id": 95,
+        "name": "xizmat boshlig‘i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 96,
+        "name": "bosh mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 97,
+        "name": "katta noziri",
+        "category": 4
+    },
+    {
+        "id": 98,
+        "name": "fuqaro mudofaasi bo‘yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 99,
+        "name": "maxsus aloqa bo‘yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 100,
+        "name": "maxsus aloqa bo‘yicha noziri",
+        "category": 4
+    },
+    {
+        "id": 101,
+        "name": "maxsus aloqa bo‘yicha 1-toifali muhandisi",
+        "category": 2
+    },
+    {
+        "id": 102,
+        "name": "yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 103,
+        "name": "rahbar xodimlar bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 104,
+        "name": "xodimlar faoliyatini kompleks tahlil qilish bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 105,
+        "name": "sektor boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 106,
+        "name": "mukofotlash va rag'batlantirish bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 107,
+        "name": "yuridik maslahatchisi",
+        "category": 2
+    },
+    {
+        "id": 108,
+        "name": "katta yurist konsulti",
+        "category": 2
+    },
+    {
+        "id": 109,
+        "name": "texnik-tahlil bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 110,
+        "name": "texnik-tahlil bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 111,
+        "name": "strategiya va samaradorlik rahbari",
+        "category": 1
+    },
+    {
+        "id": 112,
+        "name": "strategiya va samaradorlik bo‘yicha 2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 113,
+        "name": "strategiya masalalari bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 114,
+        "name": "asbob-uskunalar muhandisi",
+        "category": 2
+    },
+    {
+        "id": 115,
+        "name": "asbob-uskunalar ombori omborchisi",
+        "category": 4
+    },
+    {
+        "id": 116,
+        "name": "avtobus haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 117,
+        "name": "avtogreyder mashinisti",
+        "category": 4
+    },
+    {
+        "id": 118,
+        "name": "avtomobil haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 119,
+        "name": "avtomobil haydovchisi (yengil)",
+        "category": 4
+    },
+    {
+        "id": 120,
+        "name": "avtomobil haydovchisi (yuk tashuvchi)",
+        "category": 4
+    },
+    {
+        "id": 121,
+        "name": "avtomobil krani mashinisti",
+        "category": 4
+    },
+    {
+        "id": 122,
+        "name": "avtotransport vositalarini ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 123,
+        "name": "avtomotris mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 124,
+        "name": "avtomotris mashinisti",
+        "category": 4
+    },
+    {
+        "id": 125,
+        "name": "axborot xavfsizligi bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 126,
+        "name": "betonchisi",
+        "category": 4
+    },
+    {
+        "id": 127,
+        "name": "sun'iy inshootlarni joriy taʼmirlash va ularni saqlash ustasi",
+        "category": 1
+    },
+    {
+        "id": 128,
+        "name": "binolarga kompleks xizmat ko'rsatish va ta'mirlash ishchisi",
+        "category": 1
+    },
+    {
+        "id": 129,
+        "name": "sun'iy inshootlar muhandisi",
+        "category": 2
+    },
+    {
+        "id": 130,
+        "name": "bo‘yoqchisi",
+        "category": 4
+    },
+    {
+        "id": 131,
+        "name": "bog‘bon",
+        "category": 4
+    },
+    {
+        "id": 132,
+        "name": "bolg‘a va press temirchisi",
+        "category": 4
+    },
+    {
+        "id": 133,
+        "name": "ta'mirlash va sozlash bo‘yicha bosh mexanigi",
+        "category": 1
+    },
+    {
+        "id": 134,
+        "name": "bosh texnologi",
+        "category": 2
+    },
+    {
+        "id": 135,
+        "name": "filial boshlig‘i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 136,
+        "name": "temir yo‘l sardori",
+        "category": 4
+    },
+    {
+        "id": 137,
+        "name": "buldozer mashinisti",
+        "category": 4
+    },
+    {
+        "id": 138,
+        "name": "temir yo‘l sozlovchisi",
+        "category": 4
+    },
+    {
+        "id": 139,
+        "name": "asbobsoz-chilangari",
+        "category": 4
+    },
+    {
+        "id": 140,
+        "name": "dasturiy mahsulotlarni ishlab chiqish va joriy etish bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 141,
+        "name": "nuqson aniqlash aravachasi operatori",
+        "category": 1
+    },
+    {
+        "id": 142,
+        "name": "yo‘l dispetchiri",
+        "category": 2
+    },
+    {
+        "id": 143,
+        "name": "yo‘l katta dispetchiri",
+        "category": 2
+    },
+    {
+        "id": 144,
+        "name": "filial boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 145,
+        "name": "drezina haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 146,
+        "name": "drezina haydovchisi yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 147,
+        "name": "yog‘och va yog‘och mahsulotlari duradgori",
+        "category": 4
+    },
+    {
+        "id": 148,
+        "name": "ekskavator mashinisti",
+        "category": 4
+    },
+    {
+        "id": 149,
+        "name": "ekspeditori",
+        "category": 3
+    },
+    {
+        "id": 150,
+        "name": "elektr jihozlarni taʼmirlash va ularga xizmat ko‘rsatish elektrigi",
+        "category": 2
+    },
+    {
+        "id": 151,
+        "name": "elektrogazpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 152,
+        "name": "elektr jihozlarni taʼmirlash va ularga xizmat ko‘rsatish elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 153,
+        "name": "fuqaro muhofazasi bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 154,
+        "name": "g‘alvirlovchisi",
+        "category": 4
+    },
+    {
+        "id": 155,
+        "name": "g‘isht teruvchisi",
+        "category": 4
+    },
+    {
+        "id": 156,
+        "name": "transport vositalari holatini saqlash mexanigi",
+        "category": 2
+    },
+    {
+        "id": 157,
+        "name": "gazda kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 158,
+        "name": "harakat xavfsizligi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 159,
+        "name": "hudud farroshi (ishlab chiqarish, xizmat)",
+        "category": 5
+    },
+    {
+        "id": 160,
+        "name": "mehnat va iqtisodiy masalalar inspektori",
+        "category": 2
+    },
+    {
+        "id": 161,
+        "name": "ish yurituvchi-kotib(a)",
+        "category": 2
+    },
+    {
+        "id": 162,
+        "name": "ishlab chiqarish taʼlimi yo‘riqchisi",
+        "category": 2
+    },
+    {
+        "id": 163,
+        "name": "ishlab chiqarishni tayyorlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 164,
+        "name": "kadrlar bo‘yicha inspektori",
+        "category": 2
+    },
+    {
+        "id": 165,
+        "name": "kadrlar bo‘yicha noziri",
+        "category": 2
+    },
+    {
+        "id": 166,
+        "name": "kadrlar bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 167,
+        "name": "kadrlar va ijtimoiy taraqqiyot bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 168,
+        "name": "kadrlar bo‘yicha katta noziri",
+        "category": 2
+    },
+    {
+        "id": 169,
+        "name": "kadrlar va ijtimoiy taraqqiyot bo‘yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 170,
+        "name": "3-toifali qurilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 171,
+        "name": "karer boshligʻi",
+        "category": 1
+    },
+    {
+        "id": 172,
+        "name": "kasaba uyushmasi qo‘mitasi raisi",
+        "category": 1
+    },
+    {
+        "id": 173,
+        "name": "xazinachi",
+        "category": 3
+    },
+    {
+        "id": 174,
+        "name": "temir yoʻl katta ustasi",
+        "category": 2
+    },
+    {
+        "id": 175,
+        "name": "yashil xo'jalik ishchisi",
+        "category": 4
+    },
+    {
+        "id": 176,
+        "name": "kran mashinisti (kranchi)",
+        "category": 4
+    },
+    {
+        "id": 177,
+        "name": "kompyuter texnikasiga xizmat koʻrsatish texnigi",
+        "category": 3
+    },
+    {
+        "id": 178,
+        "name": "kompyuter texnikasiga xizmat koʻrsatish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 179,
+        "name": "kran mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 180,
+        "name": "togʻ-kon muhandisi",
+        "category": 2
+    },
+    {
+        "id": 181,
+        "name": "loyiha ishlarini muvofiqlashtirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 182,
+        "name": "ma'lumotlar bazasini kiritish operatori",
+        "category": 4
+    },
+    {
+        "id": 183,
+        "name": "marketing bo‘yicha bosh mutaxassisi",
+        "category": 4
+    },
+    {
+        "id": 184,
+        "name": "marketing bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 185,
+        "name": "mashina va mexanizmlarni taʼmirlash va eksplautatsiya ustasi",
+        "category": 2
+    },
+    {
+        "id": 186,
+        "name": "o‘zi yurar mashina va mexanizmlar mashinisti",
+        "category": 4
+    },
+    {
+        "id": 187,
+        "name": "o‘zi yurar mashina va mexanizmlar mashinist-yo‘riqchisi",
+        "category": 2
+    },
+    {
+        "id": 188,
+        "name": "maydalovchi kopra, qurilma, agregatlarda maydalovchi",
+        "category": 4
+    },
+    {
+        "id": 189,
+        "name": "mehnat muhofazasi va texnika xavfsizligi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 190,
+        "name": "mehnat muhofazasi va texnika xavfsizligi noziri",
+        "category": 2
+    },
+    {
+        "id": 191,
+        "name": "mehnat va ish haqi bo‘yicha iqtisodchi",
+        "category": 2
+    },
+    {
+        "id": 192,
+        "name": "mehnatni tashkil etish va me'yorlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 193,
+        "name": "metrologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 194,
+        "name": "moddiy-texnik taʼminot muhandisi",
+        "category": 2
+    },
+    {
+        "id": 195,
+        "name": "motovoz mashinisti",
+        "category": 4
+    },
+    {
+        "id": 196,
+        "name": "xo‘jalik ishlari inspektori",
+        "category": 2
+    },
+    {
+        "id": 197,
+        "name": "texnologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 198,
+        "name": "nuqson aniqlash aravachasi sozlovchisi",
+        "category": 2
+    },
+    {
+        "id": 199,
+        "name": "nasos qurilmasi operatori",
+        "category": 4
+    },
+    {
+        "id": 200,
+        "name": "nuqson aniqlash katta operatori",
+        "category": 2
+    },
+    {
+        "id": 201,
+        "name": "nuqson aniqlash operatori",
+        "category": 4
+    },
+    {
+        "id": 202,
+        "name": "ko‘prik nazoratchi navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 203,
+        "name": "temir yo‘l hududi qo‘riqchisi",
+        "category": 2
+    },
+    {
+        "id": 204,
+        "name": "parmalovchi",
+        "category": 4
+    },
+    {
+        "id": 205,
+        "name": "temir yo‘l kesishma navbatchisi",
+        "category": 4
+    },
+    {
+        "id": 206,
+        "name": "bino (hudud) qorovuli",
+        "category": 5
+    },
+    {
+        "id": 207,
+        "name": "bino (hudud) qorovul boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 208,
+        "name": "filial boshlig‘i yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 209,
+        "name": "sanoat alpinisti",
+        "category": 3
+    },
+    {
+        "id": 210,
+        "name": "standartlashtirish, metrologiya, texnik reglament, sifatini sertifikatlashtirish bo'yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 211,
+        "name": "suniy inshootlar va temir yo‘l kuzatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 212,
+        "name": "o‘zi yurar mashina va mexanizmlar mashinist yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 213,
+        "name": "texnik hujjatlarni yuritish texnigi",
+        "category": 3
+    },
+    {
+        "id": 214,
+        "name": "ishlab chiqarish texnik-texnologi",
+        "category": 2
+    },
+    {
+        "id": 215,
+        "name": "tikuvchisi",
+        "category": 4
+    },
+    {
+        "id": 216,
+        "name": "traktorchisi",
+        "category": 4
+    },
+    {
+        "id": 217,
+        "name": "tokarlik mutaxassisi",
+        "category": 4
+    },
+    {
+        "id": 218,
+        "name": "uchastka boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 219,
+        "name": "mehnat va ish haqi bo‘yicha yetakchi iqtisodchi",
+        "category": 2
+    },
+    {
+        "id": 220,
+        "name": "yo‘l bosh dispechiri",
+        "category": 1
+    },
+    {
+        "id": 221,
+        "name": "yotoqxona mudiri",
+        "category": 1
+    },
+    {
+        "id": 222,
+        "name": "yordamchi ishchi",
+        "category": 4
+    },
+    {
+        "id": 223,
+        "name": "yuk ortuvchi haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 224,
+        "name": "chilangar-akkumulyatorchi",
+        "category": 4
+    },
+    {
+        "id": 225,
+        "name": "arxiv mudiri",
+        "category": 2
+    },
+    {
+        "id": 226,
+        "name": "asbob-uskunalar chilangari-tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 227,
+        "name": "4-toifali asbob-uskunalar chilangari",
+        "category": 4
+    },
+    {
+        "id": 228,
+        "name": "5-toifali asbob-uskunalarni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 229,
+        "name": "6-toifali asbob-uskunalarni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 230,
+        "name": "atrof-muhit muhofazasi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 231,
+        "name": "kompressor qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 232,
+        "name": "markaz boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 233,
+        "name": "bandajchisi",
+        "category": 4
+    },
+    {
+        "id": 234,
+        "name": "bo‘lim mudiri",
+        "category": 1
+    },
+    {
+        "id": 235,
+        "name": "bosh energetigi",
+        "category": 1
+    },
+    {
+        "id": 236,
+        "name": "bosh muhandis o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 237,
+        "name": "brigadalar zaxirasi (poyezdlari) boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 238,
+        "name": "brigadiri",
+        "category": 4
+    },
+    {
+        "id": 239,
+        "name": "xom-ashyo materiallari buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 240,
+        "name": "asosiy vositalar buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 241,
+        "name": "3-toifali harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 242,
+        "name": "4-toifali harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 243,
+        "name": "5-toifali harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 244,
+        "name": "6-toifali harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 245,
+        "name": "chilangar-elektrmontajchi",
+        "category": 4
+    },
+    {
+        "id": 246,
+        "name": "chilangarlik va dastgox ishlari nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 247,
+        "name": "2-toifali harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 248,
+        "name": "harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 3
+    },
+    {
+        "id": 249,
+        "name": "dam olish xonasi navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 250,
+        "name": "nuqson aniqlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 251,
+        "name": "dispetcheri",
+        "category": 2
+    },
+    {
+        "id": 252,
+        "name": "elektr jihozlariga xizmat ko‘rsatish va taʼmirlash elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 253,
+        "name": "elektr jihozlarni taʼmirlash chilangar-elektrigi",
+        "category": 5
+    },
+    {
+        "id": 254,
+        "name": "elektr jihozlar mexanigi",
+        "category": 3
+    },
+    {
+        "id": 255,
+        "name": "elektropoyezd mashinisti",
+        "category": 4
+    },
+    {
+        "id": 256,
+        "name": "elektrovoz mashinisti",
+        "category": 4
+    },
+    {
+        "id": 257,
+        "name": "elektrovoz mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 258,
+        "name": "elektrpoyezd mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 259,
+        "name": "eltish hujjatlariga ishlov berish operatori",
+        "category": 3
+    },
+    {
+        "id": 260,
+        "name": "marshrut varaqalarini hisoblash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 261,
+        "name": "guruh boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 262,
+        "name": "hisob yuritish texnigi",
+        "category": 3
+    },
+    {
+        "id": 263,
+        "name": "mehnatga haq to‘lash inspektori",
+        "category": 2
+    },
+    {
+        "id": 264,
+        "name": "ishlab chiqarish hammomlari ishchisi",
+        "category": 5
+    },
+    {
+        "id": 265,
+        "name": "ishlab chiqarish ustasi",
+        "category": 2
+    },
+    {
+        "id": 266,
+        "name": "jihozlarga xizmat ko‘rsatish va ularni taʼmirlash ustasi",
+        "category": 1
+    },
+    {
+        "id": 267,
+        "name": "kanalizatsiya-nasos stansiyasini taʼmirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 268,
+        "name": "hisob-kitob kassiri",
+        "category": 3
+    },
+    {
+        "id": 269,
+        "name": "katta ustasi",
+        "category": 2
+    },
+    {
+        "id": 270,
+        "name": "kimyoviy tahlil laboranti",
+        "category": 4
+    },
+    {
+        "id": 271,
+        "name": "kir yuvish mashinasi operatori",
+        "category": 5
+    },
+    {
+        "id": 272,
+        "name": "ko‘priksimon kran mashinisti",
+        "category": 4
+    },
+    {
+        "id": 273,
+        "name": "kompressor uskunasi chilangari",
+        "category": 5
+    },
+    {
+        "id": 274,
+        "name": "kutubxonachi",
+        "category": 2
+    },
+    {
+        "id": 275,
+        "name": "laboratoriya mudiri",
+        "category": 1
+    },
+    {
+        "id": 276,
+        "name": "lokomotiv (poyezd) brigadalari naryadchisi",
+        "category": 3
+    },
+    {
+        "id": 277,
+        "name": "lokomotiv (poyezd) brigadasi dam olish uyi mudiri",
+        "category": 1
+    },
+    {
+        "id": 278,
+        "name": "lokomotiv brigadasi yo‘riqchi mashinisti",
+        "category": 2
+    },
+    {
+        "id": 279,
+        "name": "depo navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 280,
+        "name": "aylanma depo navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 281,
+        "name": "maxsus suv tozalash operatori",
+        "category": 4
+    },
+    {
+        "id": 282,
+        "name": "metall va qotishmalarni quyuvchi",
+        "category": 4
+    },
+    {
+        "id": 283,
+        "name": "muhandis-elektronchisi",
+        "category": 2
+    },
+    {
+        "id": 284,
+        "name": "energetika muhandisi",
+        "category": 2
+    },
+    {
+        "id": 285,
+        "name": "kamera kuzatuvi navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 286,
+        "name": "nazorat-o‘lchov asboblari va avtomatika chilangari",
+        "category": 4
+    },
+    {
+        "id": 287,
+        "name": "oshpazi",
+        "category": 4
+    },
+    {
+        "id": 288,
+        "name": "rezina va plastmass mahsulotlari preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 289,
+        "name": "psixologi",
+        "category": 2
+    },
+    {
+        "id": 290,
+        "name": "qozonxona mashinisti",
+        "category": 4
+    },
+    {
+        "id": 291,
+        "name": "qozonxona operatori",
+        "category": 3
+    },
+    {
+        "id": 292,
+        "name": "qozonxonaga xizmat ko‘rsatish chilangari",
+        "category": 4
+    },
+    {
+        "id": 293,
+        "name": "qum uzatish qurilmasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 294,
+        "name": "qurilmalarni taʼmirlash va ekspluatatsiya qilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 295,
+        "name": "sanoat xavfsizligi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 296,
+        "name": "sex boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 297,
+        "name": "harakatlanuvchi tarkibni ta'mirlash ustasi",
+        "category": 2
+    },
+    {
+        "id": 298,
+        "name": "harakatlanuvchi tarkibni ta'mirlash katta ustasi",
+        "category": 2
+    },
+    {
+        "id": 299,
+        "name": "shartnomalar bo'yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 300,
+        "name": "shaylovchi",
+        "category": 4
+    },
+    {
+        "id": 301,
+        "name": "sovutish qurilmalarini taʼmirlash chilangari",
+        "category": 5
+    },
+    {
+        "id": 302,
+        "name": "teplovoz mashinisti",
+        "category": 4
+    },
+    {
+        "id": 303,
+        "name": "teplovoz mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 304,
+        "name": "texnik hujjatlarni yuritish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 305,
+        "name": "texnologik qurilmalarni taʼmirlash chilangari",
+        "category": 5
+    },
+    {
+        "id": 306,
+        "name": "tezlik tasmalarini taqsimlash texnigi",
+        "category": 2
+    },
+    {
+        "id": 307,
+        "name": "uchastka ustasi",
+        "category": 2
+    },
+    {
+        "id": 308,
+        "name": "vagon boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 309,
+        "name": "vagonlarga texnik xizmat ko‘rsatish punkti boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 310,
+        "name": "xodimlar malakasini oshirish mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 311,
+        "name": "xo‘jalik mudiri",
+        "category": 3
+    },
+    {
+        "id": 312,
+        "name": "yong'inga qarshi profilaktika yo'riqchisi",
+        "category": 2
+    },
+    {
+        "id": 313,
+        "name": "yoshlar ittifoqi kengashi raisi",
+        "category": 2
+    },
+    {
+        "id": 314,
+        "name": "yoqilg‘i apparaturasi chilangari",
+        "category": 5
+    },
+    {
+        "id": 315,
+        "name": "yoqilg‘i va moylash materiallari quyish operatori",
+        "category": 4
+    },
+    {
+        "id": 316,
+        "name": "yoqilg‘i-energetika manbalari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 317,
+        "name": "yoqilg‘i-energetika manbalari texnigi",
+        "category": 3
+    },
+    {
+        "id": 318,
+        "name": "yoqilg‘i-energiya resurslari sarfini nazorat qilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 319,
+        "name": "signallashtirish va aloqa elektromexanigi",
+        "category": 2
+    },
+    {
+        "id": 320,
+        "name": "signallashtirish va aloqa katta elektromexanigi",
+        "category": 2
+    },
+    {
+        "id": 321,
+        "name": "navbatchi aloqa elektromexanigi",
+        "category": 2
+    },
+    {
+        "id": 322,
+        "name": "signallash, markazlash, blokirovkalash qurilmalari va aloqa vositalari aloqa elektromexanigi",
+        "category": 2
+    },
+    {
+        "id": 323,
+        "name": "aloqa vositalaridan foydalanish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 324,
+        "name": "aloqa vositalariga xizmat ko‘rsatish bo‘yicha elektromontyori",
+        "category": 4
+    },
+    {
+        "id": 325,
+        "name": "transport vositalari holatini saqlash mexanigi",
+        "category": 4
+    },
+    {
+        "id": 326,
+        "name": "iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 327,
+        "name": "kontakt tarmog’i elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 328,
+        "name": "tortish podstansiyasi elektromontyori",
+        "category": 4
+    },
+    {
+        "id": 329,
+        "name": "kontakt tarmog'i elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 330,
+        "name": "kontakt tarmog’i bosh elektromexanigi",
+        "category": 4
+    },
+    {
+        "id": 331,
+        "name": "tortish podstansiyasi elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 332,
+        "name": "tortish podstansiyasi bosh elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 333,
+        "name": "tortish podstansiyasi katta elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 334,
+        "name": "kontakt tarmog’i katta elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 335,
+        "name": "aloqa dispetcheri",
+        "category": 2
+    },
+    {
+        "id": 336,
+        "name": "katta aloqa dispetcheri",
+        "category": 2
+    },
+    {
+        "id": 337,
+        "name": "elektrovoz tok qabul qilgichlarini tekshirish elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 338,
+        "name": "motor-dizel mexanigi",
+        "category": 4
+    },
+    {
+        "id": 339,
+        "name": "elektroaloqa muhandisi",
+        "category": 2
+    },
+    {
+        "id": 340,
+        "name": "signallashtirish va aloqa bosh elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 341,
+        "name": "kontakt tarmog’i navbatchi elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 342,
+        "name": "kontakt tarmog’i boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 343,
+        "name": "signallashtirish, markazlashtirish va blokirovka qurilmalari elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 344,
+        "name": "signallashtirish, markazlashtirish va blokirovka qurilmalari katta elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 345,
+        "name": "kontakt tarmog'i muhandisi",
+        "category": 2
+    },
+    {
+        "id": 346,
+        "name": "xodimlarni kasbga tayyorlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 347,
+        "name": "maslahatchisi",
+        "category": 2
+    },
+    {
+        "id": 348,
+        "name": "texnik hujjatlarni yuritish yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 349,
+        "name": "muhandis-iqtisodchi",
+        "category": 2
+    },
+    {
+        "id": 350,
+        "name": "navbatchi dispetcheri",
+        "category": 3
+    },
+    {
+        "id": 351,
+        "name": "muhandisi",
+        "category": 1
+    },
+    {
+        "id": 352,
+        "name": "buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 353,
+        "name": "elektrigi",
+        "category": 3
+    },
+    {
+        "id": 354,
+        "name": "bosh elektrigi",
+        "category": 1
+    },
+    {
+        "id": 355,
+        "name": "muhandis-texnologi",
+        "category": 2
+    },
+    {
+        "id": 356,
+        "name": "bosh mexanigi",
+        "category": 1
+    },
+    {
+        "id": 357,
+        "name": "bosh payvandchisi",
+        "category": 1
+    },
+    {
+        "id": 358,
+        "name": "elektron-hisoblash mashinalari operatori",
+        "category": 3
+    },
+    {
+        "id": 359,
+        "name": "pochta hujjatlarini saralovchi va yetkazuvchisi",
+        "category": 3
+    },
+    {
+        "id": 360,
+        "name": "energiya manbalarini hisobga olish bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 361,
+        "name": "haydovchi-mexanigi",
+        "category": 4
+    },
+    {
+        "id": 362,
+        "name": "inspektori",
+        "category": 2
+    },
+    {
+        "id": 363,
+        "name": "qurilish-montaj ishlari ustasi",
+        "category": 2
+    },
+    {
+        "id": 364,
+        "name": "radioaloqa elektromexanigi",
+        "category": 4
+    },
+    {
+        "id": 365,
+        "name": "radioaloqa katta elektromexanigi",
+        "category": 4
+    },
+    {
+        "id": 366,
+        "name": "yetakchi iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 367,
+        "name": "radioreleli aloqa liniyalari stansiya jihozlari elektromontyori",
+        "category": 4
+    },
+    {
+        "id": 368,
+        "name": "shaharlararo telefon aloqasi telefonisti",
+        "category": 3
+    },
+    {
+        "id": 369,
+        "name": "signalizatsiya, markazlishtirish, blokirovkalash qurilmalari elektromontyori",
+        "category": 4
+    },
+    {
+        "id": 370,
+        "name": "signalizatsiya, markazlishtirish, blokirovkalash qurilmalari 1-toifali elektromontyori",
+        "category": 4
+    },
+    {
+        "id": 371,
+        "name": "signallashtirish, markazlashtirish, blokirovka qurilmalari va elektr taʼminoti muhandisi",
+        "category": 2
+    },
+    {
+        "id": 372,
+        "name": "yo‘l energodispetcheri",
+        "category": 3
+    },
+    {
+        "id": 373,
+        "name": "energodispetcheri",
+        "category": 3
+    },
+    {
+        "id": 374,
+        "name": "axborot texnologiyalari mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 375,
+        "name": "avtomobillarni taʼmirlovchi chilangari",
+        "category": 4
+    },
+    {
+        "id": 376,
+        "name": "avtomobil kolonasi mexanigi",
+        "category": 4
+    },
+    {
+        "id": 377,
+        "name": "jihozlar va materiallarni komplektlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 378,
+        "name": "mehnat muhofazasi va texnika xavfsizligi inspektori",
+        "category": 2
+    },
+    {
+        "id": 379,
+        "name": "mexanigi",
+        "category": 2
+    },
+    {
+        "id": 380,
+        "name": "muhandis-metrologi",
+        "category": 2
+    },
+    {
+        "id": 381,
+        "name": "muhandis-tahlilchisi",
+        "category": 2
+    },
+    {
+        "id": 382,
+        "name": "nazorat bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 383,
+        "name": "qo‘lda payvandlash elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 384,
+        "name": "taʼmirlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 385,
+        "name": "texnigi",
+        "category": 3
+    },
+    {
+        "id": 386,
+        "name": "tozalovchisi",
+        "category": 4
+    },
+    {
+        "id": 387,
+        "name": "transportni taʼmirlash mexanigi",
+        "category": 4
+    },
+    {
+        "id": 388,
+        "name": "elektrotaʼminot boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 389,
+        "name": "standartlashtirish, metrologiya, texnik reglament, sifatini sertifikatlashtirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 390,
+        "name": "yoshlarning birlamchi tashkilotlari yetakchisi",
+        "category": 2
+    },
+    {
+        "id": 391,
+        "name": "ta'minot bo‘yicha katta muhandisi",
+        "category": 2
+    },
+    {
+        "id": 392,
+        "name": "telefonisti",
+        "category": 4
+    },
+    {
+        "id": 393,
+        "name": "telegrafisti",
+        "category": 3
+    },
+    {
+        "id": 394,
+        "name": "telefon-telegraf boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 395,
+        "name": "nazorat-o‘lchov asboblari va telemexanika muhandisi",
+        "category": 2
+    },
+    {
+        "id": 396,
+        "name": "tibbiyot hamshirasi",
+        "category": 3
+    },
+    {
+        "id": 397,
+        "name": "xizmat-texnik vagoni kuzatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 398,
+        "name": "yo‘lovchi vagonlar kuzatuvchisi",
+        "category": 5
+    },
+    {
+        "id": 399,
+        "name": "bosh direktori",
+        "category": 1
+    },
+    {
+        "id": 400,
+        "name": "bosh direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 401,
+        "name": "direktori",
+        "category": 1
+    },
+    {
+        "id": 402,
+        "name": "direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 402,
+        "name": "direktor maslahatchisi",
+        "category": 1
+    },
+    {
+        "id": 403,
+        "name": "moliya va iqtisod bo‘yicha direktor o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 404,
+        "name": "direktor yordamchisi",
+        "category": 1
+    },
+    {
+        "id": 405,
+        "name": "filial direktori",
+        "category": 1
+    },
+    {
+        "id": 406,
+        "name": "agregatchisi",
+        "category": 4
+    },
+    {
+        "id": 407,
+        "name": "akkumulyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 408,
+        "name": "aloqa jarayonini boshqarishni tashkil etish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 409,
+        "name": "auditori",
+        "category": 2
+    },
+    {
+        "id": 410,
+        "name": "avtomatik boshqaruv tizimi operatori",
+        "category": 4
+    },
+    {
+        "id": 411,
+        "name": "axborot taʼminoti bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 412,
+        "name": "raqamlashtirish va axborot xavfsizligi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 413,
+        "name": "badiiy ishlar rassomi",
+        "category": 2
+    },
+    {
+        "id": 414,
+        "name": "binolar va inshootlardan foydalanish va ularni taʼmirlashni tashkil etish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 415,
+        "name": "binolarni suv, gaz bilan taʼminlash va kanalizatsiya bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 416,
+        "name": "bosh buxgalter o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 417,
+        "name": "korrupsiya va komplayens nazorati mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 418,
+        "name": "bosh kutubxonachisi",
+        "category": 1
+    },
+    {
+        "id": 419,
+        "name": "bosh taftishchisi",
+        "category": 1
+    },
+    {
+        "id": 420,
+        "name": "stansiya boshlig‘ining operativ ishlari bo‘yicha o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 421,
+        "name": "stansiya boshlig'i o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 422,
+        "name": "stansiya boshlig'ining yuk va tijorat ishlari bo'yicha o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 423,
+        "name": "stansiya boshlig'ining tashishni tashkil etish ishlari bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 424,
+        "name": "markaz boshlig‘ining o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 425,
+        "name": "boshqaruv raisining moliya va iqtisod masalalari bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 426,
+        "name": "boshqaruv raisining raqamlashtirishni tadbiq etish va undan foydalanish bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 427,
+        "name": "boshqaruv raisi o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 428,
+        "name": "boshqaruv raisi yordamchisi",
+        "category": 1
+    },
+    {
+        "id": 429,
+        "name": "butlovchisi",
+        "category": 4
+    },
+    {
+        "id": 430,
+        "name": "call-senter operatori",
+        "category": 3
+    },
+    {
+        "id": 431,
+        "name": "charxlovchisi",
+        "category": 4
+    },
+    {
+        "id": 432,
+        "name": "chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 433,
+        "name": "chim qirquvchisi",
+        "category": 4
+    },
+    {
+        "id": 434,
+        "name": "daʼvo-dalil ishlari mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 435,
+        "name": "dezinfektori",
+        "category": 2
+    },
+    {
+        "id": 436,
+        "name": "elektr ta’minoti muhandisi",
+        "category": 2
+    },
+    {
+        "id": 437,
+        "name": "stansiya boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 438,
+        "name": "elektron hujjatlarni raqamlovchi, saqlovchi va ularga ishlov beruvchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 439,
+        "name": "feldsheri",
+        "category": 1
+    },
+    {
+        "id": 440,
+        "name": "gidropnevmatik qurilma mashinisti",
+        "category": 4
+    },
+    {
+        "id": 441,
+        "name": "harakat xavfsizligi noziri",
+        "category": 2
+    },
+    {
+        "id": 442,
+        "name": "agronomi",
+        "category": 2
+    },
+    {
+        "id": 443,
+        "name": "4-toifali akkumuliyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 444,
+        "name": "3-toifali akkumuliyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 445,
+        "name": "5-toifali akkumuliyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 446,
+        "name": "6-toifali akkumuliyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 447,
+        "name": "2-toifali akkumuliyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 448,
+        "name": "1-toifali akkumuliyatorchisi",
+        "category": 4
+    },
+    {
+        "id": 449,
+        "name": "aksiyadorlar bilan korporativ munosabatlar mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 450,
+        "name": "aloqa va avtotexnika vositalari yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 451,
+        "name": "aloqa va avtotexnika vositalari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 452,
+        "name": "armaturachisi",
+        "category": 4
+    },
+    {
+        "id": 453,
+        "name": "arxivariusi",
+        "category": 2
+    },
+    {
+        "id": 454,
+        "name": "asalarichisi",
+        "category": 4
+    },
+    {
+        "id": 455,
+        "name": "elektr jihozlari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 457,
+        "name": "4-toifali asbob-uskunalar chilangari-tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 458,
+        "name": "5-toifali asbob-uskunalar chilangari-tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 459,
+        "name": "6-toifali asbob-uskunalar chilangari-tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 460,
+        "name": "3-toifali asbob-uskunalar chilangari-tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 461,
+        "name": "2-toifali asbob-uskunalar chilangari-tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 462,
+        "name": "auditor yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 463,
+        "name": "avariya-tiklash ishlari chilangari",
+        "category": 4
+    },
+    {
+        "id": 464,
+        "name": "aviatsiya texnikalarini to‘plovchisi",
+        "category": 4
+    },
+    {
+        "id": 465,
+        "name": "avtokolonna mexanigi",
+        "category": 2
+    },
+    {
+        "id": 466,
+        "name": "6-toifali kompressor qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 467,
+        "name": "rels silliqlash dastgoh operatori",
+        "category": 4
+    },
+    {
+        "id": 468,
+        "name": "sovutish dastgohlari va qurilmalari operatori",
+        "category": 4
+    },
+    {
+        "id": 469,
+        "name": "operatori",
+        "category": 4
+    },
+    {
+        "id": 470,
+        "name": "2-darajali qo‘lda payvandlash elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 471,
+        "name": "3-darajali qo‘lda payvandlash elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 472,
+        "name": "2-darajali elektrogazpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 473,
+        "name": "1-darajali qo‘lda payvandlash elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 474,
+        "name": "qo‘lda payvandlash elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 475,
+        "name": "avtomatik vositalar va texnologik qurilmalar\npriborlari elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 476,
+        "name": "avtomexanigi",
+        "category": 4
+    },
+    {
+        "id": 477,
+        "name": "4-toifali avtomobillarni taʼmirlovchi chilangari",
+        "category": 4
+    },
+    {
+        "id": 478,
+        "name": "baholar iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 479,
+        "name": "ballonlarni to‘ldiruvchisi",
+        "category": 2
+    },
+    {
+        "id": 480,
+        "name": "3-darajali ballonlarni to‘ldiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 481,
+        "name": "basseynchisi",
+        "category": 4
+    },
+    {
+        "id": 482,
+        "name": "beton qorish qurilmasi motoristi",
+        "category": 5
+    },
+    {
+        "id": 483,
+        "name": "3-darajali betonchisi",
+        "category": 4
+    },
+    {
+        "id": 484,
+        "name": "bezovchi rassomi",
+        "category": 2
+    },
+    {
+        "id": 485,
+        "name": "bino va inshootlar nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 486,
+        "name": "bino va inshootlarni joriy taʼmirlash va ularni saqlash ustasi",
+        "category": 1
+    },
+    {
+        "id": 487,
+        "name": "binolarning texnik holatini nazorat etish inspektori",
+        "category": 2
+    },
+    {
+        "id": 488,
+        "name": "bort muhandisi",
+        "category": 2
+    },
+    {
+        "id": 489,
+        "name": "bosh direktor yordamchisi",
+        "category": 1
+    },
+    {
+        "id": 490,
+        "name": "bosh noziri",
+        "category": 1
+    },
+    {
+        "id": 491,
+        "name": "bosh iqtisodchisi",
+        "category": 1
+    },
+    {
+        "id": 492,
+        "name": "bosh konstruktori",
+        "category": 1
+    },
+    {
+        "id": 493,
+        "name": "bosh menejeri",
+        "category": 1
+    },
+    {
+        "id": 494,
+        "name": "bosh metallurgi",
+        "category": 1
+    },
+    {
+        "id": 495,
+        "name": "bosh metrologi",
+        "category": 1
+    },
+    {
+        "id": 496,
+        "name": "bosh muharriri",
+        "category": 1
+    },
+    {
+        "id": 497,
+        "name": "bosh oshpazi",
+        "category": 2
+    },
+    {
+        "id": 498,
+        "name": "bosh yuriskonsulti",
+        "category": 1
+    },
+    {
+        "id": 499,
+        "name": "terminali boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 500,
+        "name": "vagon ta'miri bo'yicha boshliq o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 501,
+        "name": "direksiya boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 502,
+        "name": "direksiya boshlig'i o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 503,
+        "name": "otryad boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 504,
+        "name": "otryad boshlig'i o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 505,
+        "name": "sex boshlig‘i o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 506,
+        "name": "boshqaruv raisining birinchi o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 507,
+        "name": "boshqaruv pulti operatori",
+        "category": 4
+    },
+    {
+        "id": 508,
+        "name": "1-darajali boshqaruv pulti operatori",
+        "category": 4
+    },
+    {
+        "id": 509,
+        "name": "2-darajali boshqaruv pulti operatori",
+        "category": 4
+    },
+    {
+        "id": 510,
+        "name": "3-darajali boshqaruv pulti operatori",
+        "category": 4
+    },
+    {
+        "id": 511,
+        "name": "4-darajali boshqaruv pulti operatori",
+        "category": 4
+    },
+    {
+        "id": 512,
+        "name": "5-darajali boshqaruv pulti operatori",
+        "category": 4
+    },
+    {
+        "id": 513,
+        "name": "boshqaruv raisining moliyaviy-iqtisodiy masalalar bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 514,
+        "name": "boshqaruv raisining tezkor masalalar va logistika bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 515,
+        "name": "boshqaruv raisining ishlab chiqarish masalalari bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 516,
+        "name": "boshqaruv raisining infratuzilma bo'yicha o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 517,
+        "name": "bostiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 518,
+        "name": "quritish qurilmasi operatori",
+        "category": 4
+    },
+    {
+        "id": 519,
+        "name": "burg'ilash qurilmasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 520,
+        "name": "burg'ilash qurilmasi mashinisti yordamchisi",
+        "category": 3
+    },
+    {
+        "id": 521,
+        "name": "2-toifali buxgalteri",
+        "category": 2
+    },
+    {
+        "id": 522,
+        "name": "buxgalter-kassiri",
+        "category": 2
+    },
+    {
+        "id": 523,
+        "name": "2-toifali buxgalter-kassiri",
+        "category": 2
+    },
+    {
+        "id": 524,
+        "name": "buyum va asboblar butlovchisi",
+        "category": 4
+    },
+    {
+        "id": 525,
+        "name": "byuro boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 526,
+        "name": "chang va gazlar tahlili laboranti",
+        "category": 4
+    },
+    {
+        "id": 527,
+        "name": "gidravlik chilangari",
+        "category": 4
+    },
+    {
+        "id": 528,
+        "name": "1-darajali gidravlik chilangari",
+        "category": 4
+    },
+    {
+        "id": 529,
+        "name": "2-darajali gidravlik chilangari",
+        "category": 4
+    },
+    {
+        "id": 530,
+        "name": "3-darajali gidravlik chilangari",
+        "category": 4
+    },
+    {
+        "id": 530,
+        "name": "4-darajali gidravlik chilangari",
+        "category": 4
+    },
+    {
+        "id": 531,
+        "name": "1-toifali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 532,
+        "name": "2-toifali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 533,
+        "name": "3-toifali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 534,
+        "name": "4-toifali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 535,
+        "name": "5-toifali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 536,
+        "name": "6-toifali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 537,
+        "name": "1-darajali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 538,
+        "name": "2-darajali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 539,
+        "name": "3-darajali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 540,
+        "name": "4-darajali chilangar-santexnigi",
+        "category": 4
+    },
+    {
+        "id": 541,
+        "name": "silliqlovchi chilangari",
+        "category": 4
+    },
+    {
+        "id": 542,
+        "name": "yo'l hujjatlarini rasmiylashtirish agenti",
+        "category": 3
+    },
+    {
+        "id": 543,
+        "name": "xarakatdagi chipta sotuvchisi",
+        "category": 3
+    },
+    {
+        "id": 544,
+        "name": "introskop noziri",
+        "category": 2
+    },
+    {
+        "id": 545,
+        "name": "chipta sotuvchisi",
+        "category": 3
+    },
+    {
+        "id": 546,
+        "name": "vagon farroshi",
+        "category": 3
+    },
+    {
+        "id": 547,
+        "name": "operatsion ma'lumotlarni yig'ish dispetcheri",
+        "category": 2
+    },
+    {
+        "id": 548,
+        "name": "mahalliy daromad va chipta kassalari noziri",
+        "category": 3
+    },
+    {
+        "id": 549,
+        "name": "ish vaqtini hisobga olish texnigi",
+        "category": 3
+    },
+    {
+        "id": 550,
+        "name": "chopuvchisi",
+        "category": 4
+    },
+    {
+        "id": 551,
+        "name": "1-darajali chopuvchisi",
+        "category": 4
+    },
+    {
+        "id": 552,
+        "name": "2-darajali chopuvchisi",
+        "category": 4
+    },
+    {
+        "id": 553,
+        "name": "3-darajali chopuvchisi",
+        "category": 4
+    },
+    {
+        "id": 554,
+        "name": "4-darajali chopuvchisi",
+        "category": 4
+    },
+    {
+        "id": 555,
+        "name": "5-darajali chopuvchisi",
+        "category": 4
+    },
+    {
+        "id": 556,
+        "name": "dastgoh, arra va dastarrada kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 557,
+        "name": "dasturli boshqaruv dastgohlari operatori",
+        "category": 4
+    },
+    {
+        "id": 558,
+        "name": "1-darajali dasturli boshqaruv dastgohlari operatori",
+        "category": 4
+    },
+    {
+        "id": 559,
+        "name": "2-darajali dasturli boshqaruv dastgohlari operatori",
+        "category": 4
+    },
+    {
+        "id": 560,
+        "name": "3-darajali dasturli boshqaruv dastgohlari operatori",
+        "category": 4
+    },
+    {
+        "id": 561,
+        "name": "4-darajali dasturli boshqaruv dastgohlari operatori",
+        "category": 4
+    },
+    {
+        "id": 562,
+        "name": "5-darajali dasturli boshqaruv dastgohlari operatori",
+        "category": 4
+    },
+    {
+        "id": 563,
+        "name": "dasturchisi",
+        "category": 2
+    },
+    {
+        "id": 564,
+        "name": "1-toifali dasturchisi",
+        "category": 2
+    },
+    {
+        "id": 565,
+        "name": "yetakchi dasturchisi",
+        "category": 2
+    },
+    {
+        "id": 566,
+        "name": "dazmollovchisi",
+        "category": 5
+    },
+    {
+        "id": 567,
+        "name": "defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 568,
+        "name": "1-toifali defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 569,
+        "name": "2-toifali defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 570,
+        "name": "3-toifali defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 571,
+        "name": "4-toifali defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 572,
+        "name": "5-toifali defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 573,
+        "name": "6-toifali defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 574,
+        "name": "ishlab chiqarish va yangi texnologiyalar yaratish bo'yicha direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 575,
+        "name": "marketing va servis xizmatlarini rivojlantirish bo'yicha direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 576,
+        "name": "kadrlar masalasi bo'yicha direktor yordamchisi",
+        "category": 1
+    },
+    {
+        "id": 577,
+        "name": "hududlarni rivojlantirish bo'yicha direktor yordamchisi",
+        "category": 1
+    },
+    {
+        "id": 578,
+        "name": "direksiya boshlig'i yordamchisi",
+        "category": 1
+    },
+    {
+        "id": 579,
+        "name": "tijorat va marketing masalalari bo‘yicha direktori",
+        "category": 1
+    },
+    {
+        "id": 580,
+        "name": "moliya masalalari bo'yicha direktori",
+        "category": 1
+    },
+    {
+        "id": 581,
+        "name": "direktorning birinchi o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 582,
+        "name": "dizel elektrostatsiyasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 583,
+        "name": "dozalarga bo'luvchi",
+        "category": 4
+    },
+    {
+        "id": 584,
+        "name": "1-toifali duradgori",
+        "category": 4
+    },
+    {
+        "id": 585,
+        "name": "2-toifali duradgori",
+        "category": 4
+    },
+    {
+        "id": 586,
+        "name": "3-toifali duradgori",
+        "category": 4
+    },
+    {
+        "id": 587,
+        "name": "4-toifali duradgori",
+        "category": 4
+    },
+    {
+        "id": 588,
+        "name": "5-toifali duradgori",
+        "category": 4
+    },
+    {
+        "id": 589,
+        "name": "6-toifali duradgori",
+        "category": 4
+    },
+    {
+        "id": 590,
+        "name": "stanokchi duradgori",
+        "category": 4
+    },
+    {
+        "id": 591,
+        "name": "1-toifali stanokchi duradgori",
+        "category": 4
+    },
+    {
+        "id": 592,
+        "name": "2-toifali stanokchi duradgori",
+        "category": 4
+    },
+    {
+        "id": 593,
+        "name": "3-toifali stanokchi duradgori",
+        "category": 4
+    },
+    {
+        "id": 594,
+        "name": "4-toifali stanokchi duradgori",
+        "category": 4
+    },
+    {
+        "id": 595,
+        "name": "5-toifali stanokchi duradgori",
+        "category": 4
+    },
+    {
+        "id": 596,
+        "name": "dvigatellar sinovchisi",
+        "category": 4
+    },
+    {
+        "id": 597,
+        "name": "ekspeditsiya mudiri",
+        "category": 1
+    },
+    {
+        "id": 598,
+        "name": "elektr jihozlariga xizmat ko‘rsatish va taʼmirlash ustasi",
+        "category": 4
+    },
+    {
+        "id": 599,
+        "name": "elektr jihozlarni taʼmirlash bo'yicha 1-toifali chilangar-elektrigi",
+        "category": 4
+    },
+    {
+        "id": 600,
+        "name": "elektr jihozlarni taʼmirlash bo'yicha 2-toifali chilangar-elektrigi",
+        "category": 5
+    },
+    {
+        "id": 601,
+        "name": "elektr jihozlarni taʼmirlash bo'yicha 3-toifali chilangar-elektrigi",
+        "category": 4
+    },
+    {
+        "id": 602,
+        "name": "elektr jihozlarni taʼmirlash bo'yicha 4-toifali chilangar-elektrigi",
+        "category": 5
+    },
+    {
+        "id": 603,
+        "name": "elektr jihozlarni taʼmirlash bo'yicha 5-toifali chilangar-elektrigi",
+        "category": 5
+    },
+    {
+        "id": 604,
+        "name": "elektr jihozlarni taʼmirlash bo'yicha 6-toifali chilangar-elektrigi",
+        "category": 5
+    },
+    {
+        "id": 605,
+        "name": "elektr jihozlarni taʼmirlash elektromexanigi",
+        "category": 2
+    },
+    {
+        "id": 606,
+        "name": "elektromashina jihozlariga cho‘lg‘am o‘ruvchisi",
+        "category": 4
+    },
+    {
+        "id": 607,
+        "name": "elektromashina asbob va apparatlarni yigʻish nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 608,
+        "name": "elektrmontajchi-sxemachi",
+        "category": 4
+    },
+    {
+        "id": 609,
+        "name": "3-darajali elektrogazpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 610,
+        "name": "4-darajali elektrogazpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 611,
+        "name": "5-darajali elektrogazpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 612,
+        "name": "1-darajali elektrogazpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 613,
+        "name": "elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 614,
+        "name": "1-toifali elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 615,
+        "name": "2-toifali elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 616,
+        "name": "3-toifali elektromexanig",
+        "category": 3
+    },
+    {
+        "id": 617,
+        "name": "4-toifali elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 618,
+        "name": "5-toifali elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 619,
+        "name": "6-toifali elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 620,
+        "name": "elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 621,
+        "name": "1-toifali elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 622,
+        "name": "2-toifali elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 623,
+        "name": "3-toifali elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 624,
+        "name": "4-toifali elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 625,
+        "name": "5-toifali elektromontyori",
+        "category": 3
+    },
+    {
+        "id": 626,
+        "name": "elektrotexnik buyumlarni shimdiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 627,
+        "name": "elektropoyezd mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 628,
+        "name": "emal bo‘yoqlari va nitrolaklar bo‘yoqchisi",
+        "category": 4
+    },
+    {
+        "id": 629,
+        "name": "frezalovchisi",
+        "category": 4
+    },
+    {
+        "id": 630,
+        "name": "1-darajali frezalovchisi",
+        "category": 4
+    },
+    {
+        "id": 631,
+        "name": "2-darajali frezalovchisi",
+        "category": 4
+    },
+    {
+        "id": 632,
+        "name": "3-darajali frezalovchisi",
+        "category": 4
+    },
+    {
+        "id": 633,
+        "name": "4-darajali frezalovchisi",
+        "category": 4
+    },
+    {
+        "id": 634,
+        "name": "frezalovchi-yo‘nuvchisi",
+        "category": 4
+    },
+    {
+        "id": 635,
+        "name": "frizerchisi",
+        "category": 4
+    },
+    {
+        "id": 636,
+        "name": "1-darajali g'ildirak juftliklari presslovchisi",
+        "category": 4
+    },
+    {
+        "id": 637,
+        "name": "g'ildirak juftliklari presslovchisi",
+        "category": 4
+    },
+    {
+        "id": 638,
+        "name": "2-darajali g'ildirak juftliklari presslovchisi",
+        "category": 4
+    },
+    {
+        "id": 639,
+        "name": "g‘ildirak juftlarini yo‘nish tokari",
+        "category": 4
+    },
+    {
+        "id": 640,
+        "name": "g‘ildiraklarni tekshirish va mexanik ishlov berish brigadiri",
+        "category": 4
+    },
+    {
+        "id": 641,
+        "name": "1-darajali g‘isht teruvchisi",
+        "category": 4
+    },
+    {
+        "id": 642,
+        "name": "2-darajali g‘isht teruvchisi",
+        "category": 4
+    },
+    {
+        "id": 643,
+        "name": "3-darajali g‘isht teruvchisi",
+        "category": 4
+    },
+    {
+        "id": 644,
+        "name": "galvanigi",
+        "category": 4
+    },
+    {
+        "id": 645,
+        "name": "garaj boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 646,
+        "name": "garaj mexanigi",
+        "category": 2
+    },
+    {
+        "id": 647,
+        "name": "garderobchisi",
+        "category": 5
+    },
+    {
+        "id": 648,
+        "name": "1-darajali gazda kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 649,
+        "name": "2-darajali gazda kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 650,
+        "name": "3-darajali gazda kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 651,
+        "name": "4-darajali gazda kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 652,
+        "name": "5-darajali gazda kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 653,
+        "name": "gazdan foydalanish qurilmalariga xizmat ko‘rsatish va taʼmirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 654,
+        "name": "germetizatorchisi",
+        "category": 4
+    },
+    {
+        "id": 655,
+        "name": "gidrotexnik obyektlarga qarovchi",
+        "category": 4
+    },
+    {
+        "id": 656,
+        "name": "harakatlanuvchi elektrostansiya mashinisti",
+        "category": 4
+    },
+    {
+        "id": 657,
+        "name": "1-toifali harakatlanuvchi tarkibni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 658,
+        "name": "harakatlanuvchi tarkibga xizmat ko‘rsatuvchi uskunalar mashinisti",
+        "category": 4
+    },
+    {
+        "id": 659,
+        "name": "harbiy hisobni yuritish mutaxassisi",
+        "category": 3
+    },
+    {
+        "id": 660,
+        "name": "havo taqsimlash qurilmasi mashinisti",
+        "category": 3
+    },
+    {
+        "id": 661,
+        "name": "4-darajali havo taqsimlash qurilmasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 662,
+        "name": "5-darajali havo taqsimlash qurilmasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 663,
+        "name": "3-darajali havo taqsimlash qurilmasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 664,
+        "name": "havoni ajratish apparatchisi",
+        "category": 4
+    },
+    {
+        "id": 665,
+        "name": "3-darajali havoni ajratish apparatchisi",
+        "category": 4
+    },
+    {
+        "id": 666,
+        "name": "5-darajali havoni ajratish apparatchisi",
+        "category": 4
+    },
+    {
+        "id": 667,
+        "name": "hisob yurituvchisi",
+        "category": 3
+    },
+    {
+        "id": 668,
+        "name": "hovli supuruvchisi",
+        "category": 5
+    },
+    {
+        "id": 669,
+        "name": "idish yuvuvchisi",
+        "category": 4
+    },
+    {
+        "id": 670,
+        "name": "ilmiy xodimi",
+        "category": 2
+    },
+    {
+        "id": 671,
+        "name": "kutubxona mudiri",
+        "category": 1
+    },
+    {
+        "id": 672,
+        "name": "import-eksport operatsiyalari mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 673,
+        "name": "noziri",
+        "category": 2
+    },
+    {
+        "id": 674,
+        "name": "1-toifali iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 675,
+        "name": "2-toifali iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 676,
+        "name": "ish boshqaruvchisi",
+        "category": 2
+    },
+    {
+        "id": 677,
+        "name": "ish yuritish noziri",
+        "category": 2
+    },
+    {
+        "id": 678,
+        "name": "ish yurituvchisi",
+        "category": 2
+    },
+    {
+        "id": 679,
+        "name": "ishlab chiqarish va rivojlantirish bo‘yicha direktori",
+        "category": 1
+    },
+    {
+        "id": 680,
+        "name": "ishlab chiqarish jarayonini mexanizatsiyalash va avtomatlashtirish muhandisi",
+        "category": 1
+    },
+    {
+        "id": 681,
+        "name": "ishlab chiqarish jarayonini mexanizatsiyalash va avtomatlashtirish yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 682,
+        "name": "ishlab chiqarish laboronti",
+        "category": 4
+    },
+    {
+        "id": 683,
+        "name": "ishlab chiqarish pechi operatori",
+        "category": 4
+    },
+    {
+        "id": 684,
+        "name": "ishlab chiqarish taʼlimi yo‘riqchisi",
+        "category": 2
+    },
+    {
+        "id": 685,
+        "name": "1-toifali ishlab chiqarishni tayyorlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 686,
+        "name": "ishlab chiqarishni tayyorlash ustasi",
+        "category": 2
+    },
+    {
+        "id": 687,
+        "name": "ishlab chiqarish-texnik taʼminoti va sifati bo‘yicha bosh muhandis o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 688,
+        "name": "issiqlik tarmog'idagi uskunalarni ta'mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 689,
+        "name": "istiqbolli rivojlantirish va investitsiyalar direktori",
+        "category": 1
+    },
+    {
+        "id": 690,
+        "name": "izoyatsiyalovchisi",
+        "category": 4
+    },
+    {
+        "id": 691,
+        "name": "baza boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 692,
+        "name": "jihozlar va materiallarni komplektlash texnigi",
+        "category": 3
+    },
+    {
+        "id": 693,
+        "name": "jihozlardan foydalanish va ularni taʼmirlashni tashkil etish bo‘yicha 2-toifali muhandisi",
+        "category": 2
+    },
+    {
+        "id": 694,
+        "name": "jihozlardan foydalanish va ularni taʼmirlashni tashkil etish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 695,
+        "name": "elektr jihozlarni taʼmirlash chilangar-elektrigi",
+        "category": 3
+    },
+    {
+        "id": 696,
+        "name": "jilvirchisi",
+        "category": 4
+    },
+    {
+        "id": 697,
+        "name": "jismoniy tarbiya va sport bo‘yicha yo‘riqchi-uslubchisi",
+        "category": 2
+    },
+    {
+        "id": 698,
+        "name": "kabel liniyalari montaji va taʼmiri elektromontyori",
+        "category": 4
+    },
+    {
+        "id": 699,
+        "name": "kadrlar menejeri",
+        "category": 1
+    },
+    {
+        "id": 700,
+        "name": "kadrlar bo‘yicha mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 701,
+        "name": "kadrlar bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 702,
+        "name": "kavsharlovchisi",
+        "category": 4
+    },
+    {
+        "id": 703,
+        "name": "2-darajali kavsharlovchisi",
+        "category": 4
+    },
+    {
+        "id": 704,
+        "name": "4-toifali kimyoviy tahlil laboranti",
+        "category": 4
+    },
+    {
+        "id": 705,
+        "name": "2-toifali kimyoviy tahlil laboranti",
+        "category": 4
+    },
+    {
+        "id": 706,
+        "name": "kir yuvuvchisi",
+        "category": 4
+    },
+    {
+        "id": 707,
+        "name": "kislota bilan ishlov beruvchisi",
+        "category": 4
+    },
+    {
+        "id": 708,
+        "name": "kislota va kimyoviy moddalar omborchisi",
+        "category": 4
+    },
+    {
+        "id": 709,
+        "name": "kiyim taʼmirlovchi tikuvchisi",
+        "category": 5
+    },
+    {
+        "id": 710,
+        "name": "zootexnigi",
+        "category": 2
+    },
+    {
+        "id": 711,
+        "name": "zal navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 712,
+        "name": "yuvish mashinalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 713,
+        "name": "ko‘chma sostavni yuvuvchi-tozalovchisi",
+        "category": 5
+    },
+    {
+        "id": 714,
+        "name": "ko‘kalamzorlashtirish qurilishi ishchisi",
+        "category": 4
+    },
+    {
+        "id": 715,
+        "name": "ko‘kalamzorlashtiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 716,
+        "name": "ko‘paytirish texnikasi operatori",
+        "category": 3
+    },
+    {
+        "id": 717,
+        "name": "komanda boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 718,
+        "name": "5-toifali kompressor qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 719,
+        "name": "2-toifali kompressor qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 720,
+        "name": "daslabki ma’lumotlarni kiritish operatori",
+        "category": 3
+    },
+    {
+        "id": 721,
+        "name": "kompyuter tizimi (sistemasi) muhandisi",
+        "category": 2
+    },
+    {
+        "id": 722,
+        "name": "konstruksiyalarni yig‘uvchi-yelimlovchisi",
+        "category": 4
+    },
+    {
+        "id": 723,
+        "name": "konstruktori",
+        "category": 2
+    },
+    {
+        "id": 724,
+        "name": "1-toifali konstruktori",
+        "category": 2
+    },
+    {
+        "id": 725,
+        "name": "2-toifali konstruktori",
+        "category": 2
+    },
+    {
+        "id": 726,
+        "name": "kontaktli (press) payvandlash mashinalari payvandchisi",
+        "category": 4
+    },
+    {
+        "id": 727,
+        "name": "konveyer mashinisti",
+        "category": 4
+    },
+    {
+        "id": 728,
+        "name": "koordinatori",
+        "category": 2
+    },
+    {
+        "id": 729,
+        "name": "kopirayteri",
+        "category": 2
+    },
+    {
+        "id": 730,
+        "name": "kotibiyat boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 731,
+        "name": "kozlovoy kran mashinisti",
+        "category": 4
+    },
+    {
+        "id": 732,
+        "name": "4-darajali kozlovoy kran mashinisti",
+        "category": 4
+    },
+    {
+        "id": 733,
+        "name": "5-darajali kozlovoy kran mashinisti",
+        "category": 4
+    },
+    {
+        "id": 734,
+        "name": "kuryeri",
+        "category": 5
+    },
+    {
+        "id": 735,
+        "name": "kutubxona direktori",
+        "category": 1
+    },
+    {
+        "id": 736,
+        "name": "laboranti",
+        "category": 2
+    },
+    {
+        "id": 737,
+        "name": "katta laboranti",
+        "category": 2
+    },
+    {
+        "id": 738,
+        "name": "3-toifali laboranti",
+        "category": 2
+    },
+    {
+        "id": 739,
+        "name": "4-toifali laboranti",
+        "category": 2
+    },
+    {
+        "id": 740,
+        "name": "laboratoriya boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 741,
+        "name": "lazerli kesish operatori",
+        "category": 3
+    },
+    {
+        "id": 742,
+        "name": "lokomativ qabul qiluvchisi",
+        "category": 2
+    },
+    {
+        "id": 743,
+        "name": "lokomotiv (poyezd) brigadasi dam olish xonasining navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 744,
+        "name": "lokomotiv brigadar dispetcheri",
+        "category": 3
+    },
+    {
+        "id": 745,
+        "name": "lom va metall chiqindilarini yig‘uvchi-saralovchisi",
+        "category": 4
+    },
+    {
+        "id": 746,
+        "name": "madaniy tadbirlarni tashkil etuvchisi",
+        "category": 2
+    },
+    {
+        "id": 747,
+        "name": "mahsulot o‘lchamini tekshiruvchisi",
+        "category": 2
+    },
+    {
+        "id": 748,
+        "name": "1-darajali mahsulot o‘lchamini tekshiruvchisi",
+        "category": 2
+    },
+    {
+        "id": 749,
+        "name": "2-darajali mahsulot o‘lchamini tekshiruvchisi",
+        "category": 2
+    },
+    {
+        "id": 750,
+        "name": "3-darajali mahsulot o‘lchamini tekshiruvchisi",
+        "category": 2
+    },
+    {
+        "id": 751,
+        "name": "4-darajali mahsulot o‘lchamini tekshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 752,
+        "name": "ishlab chiqarish sifati va texnologik jarayoni nazoratchisi",
+        "category": 2
+    },
+    {
+        "id": 753,
+        "name": "mahsulot tozalovchisi",
+        "category": 4
+    },
+    {
+        "id": 754,
+        "name": "kompleks boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 755,
+        "name": "maʼnaviyat va marifat masalalari mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 756,
+        "name": "manipulyator, press va bolg‘a mashinisti",
+        "category": 4
+    },
+    {
+        "id": 757,
+        "name": "markaz mudiri",
+        "category": 1
+    },
+    {
+        "id": 758,
+        "name": "markazlashtirish posti operatori",
+        "category": 3
+    },
+    {
+        "id": 759,
+        "name": "marketing bo‘yicha 1-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 760,
+        "name": "marketing bo‘yicha yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 761,
+        "name": "marketologi",
+        "category": 2
+    },
+    {
+        "id": 762,
+        "name": "mashinada qoliplash o‘zakchisi",
+        "category": 2
+    },
+    {
+        "id": 763,
+        "name": "1-darajali mashinada qoliplash o‘zakchisi",
+        "category": 2
+    },
+    {
+        "id": 764,
+        "name": "2-darajali mashinada qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 765,
+        "name": "3-darajali mashinada qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 766,
+        "name": "mashinada qoliplash qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 767,
+        "name": "1-darajali mashinada qoliplash qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 768,
+        "name": "2-darajali mashinada qoliplash qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 769,
+        "name": "3-darajali mashinada qoliplash qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 770,
+        "name": "4-darajali mashinada qoliplash qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 771,
+        "name": "5-darajali mashinada qoliplash qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 772,
+        "name": "matbuot kotibi",
+        "category": 4
+    },
+    {
+        "id": 773,
+        "name": "yetakchi matbuot kotibi",
+        "category": 1
+    },
+    {
+        "id": 774,
+        "name": "materiallar hisobini yuritish texnigi",
+        "category": 3
+    },
+    {
+        "id": 775,
+        "name": "materiallar, metallar, yarim tayyor mahsulotlar va buyumlar nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 776,
+        "name": "materiallarni komplektlash texnigi",
+        "category": 3
+    },
+    {
+        "id": 777,
+        "name": "maxsus tashishlar muhandisi",
+        "category": 2
+    },
+    {
+        "id": 778,
+        "name": "1-toifali maxsus tashishlar muhandisi",
+        "category": 2
+    },
+    {
+        "id": 779,
+        "name": "maydalash qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 780,
+        "name": "mehmonxona maʼmuri",
+        "category": 2
+    },
+    {
+        "id": 781,
+        "name": "mehmonxona qavati navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 782,
+        "name": "mehnat yo‘riqchisi",
+        "category": 2
+    },
+    {
+        "id": 783,
+        "name": "mehnat va ish haqi katta iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 784,
+        "name": "mehnat va ish haqi 1-toifali iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 785,
+        "name": "mehnat muhofazasi va texnika xavfsizligi 1-toifali muhandisi",
+        "category": 2
+    },
+    {
+        "id": 786,
+        "name": "mehnat muhofazasi va texnika xavfsizligi yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 787,
+        "name": "mehnatni tashkil etish va me'yorlash yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 788,
+        "name": "menejeri",
+        "category": 2
+    },
+    {
+        "id": 789,
+        "name": "yetakchi menejeri",
+        "category": 2
+    },
+    {
+        "id": 790,
+        "name": "metall kesuvchi va temirchilik-presslash qurilmalari montajchisi",
+        "category": 4
+    },
+    {
+        "id": 791,
+        "name": "metall konstruksiyalarni yig'ish chilangari",
+        "category": 4
+    },
+    {
+        "id": 792,
+        "name": "1-darajali metall konstruksiyalarni yig'ish chilangari",
+        "category": 4
+    },
+    {
+        "id": 793,
+        "name": "2-darajali metall konstruksiyalarni yig'ish chilangari",
+        "category": 4
+    },
+    {
+        "id": 794,
+        "name": "3-darajali metall konstruksiyalarni yig'ish chilangari",
+        "category": 4
+    },
+    {
+        "id": 795,
+        "name": "4-darajali metall konstruksiyalarni yig'ish chilangari",
+        "category": 4
+    },
+    {
+        "id": 796,
+        "name": "5-darajali metall konstruksiyalarni yig'ish chilangari",
+        "category": 4
+    },
+    {
+        "id": 797,
+        "name": "metall quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 798,
+        "name": "1-darajali metall quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 799,
+        "name": "2-darajali metall quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 800,
+        "name": "3-darajali metall quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 801,
+        "name": "4-darajali metall quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 802,
+        "name": "5-darajali metall quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 803,
+        "name": "metall va qotishmalar erituvchisi",
+        "category": 4
+    },
+    {
+        "id": 804,
+        "name": "1-darajali metall va qotishmalar erituvchisi",
+        "category": 4
+    },
+    {
+        "id": 805,
+        "name": "2-darajali metall va qotishmalar erituvchisi",
+        "category": 4
+    },
+    {
+        "id": 806,
+        "name": "3-darajali metall va qotishmalar erituvchisi",
+        "category": 4
+    },
+    {
+        "id": 807,
+        "name": "4-darajali metall va qotishmalar erituvchisi",
+        "category": 4
+    },
+    {
+        "id": 808,
+        "name": "5-darajali metall va qotishmalar erituvchisi",
+        "category": 4
+    },
+    {
+        "id": 809,
+        "name": "metall, quyma, buyum va detallar tozalovchisi",
+        "category": 4
+    },
+    {
+        "id": 810,
+        "name": "metrologi",
+        "category": 2
+    },
+    {
+        "id": 811,
+        "name": "mexanik yig‘uv ishlari chilangari",
+        "category": 4
+    },
+    {
+        "id": 812,
+        "name": "me'yorlashtirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 813,
+        "name": "me'yorlashtirish bosh muhandisi",
+        "category": 2
+    },
+    {
+        "id": 814,
+        "name": "moddiy qiymatlarni qabul qilish, saqlash, tarqatish va hisobini yuritish texnigi",
+        "category": 3
+    },
+    {
+        "id": 815,
+        "name": "tovar moddiy boyliklarini hisobga olish brigadiri",
+        "category": 3
+    },
+    {
+        "id": 816,
+        "name": "inkassatori",
+        "category": 3
+    },
+    {
+        "id": 817,
+        "name": "1-toifali moddiy-texnik taʼminot muhandisi",
+        "category": 2
+    },
+    {
+        "id": 818,
+        "name": "moddiy-texnik zahiralarni meʼyorlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 819,
+        "name": "moddiy-texnik-taʼminot iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 820,
+        "name": "montajchisi",
+        "category": 4
+    },
+    {
+        "id": 821,
+        "name": "motoristi",
+        "category": 4
+    },
+    {
+        "id": 822,
+        "name": "muassasa boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 823,
+        "name": "1-toifali muhandisi",
+        "category": 2
+    },
+    {
+        "id": 824,
+        "name": "2-toifali muhandisi",
+        "category": 2
+    },
+    {
+        "id": 825,
+        "name": "yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 826,
+        "name": "1-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 827,
+        "name": "2-toifali mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 828,
+        "name": "ekologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 829,
+        "name": "1-toifali muhandis-elektronchisi",
+        "category": 2
+    },
+    {
+        "id": 830,
+        "name": "yetakchi muhandis-elektronchisi",
+        "category": 2
+    },
+    {
+        "id": 831,
+        "name": "2-toifali muhandis-elektronchisi",
+        "category": 2
+    },
+    {
+        "id": 832,
+        "name": "1-toifali energetika muhandisi",
+        "category": 2
+    },
+    {
+        "id": 833,
+        "name": "geodeziya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 834,
+        "name": "muhandis-noziri",
+        "category": 2
+    },
+    {
+        "id": 835,
+        "name": "1-toifali muhandis-iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 836,
+        "name": "yetakchi muhandis-iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 837,
+        "name": "2-toifali muhandis-iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 838,
+        "name": "shartnoma va davo bo‘yicha muhandis-iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 839,
+        "name": "shartnoma va davo bo‘yicha yetakchi muhandis-iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 840,
+        "name": "yetakchi muhandis-konstruktori",
+        "category": 2
+    },
+    {
+        "id": 841,
+        "name": "1-toifali muhandis-konstruktori",
+        "category": 2
+    },
+    {
+        "id": 842,
+        "name": "muhandis-konstruktori",
+        "category": 2
+    },
+    {
+        "id": 843,
+        "name": "muhandis-laboranti",
+        "category": 2
+    },
+    {
+        "id": 844,
+        "name": "loyiha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 845,
+        "name": "yetakchi muhandis-loyihachisi",
+        "category": 2
+    },
+    {
+        "id": 846,
+        "name": "1-toifali muhandis-loyihachisi",
+        "category": 2
+    },
+    {
+        "id": 847,
+        "name": "2-toifali muhandis-loyihachisi",
+        "category": 2
+    },
+    {
+        "id": 848,
+        "name": "marksheyderi",
+        "category": 2
+    },
+    {
+        "id": 849,
+        "name": "metallurgiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 850,
+        "name": "yetakchi muhandis-metallurg",
+        "category": 2
+    },
+    {
+        "id": 851,
+        "name": "1-toifali metrologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 852,
+        "name": "2-toifali muhandis-mexanigi",
+        "category": 2
+    },
+    {
+        "id": 853,
+        "name": "muhandis-mexanigi",
+        "category": 2
+    },
+    {
+        "id": 854,
+        "name": "qurilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 855,
+        "name": "sinash muhandis",
+        "category": 2
+    },
+    {
+        "id": 856,
+        "name": "tizim administratori",
+        "category": 2
+    },
+    {
+        "id": 857,
+        "name": "katta tizim administratori",
+        "category": 2
+    },
+    {
+        "id": 858,
+        "name": "1-toifali muhandis-tahlilchi",
+        "category": 2
+    },
+    {
+        "id": 859,
+        "name": "tekshirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 860,
+        "name": "1-toifali texnologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 861,
+        "name": "2-toifali texnologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 862,
+        "name": "3-toifali texnologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 863,
+        "name": "yetakchi texnologiya muhandisi",
+        "category": 2
+    },
+    {
+        "id": 864,
+        "name": "muqavalovchisi",
+        "category": 4
+    },
+    {
+        "id": 865,
+        "name": "mashinist murabbiyi",
+        "category": 4
+    },
+    {
+        "id": 866,
+        "name": "mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 867,
+        "name": "nasos qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 868,
+        "name": "1-darajali nasos qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 869,
+        "name": "2-darajali nasos qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 870,
+        "name": "3-darajali nasos qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 871,
+        "name": "4-darajali nasos qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 872,
+        "name": "5-darajali nasos qurilmalari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 873,
+        "name": "stansiya navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 874,
+        "name": "navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 875,
+        "name": "1-toifali navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 876,
+        "name": "2-toifali navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 877,
+        "name": "3-toifali navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 878,
+        "name": "4-toifali navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 879,
+        "name": "5-toifali navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 880,
+        "name": "6-toifali navbatchi elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 881,
+        "name": "nazorat ustasi",
+        "category": 1
+    },
+    {
+        "id": 882,
+        "name": "nazorat muhandisi",
+        "category": 2
+    },
+    {
+        "id": 883,
+        "name": "nazorat katta ustasi",
+        "category": 2
+    },
+    {
+        "id": 884,
+        "name": "qabul qilish nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 885,
+        "name": "nazorat o'tish punkti nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 886,
+        "name": "neft mahsulotlarini tarqatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 887,
+        "name": "novvoyi",
+        "category": 4
+    },
+    {
+        "id": 888,
+        "name": "o‘lchov priborlari va asboblarini tekshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 889,
+        "name": "o‘qituvchisi",
+        "category": 2
+    },
+    {
+        "id": 890,
+        "name": "o‘t o‘chiruvchisi",
+        "category": 3
+    },
+    {
+        "id": 891,
+        "name": "o‘tkazish quvurlarini tayyorlash va taʼmirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 892,
+        "name": "oboychisi",
+        "category": 4
+    },
+    {
+        "id": 893,
+        "name": "ofis menejeri",
+        "category": 3
+    },
+    {
+        "id": 894,
+        "name": "olovga bardoshlilikni oshiruvchisi",
+        "category": 3
+    },
+    {
+        "id": 895,
+        "name": "1-toifali olovga bardoshlilikni oshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 896,
+        "name": "2-toifali olovga bardoshlilikni oshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 897,
+        "name": "3-toifali olovga bardoshlilikni oshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 898,
+        "name": "omborxona boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 899,
+        "name": "omborchisi",
+        "category": 3
+    },
+    {
+        "id": 900,
+        "name": "katta omborchisi",
+        "category": 3
+    },
+    {
+        "id": 901,
+        "name": "katta operatori",
+        "category": 4
+    },
+    {
+        "id": 902,
+        "name": "g'ildirak juftliklarini obtachka qiluvchi operatori",
+        "category": 4
+    },
+    {
+        "id": 903,
+        "name": "g'ildirak juftliklarini qizdirish uchun induksion o'rnatish operatori",
+        "category": 4
+    },
+    {
+        "id": 904,
+        "name": "g'ildirak juftliklarini vibrodiagnostikadan o'tkazish operatori",
+        "category": 4
+    },
+    {
+        "id": 905,
+        "name": "plazmada kesuvchi operatori",
+        "category": 4
+    },
+    {
+        "id": 906,
+        "name": "1-darajali plazmada kesuvchi operatori",
+        "category": 4
+    },
+    {
+        "id": 907,
+        "name": "2-darajali plazmada kesuvchi operatori",
+        "category": 4
+    },
+    {
+        "id": 908,
+        "name": "3-darajali plazmada kesuvchi operatori",
+        "category": 5
+    },
+    {
+        "id": 909,
+        "name": "4-darajali plazmada kesuvchi operatori",
+        "category": 4
+    },
+    {
+        "id": 910,
+        "name": "5-darajali plazmada kesuvchi operatori",
+        "category": 4
+    },
+    {
+        "id": 911,
+        "name": "koordinatsiyalash va boshqarish operatori",
+        "category": 4
+    },
+    {
+        "id": 912,
+        "name": "teletayp operatori",
+        "category": 3
+    },
+    {
+        "id": 913,
+        "name": "o'qchisi",
+        "category": 4
+    },
+    {
+        "id": 914,
+        "name": "oqindi suvlarni tozalash apparatchisi",
+        "category": 4
+    },
+    {
+        "id": 915,
+        "name": "o'rmondan foydalanish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 916,
+        "name": "o'rmonni saqlash va himoya qilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 917,
+        "name": "oshxona ishchisi",
+        "category": 4
+    },
+    {
+        "id": 918,
+        "name": "oshxona mudiri",
+        "category": 1
+    },
+    {
+        "id": 919,
+        "name": "o't o'chirish mashinasi haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 920,
+        "name": "o't o'chiruvchi-qutqaruvchisi",
+        "category": 2
+    },
+    {
+        "id": 921,
+        "name": "otboqari",
+        "category": 4
+    },
+    {
+        "id": 922,
+        "name": "otryad starshinasi",
+        "category": 3
+    },
+    {
+        "id": 923,
+        "name": "otryad xizmatini tashkil etish yo'riqchisi",
+        "category": 2
+    },
+    {
+        "id": 924,
+        "name": "otryadi xizmatni tashkil etish hamda yuk va tijorat ishlari bo'yicha katta yo'riqchisi",
+        "category": 2
+    },
+    {
+        "id": 925,
+        "name": "ovchisi",
+        "category": 2
+    },
+    {
+        "id": 926,
+        "name": "park navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 927,
+        "name": "1-darajali parmalovchisi",
+        "category": 4
+    },
+    {
+        "id": 928,
+        "name": "2-darajali parmalovchisi",
+        "category": 4
+    },
+    {
+        "id": 929,
+        "name": "3-darajali parmalovchisi",
+        "category": 4
+    },
+    {
+        "id": 930,
+        "name": "4-darajali parmalovchisi",
+        "category": 4
+    },
+    {
+        "id": 931,
+        "name": "5-darajali parmalovchisi",
+        "category": 4
+    },
+    {
+        "id": 932,
+        "name": "putr yetkazmasdan tekshirish katta ustasi",
+        "category": 2
+    },
+    {
+        "id": 933,
+        "name": "putr yetkazmasdan tekshirish ustasi",
+        "category": 1
+    },
+    {
+        "id": 934,
+        "name": "depo boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 935,
+        "name": "katta dispetcheri",
+        "category": 2
+    },
+    {
+        "id": 936,
+        "name": "dizel va muzlatkich qurilmasi mexanigi",
+        "category": 4
+    },
+    {
+        "id": 937,
+        "name": "passajir vagonlar kuzatuvchisi, tezyurar poyezd styuardi",
+        "category": 4
+    },
+    {
+        "id": 938,
+        "name": "pechkachisi",
+        "category": 4
+    },
+    {
+        "id": 939,
+        "name": "harakat xavfsizligi taftishchisi",
+        "category": 2
+    },
+    {
+        "id": 940,
+        "name": "pereyezd navbatchisi",
+        "category": 4
+    },
+    {
+        "id": 941,
+        "name": "piloramachisi",
+        "category": 4
+    },
+    {
+        "id": 942,
+        "name": "planer va dvigatellar bo'yicha aviatsiya texnigi",
+        "category": 4
+    },
+    {
+        "id": 943,
+        "name": "rezina va plastmass mahsulotlari quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 944,
+        "name": "1-darajali rezina va plastmass mahsulotlari quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 945,
+        "name": "2-darajali rezina va plastmass mahsulotlari quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 946,
+        "name": "3-darajali rezina va plastmass mahsulotlari quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 947,
+        "name": "4-darajali rezina va plastmass mahsulotlari quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 948,
+        "name": "5-darajali rezina va plastmass mahsulotlari quyuvchisi",
+        "category": 4
+    },
+    {
+        "id": 949,
+        "name": "1-toifali rezina va plastmass mahsulotlari preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 950,
+        "name": "import-eksport operatsiyalari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 951,
+        "name": "2-toifali rezina va plastmass mahsulotlari preslovchisi",
+        "category": 2
+    },
+    {
+        "id": 952,
+        "name": "3-toifali rezina va plastmass mahsulotlari preslovchisi",
+        "category": 2
+    },
+    {
+        "id": 953,
+        "name": "4-toifali rezina va plastmass mahsulotlari preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 954,
+        "name": "5-toifali rezina va plastmass mahsulotlari preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 955,
+        "name": "poyezd boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 956,
+        "name": "poyezd dispetcheri",
+        "category": 3
+    },
+    {
+        "id": 957,
+        "name": "poyezd hujjatlarini yetkazuvchisi",
+        "category": 4
+    },
+    {
+        "id": 958,
+        "name": "poyezd tuzuvchisi",
+        "category": 4
+    },
+    {
+        "id": 959,
+        "name": "ish bajaruvchisi",
+        "category": 1
+    },
+    {
+        "id": 960,
+        "name": "poyezd tuzuvchi yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 961,
+        "name": "poyezd ustasi",
+        "category": 2
+    },
+    {
+        "id": 962,
+        "name": "stansiya texnologik markaz operatori",
+        "category": 3
+    },
+    {
+        "id": 963,
+        "name": "yuk va bagaj qabul qiluvchi-topshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 964,
+        "name": "poyezdlarni qabul qiluvchisi",
+        "category": 3
+    },
+    {
+        "id": 965,
+        "name": "presslovchi-vulkanizatorchisi",
+        "category": 4
+    },
+    {
+        "id": 966,
+        "name": "priborlar va elektr jihozlar aviatsiya texnigi",
+        "category": 4
+    },
+    {
+        "id": 967,
+        "name": "vagon kuzatuvchisi",
+        "category": 5
+    },
+    {
+        "id": 968,
+        "name": "prujinachisi",
+        "category": 4
+    },
+    {
+        "id": 969,
+        "name": "1-darajali prujinachisi",
+        "category": 4
+    },
+    {
+        "id": 970,
+        "name": "2-darajali prujinachisi",
+        "category": 4
+    },
+    {
+        "id": 971,
+        "name": "3-darajali prujinachisi",
+        "category": 4
+    },
+    {
+        "id": 972,
+        "name": "4-darajali prujinachisi",
+        "category": 4
+    },
+    {
+        "id": 973,
+        "name": "5-darajali prujinachisi",
+        "category": 4
+    },
+    {
+        "id": 974,
+        "name": "punkt boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 975,
+        "name": "katta yuk va bagaj qabul qiluvchi-topshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 976,
+        "name": "qaychi va pressda metall kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 977,
+        "name": "1-darajali qaychi va pressda metall kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 978,
+        "name": "2-darajali qaychi va pressda metall kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 979,
+        "name": "3-darajali qaychi va pressda metall kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 980,
+        "name": "4-darajali qaychi va pressda metall kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 981,
+        "name": "5-darajali qaychi va pressda metall kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 982,
+        "name": "qizdirish usuli bilan ruxlovchisi",
+        "category": 4
+    },
+    {
+        "id": 983,
+        "name": "qizig‘ida shtamplashda presslovchisi",
+        "category": 4
+    },
+    {
+        "id": 984,
+        "name": "qo‘lda ishlov beruvchi temirchisi",
+        "category": 4
+    },
+    {
+        "id": 985,
+        "name": "1-darajali qo‘lda ishlov beruvchi temirchisi",
+        "category": 4
+    },
+    {
+        "id": 986,
+        "name": "2-darajali qo‘lda ishlov beruvchi temirchisi",
+        "category": 4
+    },
+    {
+        "id": 987,
+        "name": "3-darajali qo‘lda ishlov beruvchi temirchisi",
+        "category": 4
+    },
+    {
+        "id": 988,
+        "name": "4-darajali qo‘lda ishlov beruvchi temirchisi",
+        "category": 4
+    },
+    {
+        "id": 989,
+        "name": "5-darajali qo‘lda ishlov beruvchi temirchisi",
+        "category": 4
+    },
+    {
+        "id": 990,
+        "name": "4-darajali elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 991,
+        "name": "5-darajali elektrpayvandchisi",
+        "category": 4
+    },
+    {
+        "id": 992,
+        "name": "qo'lda qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 993,
+        "name": "1-darajali qo'lda qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 994,
+        "name": "2-darajali qo'lda qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 995,
+        "name": "3-darajali qo'lda qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 996,
+        "name": "4-darajali qo'lda qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 997,
+        "name": "5-darajali qo'lda qoliplash o‘zakchisi",
+        "category": 4
+    },
+    {
+        "id": 998,
+        "name": "qo‘lda qoliplovchi qolipchisi",
+        "category": 4
+    },
+    {
+        "id": 999,
+        "name": "1-darajali qo‘lda qoliplovchi qolipchisi",
+        "category": 4
+    },
+    {
+        "id": 1000,
+        "name": "2-darajali qo‘lda qoliplovchi qolipchisi",
+        "category": 4
+    },
+    {
+        "id": 1001,
+        "name": "3-darajali qo‘lda qoliplovchi qolipchisi",
+        "category": 4
+    },
+    {
+        "id": 1002,
+        "name": "4-darajali qo‘lda qoliplovchi qolipchisi",
+        "category": 4
+    },
+    {
+        "id": 1003,
+        "name": "5-darajali qo‘lda qoliplovchi qolipchisi",
+        "category": 4
+    },
+    {
+        "id": 1004,
+        "name": "qo‘riqchisi",
+        "category": 5
+    },
+    {
+        "id": 1005,
+        "name": "qolipdan chiqaruvchisi",
+        "category": 4
+    },
+    {
+        "id": 1006,
+        "name": "qoliplarni yig‘uvchisi",
+        "category": 4
+    },
+    {
+        "id": 1007,
+        "name": "1-darajali qoliplarni yig‘uvchisi",
+        "category": 4
+    },
+    {
+        "id": 1008,
+        "name": "qoplovchi-plitkachisi",
+        "category": 4
+    },
+    {
+        "id": 1009,
+        "name": "qovurg'a tayorlovchisi",
+        "category": 4
+    },
+    {
+        "id": 1010,
+        "name": "1-toifali qozonxona mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1011,
+        "name": "2-toifali qozonxona mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1012,
+        "name": "3-toifali qozonxona mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1013,
+        "name": "4-toifali qozonxona mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1014,
+        "name": "5-toifali qozonxona mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1015,
+        "name": "lokomotivlar (vagonlar) zahira bazasi boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1016,
+        "name": "qozonxona ishchisi",
+        "category": 4
+    },
+    {
+        "id": 1017,
+        "name": "qozonxona ustasi",
+        "category": 4
+    },
+    {
+        "id": 1018,
+        "name": "1-toifali qozonxonaga xizmat ko‘rsatish chilangari",
+        "category": 4
+    },
+    {
+        "id": 1019,
+        "name": "2-toifali qozonxonaga xizmat ko‘rsatish chilangari",
+        "category": 5
+    },
+    {
+        "id": 1020,
+        "name": "3-toifali qozonxonaga xizmat ko‘rsatish chilangari",
+        "category": 5
+    },
+    {
+        "id": 1021,
+        "name": "4-toifali qozonxonaga xizmat ko‘rsatish chilangari",
+        "category": 5
+    },
+    {
+        "id": 1022,
+        "name": "katta qurilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1023,
+        "name": "yetakchi qurilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1024,
+        "name": "1-toifali qurilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1025,
+        "name": "2-toifali qurilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1026,
+        "name": "vagonlarni hisobga olish bo‘yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1027,
+        "name": "vagonlarni hisobga olish bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1028,
+        "name": "o‘ziyurar temir yo‘l krani mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1029,
+        "name": "qurilmalarni taʼmirlash va xizmat ko‘rsatish chilangari",
+        "category": 4
+    },
+    {
+        "id": 1030,
+        "name": "depo boshlig‘i yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 1031,
+        "name": "randalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1032,
+        "name": "saralovchisi",
+        "category": 4
+    },
+    {
+        "id": 1033,
+        "name": "signalchisi",
+        "category": 4
+    },
+    {
+        "id": 1034,
+        "name": "sisternalarni yuvuvchi-bug‘lovchisi",
+        "category": 4
+    },
+    {
+        "id": 1035,
+        "name": "navbatchi ustasi",
+        "category": 2
+    },
+    {
+        "id": 1036,
+        "name": "yuk ildiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 1037,
+        "name": "suv, issiqlik va gaz taʼminoti ustasi",
+        "category": 2
+    },
+    {
+        "id": 1038,
+        "name": "vagon tekshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 1039,
+        "name": "temir yo‘l ishchisi",
+        "category": 4
+    },
+    {
+        "id": 1040,
+        "name": "temir yo‘l stansiyasi (manyovr, stansiya) dispetcheri",
+        "category": 2
+    },
+    {
+        "id": 1041,
+        "name": "transporterchisi",
+        "category": 4
+    },
+    {
+        "id": 1042,
+        "name": "ustasi",
+        "category": 2
+    },
+    {
+        "id": 1043,
+        "name": "vagon parklari butligini saqlash katta noziri",
+        "category": 2
+    },
+    {
+        "id": 1044,
+        "name": "vagon parklari butligini saqlash noziri",
+        "category": 2
+    },
+    {
+        "id": 1045,
+        "name": "vagonlar qarovchisi",
+        "category": 4
+    },
+    {
+        "id": 1046,
+        "name": "vagonlar katta qarovchisi",
+        "category": 4
+    },
+    {
+        "id": 1047,
+        "name": "vagonlarni ko‘rikdan o‘tkazuvchi-taʼmirlovchisi",
+        "category": 4
+    },
+    {
+        "id": 1048,
+        "name": "bosh shifokori",
+        "category": 1
+    },
+    {
+        "id": 1049,
+        "name": "bosh shifokor-statsionar davolash ishlari bo'yicha direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1050,
+        "name": "ambulator davolash ishlari bo'yicha direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1051,
+        "name": "iqtisodiy-moliyaviy masalalari boyicha direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1052,
+        "name": "umumiy masalalar bo'yicha direktor o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1053,
+        "name": "bosh iqtisodchi-bo'lim boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 1054,
+        "name": "moliyaviy ishlar bo'yicha iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 1055,
+        "name": "tibbiy statistka varchi (shifokor)",
+        "category": 2
+    },
+    {
+        "id": 1056,
+        "name": "startegik rejalash va marketing bo'limi boshlig'i",
+        "category": 2
+    },
+    {
+        "id": 1057,
+        "name": "xaridlar bo'yicha mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 1058,
+        "name": "hr (inson resurslari bo'yicha)-menejer bo'lim boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 1059,
+        "name": "kadrlar bo'yicha katta inspektori",
+        "category": 1
+    },
+    {
+        "id": 1060,
+        "name": "kadrlar bo'limi ish yurituvchisi-rekruteri",
+        "category": 1
+    },
+    {
+        "id": 1061,
+        "name": "kotiba-referenti",
+        "category": 1
+    },
+    {
+        "id": 1062,
+        "name": "vagonlarga texnik xizmat ko‘rsatish punkti boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1063,
+        "name": "vrach (shifokor) dietologi",
+        "category": 1
+    },
+    {
+        "id": 1064,
+        "name": "qon quyish xonasi vrachi (shifokor)",
+        "category": 1
+    },
+    {
+        "id": 1065,
+        "name": "fuqaro muhofazasi bo'yicha vrachi (shifokor)",
+        "category": 1
+    },
+    {
+        "id": 1066,
+        "name": "vrach (shifokor) uyda yordam bo'yicha",
+        "category": 1
+    },
+    {
+        "id": 1067,
+        "name": "bosh hamshirasi",
+        "category": 1
+    },
+    {
+        "id": 1068,
+        "name": "yo‘nalish navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 1069,
+        "name": "qon quyish xonasi hamshirasi",
+        "category": 3
+    },
+    {
+        "id": 1070,
+        "name": "aloqa operatori (call markaz)",
+        "category": 3
+    },
+    {
+        "id": 1071,
+        "name": "arxivchisi",
+        "category": 3
+    },
+    {
+        "id": 1072,
+        "name": "ro'yxatdan o'tkazuvchisi",
+        "category": 4
+    },
+    {
+        "id": 1073,
+        "name": "vrach (shifokor) terapevt-bo'lim mudiri",
+        "category": 4
+    },
+    {
+        "id": 1074,
+        "name": "xavfsizlik maskanlari yo'riqchisi",
+        "category": 2
+    },
+    {
+        "id": 1075,
+        "name": "vrach (shifokor) terapevti",
+        "category": 2
+    },
+    {
+        "id": 1076,
+        "name": "katta hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1077,
+        "name": "hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1078,
+        "name": "sanitarkasi",
+        "category": 5
+    },
+    {
+        "id": 1079,
+        "name": "vrach (shifokor) anesteziolog-reanimatologi-bo'lim mudiri",
+        "category": 5
+    },
+    {
+        "id": 1080,
+        "name": "vrach (shifokor) anesteziolog-reanimatologi",
+        "category": 5
+    },
+    {
+        "id": 1081,
+        "name": "intensiv terapiya xonasi vrachi (shifokor)",
+        "category": 5
+    },
+    {
+        "id": 1082,
+        "name": "xo'jalik bekasi",
+        "category": 3
+    },
+    {
+        "id": 1083,
+        "name": "vrach (shifokor) kardiologi-bo'lim mudiri",
+        "category": 3
+    },
+    {
+        "id": 1084,
+        "name": "vrach (shifokor) kardiologi",
+        "category": 2
+    },
+    {
+        "id": 1085,
+        "name": "bemorxona hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1086,
+        "name": "muolajaxona hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1087,
+        "name": "bemorxona sanitarkasi",
+        "category": 2
+    },
+    {
+        "id": 1088,
+        "name": "ovqat tarqatuvchi sanitarka",
+        "category": 2
+    },
+    {
+        "id": 1089,
+        "name": "vrach (shifokor) nevrolog-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1090,
+        "name": "vrach (shifokor) nevrolog ",
+        "category": 2
+    },
+    {
+        "id": 1091,
+        "name": "vrach (shifokor) jarrohi (xirurg)i-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1092,
+        "name": "vrach (shifokor) jarrohi (xirurg)i",
+        "category": 2
+    },
+    {
+        "id": 1093,
+        "name": "shoshilinch yordam postining vrach (shifokor) jarrohi",
+        "category": 2
+    },
+    {
+        "id": 1094,
+        "name": "vrach (shifokor) urologi",
+        "category": 2
+    },
+    {
+        "id": 1095,
+        "name": "vrach (shifokor) koloproktologi",
+        "category": 2
+    },
+    {
+        "id": 1096,
+        "name": "vrach (shifokor) ginekologi",
+        "category": 2
+    },
+    {
+        "id": 1097,
+        "name": "katta hamshirasi (operasiya bloki) ",
+        "category": 2
+    },
+    {
+        "id": 1098,
+        "name": "operasiya xonasi hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1099,
+        "name": "bog'lovxona hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1100,
+        "name": "shoshilinch tibbiy yordam hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1101,
+        "name": "hamshira anestezisti",
+        "category": 2
+    },
+    {
+        "id": 1102,
+        "name": "operasiyaxona sanitarkasi",
+        "category": 2
+    },
+    {
+        "id": 1103,
+        "name": "vrach (shifokor) endokrinologi",
+        "category": 2
+    },
+    {
+        "id": 1104,
+        "name": "vrach (shifokor) gastroenterolog-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1105,
+        "name": "vrach (shifokor) gastroenterologi",
+        "category": 2
+    },
+    {
+        "id": 1106,
+        "name": "ichaklarni yuvish bo'yicha hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1107,
+        "name": "vrach (shifokor) oftalmolog-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1108,
+        "name": "vrach (shifokor) oftalmologi",
+        "category": 2
+    },
+    {
+        "id": 1109,
+        "name": "bog'lovxona sanitarkasi",
+        "category": 2
+    },
+    {
+        "id": 1110,
+        "name": "vrach (shifokor) otorinolaringolog-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1111,
+        "name": "vrach (shifokor) otorinolaringologi",
+        "category": 2
+    },
+    {
+        "id": 1112,
+        "name": "vrach (shifokor) fizioterapevt-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1113,
+        "name": "vrach (shifokor) fizioterapevti",
+        "category": 2
+    },
+    {
+        "id": 1114,
+        "name": "massajchi",
+        "category": 2
+    },
+    {
+        "id": 1115,
+        "name": "davolovchi jismoniy tarbiya yo'riqchisi (hamshira)",
+        "category": 2
+    },
+    {
+        "id": 1116,
+        "name": "vrach (shifokor) bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1117,
+        "name": "vrach (shifokor) endoskopist",
+        "category": 2
+    },
+    {
+        "id": 1118,
+        "name": "funksional diagnostika vrachi (shifokori)",
+        "category": 2
+    },
+    {
+        "id": 1119,
+        "name": "funksional diagnostika vrachi (shifokor) EEG",
+        "category": 2
+    },
+    {
+        "id": 1120,
+        "name": "yurak ultratovush diagnostika vrachi (shifokor)",
+        "category": 2
+    },
+    {
+        "id": 1121,
+        "name": "ultratovush diagnostika vrachi (shifokor)",
+        "category": 2
+    },
+    {
+        "id": 1122,
+        "name": "yurak ultratovush diagnostika hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1123,
+        "name": "vrach (shifokor) rentgenolog-bo'lim mudiri",
+        "category": 2
+    },
+    {
+        "id": 1124,
+        "name": "vrach (shifokor) rentgenologi",
+        "category": 2
+    },
+    {
+        "id": 1125,
+        "name": "rentgen laboranti",
+        "category": 3
+    },
+    {
+        "id": 1126,
+        "name": "katta laborant",
+        "category": 3
+    },
+    {
+        "id": 1127,
+        "name": "laboranti",
+        "category": 3
+    },
+    {
+        "id": 1128,
+        "name": "vrach (shifokor) patologoanatom-bo'lim mudiri",
+        "category": 3
+    },
+    {
+        "id": 1129,
+        "name": "vrach (shifokor) patologoanatomi",
+        "category": 3
+    },
+    {
+        "id": 1130,
+        "name": "vrach (shifokor) sitolog",
+        "category": 3
+    },
+    {
+        "id": 1131,
+        "name": "vrach (shifokor) dermatovenerolog",
+        "category": 3
+    },
+    {
+        "id": 1132,
+        "name": "vrach (shifokor) kosmetolog",
+        "category": 3
+    },
+    {
+        "id": 1133,
+        "name": "vrach (shifokor) pulmonolog",
+        "category": 3
+    },
+    {
+        "id": 1134,
+        "name": "varch (shifokor) travmatolog",
+        "category": 2
+    },
+    {
+        "id": 1135,
+        "name": "provizor (farmasevt) dorixona bo'limi mudiri",
+        "category": 2
+    },
+    {
+        "id": 1136,
+        "name": "provizor-texnologi (farnasevt)",
+        "category": 2
+    },
+    {
+        "id": 1137,
+        "name": "farmasevt-assistenti",
+        "category": 2
+    },
+    {
+        "id": 1138,
+        "name": "qadoqlovchisi",
+        "category": 2
+    },
+    {
+        "id": 1139,
+        "name": "xo'jalik mudiri",
+        "category": 3
+    },
+    {
+        "id": 1140,
+        "name": "qozonxona boshlig'i",
+        "category": 3
+    },
+    {
+        "id": 1141,
+        "name": "ombor mudiri",
+        "category": 3
+    },
+    {
+        "id": 1142,
+        "name": "bino va inshoatlarini ta'mirlash bo'yicha ishchisi",
+        "category": 3
+    },
+    {
+        "id": 1143,
+        "name": "xizmat xonalari farroshi",
+        "category": 5
+    },
+    {
+        "id": 1144,
+        "name": "aloqachi-telefonist",
+        "category": 5
+    },
+    {
+        "id": 1145,
+        "name": "kir yuvivchi mashinist",
+        "category": 5
+    },
+    {
+        "id": 1146,
+        "name": "kompyuter operatori",
+        "category": 3
+    },
+    {
+        "id": 1147,
+        "name": "elektr jihozlarni ta'mirlash bo'yicha texnik",
+        "category": 3
+    },
+    {
+        "id": 1148,
+        "name": "omborchi",
+        "category": 3
+    },
+    {
+        "id": 1149,
+        "name": "buxgalter (2-guruh zaxira ombori)",
+        "category": 3
+    },
+    {
+        "id": 1150,
+        "name": "vrach (shifokor) onkolog",
+        "category": 3
+    },
+    {
+        "id": 1151,
+        "name": "vrach (shifokor) stomatologi",
+        "category": 2
+    },
+    {
+        "id": 1152,
+        "name": "vrach (shifokor) transfuziologi",
+        "category": 2
+    },
+    {
+        "id": 1153,
+        "name": "vrach (shifokor) torakal jarrohi",
+        "category": 2
+    },
+    {
+        "id": 1154,
+        "name": "vrach (shifokor) revmatologi",
+        "category": 2
+    },
+    {
+        "id": 1155,
+        "name": "vrach (shifokor) manual terapevti",
+        "category": 2
+    },
+    {
+        "id": 1156,
+        "name": "vrach (shifokor) psixologi",
+        "category": 2
+    },
+    {
+        "id": 1157,
+        "name": "vrach (shifokro) gematologi",
+        "category": 2
+    },
+    {
+        "id": 1158,
+        "name": "buxgalter ish haqini hisoblash bo'yicha",
+        "category": 2
+    },
+    {
+        "id": 1159,
+        "name": "buxgalter moddiy qimmatliklarni hisobga olish bo'yicha",
+        "category": 2
+    },
+    {
+        "id": 1160,
+        "name": "kassiri",
+        "category": 2
+    },
+    {
+        "id": 1161,
+        "name": "qurilish bo‘yoqchisi",
+        "category": 4
+    },
+    {
+        "id": 1162,
+        "name": "qurilish-montaj ishlari katta ustasi",
+        "category": 2
+    },
+    {
+        "id": 1163,
+        "name": "1-toifali qurilmalarni taʼmirlash va ekspluatatsiya qilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1164,
+        "name": "2-toifali qurilmalarni taʼmirlash va ekspluatatsiya qilish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1165,
+        "name": "qurilmalarni tuzatuvchisi",
+        "category": 2
+    },
+    {
+        "id": 1166,
+        "name": "1-darajali qurilmalarni tuzatuvchisi",
+        "category": 2
+    },
+    {
+        "id": 1167,
+        "name": "2-darajali qurilmalarni tuzatuvchisi",
+        "category": 2
+    },
+    {
+        "id": 1168,
+        "name": "3-darajali qurilmalarni tuzatuvchisi",
+        "category": 3
+    },
+    {
+        "id": 1169,
+        "name": "4-darajali qurilmalarni tuzatuvchisi",
+        "category": 3
+    },
+    {
+        "id": 1170,
+        "name": "5-darajali qurilmalarni tuzatuvchisi",
+        "category": 3
+    },
+    {
+        "id": 1171,
+        "name": "6-darajali qurilmalarni tuzatuvchisi",
+        "category": 3
+    },
+    {
+        "id": 1172,
+        "name": "ombor boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 1173,
+        "name": "stansiya boshlig'ining kadrlar va ijtimoiy masalalar bo'yicha yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 1174,
+        "name": "boshqarma boshlig'ining hujjatlarni yuritilishini nazorat qilish va ishlarni tashkil etish bo'yicha yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 1175,
+        "name": "departament boshlig‘i yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 1176,
+        "name": "razyezd boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1177,
+        "name": "razyezd navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 1178,
+        "name": "referenti",
+        "category": 2
+    },
+    {
+        "id": 1179,
+        "name": "daromad va xarajatlarni rejalashtirish yetakchi iqtisodchisi",
+        "category": 2
+    },
+    {
+        "id": 1180,
+        "name": "rejalashtirish texnigi",
+        "category": 3
+    },
+    {
+        "id": 1181,
+        "name": "rejali taʼmirlash muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1182,
+        "name": "rejali taʼmirlash yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1183,
+        "name": "rejim va maxfiylik noziri",
+        "category": 1
+    },
+    {
+        "id": 1184,
+        "name": "rels pletlarini eltishga mo'ljallangan maxsus sostav mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1185,
+        "name": "rezinadan buyum preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1186,
+        "name": "1-darajali rezinadan buyum preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1187,
+        "name": "2-darajali rezinadan buyum preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1188,
+        "name": "3-darajali rezinadan buyum preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1189,
+        "name": "4-darajali rezinadan buyum preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1190,
+        "name": "5-darajali rezinadan buyum preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1191,
+        "name": "ruxsatnoma byurosi noziri",
+        "category": 3
+    },
+    {
+        "id": 1192,
+        "name": "ruxsatnoma byurosi katta noziri",
+        "category": 3
+    },
+    {
+        "id": 1193,
+        "name": "ruxsatnomalar byurosi navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 1194,
+        "name": "safarbarlik ishlari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1195,
+        "name": "samosval haydovchisi",
+        "category": 4
+    },
+    {
+        "id": 1196,
+        "name": "1-toifali sanoat xavfsizligi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1197,
+        "name": "saralash tepaligi navbatchisi",
+        "category": 3
+    },
+    {
+        "id": 1198,
+        "name": "saralash tepaligi operatori",
+        "category": 3
+    },
+    {
+        "id": 1199,
+        "name": "sertifikatsiya mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 1200,
+        "name": "sex texnologi",
+        "category": 2
+    },
+    {
+        "id": 1201,
+        "name": "sex ustasi",
+        "category": 2
+    },
+    {
+        "id": 1202,
+        "name": "katta sex ustasi",
+        "category": 2
+    },
+    {
+        "id": 1203,
+        "name": "shishali plastik mahsulotlarini preslovchisi",
+        "category": 4
+    },
+    {
+        "id": 1204,
+        "name": "shixtalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1205,
+        "name": "1-darajali shixtalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1206,
+        "name": "2-darajali shixtalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1207,
+        "name": "3-darajali shixtalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1208,
+        "name": "4-darajali shixtalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1209,
+        "name": "5-darajali shixtalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1210,
+        "name": "shoʻba boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1211,
+        "name": "shtab boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1212,
+        "name": "shtamplovchisi",
+        "category": 4
+    },
+    {
+        "id": 1213,
+        "name": "sifat bo‘yicha muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1214,
+        "name": "sifat bo‘yicha yetakchi muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1215,
+        "name": "sifat bo'yicha direktori",
+        "category": 1
+    },
+    {
+        "id": 1216,
+        "name": "sifat tekshiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 1217,
+        "name": "stansiyasi signalchisi",
+        "category": 4
+    },
+    {
+        "id": 1218,
+        "name": "sinov muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1219,
+        "name": "sinovchi chilangari",
+        "category": 4
+    },
+    {
+        "id": 1220,
+        "name": "smena katta qo‘riqchisi",
+        "category": 5
+    },
+    {
+        "id": 1221,
+        "name": "smena ustasi",
+        "category": 2
+    },
+    {
+        "id": 1222,
+        "name": "smeta ishlari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1223,
+        "name": "sovuq metallni kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 1224,
+        "name": "sport majmuasi boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1225,
+        "name": "standartlashtirish va sertifikatsiyalashtirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1226,
+        "name": "1-toifali standartlashtirish va sertifikatsiyalashtirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1227,
+        "name": "2-toifali standartlashtirish va sertifikatsiyalashtirish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1228,
+        "name": "stansiya navbatchisi huzuridagi operatori",
+        "category": 3
+    },
+    {
+        "id": 1229,
+        "name": "stansiya ishchisi",
+        "category": 4
+    },
+    {
+        "id": 1230,
+        "name": "strelka posti navbatchisi",
+        "category": 4
+    },
+    {
+        "id": 1231,
+        "name": "stropalchisi",
+        "category": 4
+    },
+    {
+        "id": 1232,
+        "name": "sut sog‘uvchisi",
+        "category": 4
+    },
+    {
+        "id": 1233,
+        "name": "suvni kimyoviy tozalash apparatchisi",
+        "category": 4
+    },
+    {
+        "id": 1234,
+        "name": "suvoqchisi",
+        "category": 4
+    },
+    {
+        "id": 1235,
+        "name": "suvoqchi-qoplovchisi",
+        "category": 4
+    },
+    {
+        "id": 1236,
+        "name": "tabel yurituvchisi",
+        "category": 3
+    },
+    {
+        "id": 1237,
+        "name": "yuk va tijorat ishlari noziri",
+        "category": 2
+    },
+    {
+        "id": 1238,
+        "name": "takelajchisi",
+        "category": 4
+    },
+    {
+        "id": 1239,
+        "name": "ta'minot agenti",
+        "category": 2
+    },
+    {
+        "id": 1240,
+        "name": "moddiy-texnik taʼminoti katta muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1241,
+        "name": "taʼmirlash ustasi",
+        "category": 1
+    },
+    {
+        "id": 1242,
+        "name": "taʼmirlovchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1243,
+        "name": "1-darajali taʼmirlovchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1244,
+        "name": "2-darajali taʼmirlovchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1245,
+        "name": "3-darajali taʼmirlovchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1246,
+        "name": "4-darajali taʼmirlovchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1247,
+        "name": "5-darajali taʼmirlovchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1248,
+        "name": "tarjimoni",
+        "category": 2
+    },
+    {
+        "id": 1249,
+        "name": "taroziboni",
+        "category": 4
+    },
+    {
+        "id": 1250,
+        "name": "tarqatish tarmoqlariga tezkor xizmat ko‘rsatish elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 1251,
+        "name": "tashqi iqtisodiy aloqa muhandisi",
+        "category": 5
+    },
+    {
+        "id": 1252,
+        "name": "1-toifali tashqi iqtisodiy aloqa muhandisi",
+        "category": 5
+    },
+    {
+        "id": 1253,
+        "name": "2-toifali tashqi iqtisodiy aloqa muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1254,
+        "name": "tashuvni tashkil etish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1255,
+        "name": "tekis bosma bosmalovchisi",
+        "category": 4
+    },
+    {
+        "id": 1256,
+        "name": "telefon aloqasi stansiya qurilmalari elektromontyori",
+        "category": 5
+    },
+    {
+        "id": 1257,
+        "name": "temir yo‘l mashina va mexanizmlarini sozlovchisi",
+        "category": 5
+    },
+    {
+        "id": 1258,
+        "name": "1-darajali temir yo‘l sozlovchisi",
+        "category": 5
+    },
+    {
+        "id": 1259,
+        "name": "2-darajali temir yo‘l sozlovchisi",
+        "category": 5
+    },
+    {
+        "id": 1260,
+        "name": "3-darajali temir yo‘l sozlovchisi",
+        "category": 5
+    },
+    {
+        "id": 1261,
+        "name": "4-darajali temir yo‘l sozlovchisi",
+        "category": 5
+    },
+    {
+        "id": 1262,
+        "name": "5-darajali temir yo‘l sozlovchisi",
+        "category": 4
+    },
+    {
+        "id": 1263,
+        "name": "temir yoʻl ustasi",
+        "category": 2
+    },
+    {
+        "id": 1264,
+        "name": "temir yo‘l transportidan foydalanish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1265,
+        "name": "temir yo‘l-qurilish mashinasi mashinisti yordamchisi",
+        "category": 4
+    },
+    {
+        "id": 1266,
+        "name": "temirbeton buyumlar va konstruksiyalar qoliplovchisi",
+        "category": 4
+    },
+    {
+        "id": 1267,
+        "name": "temirbeton buyumar va konstruksiyalarni sinash qurilmasi mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1268,
+        "name": "temirchi-shtampovkachi",
+        "category": 4
+    },
+    {
+        "id": 1269,
+        "name": "1-darajali temirchi-shtampovkachi",
+        "category": 4
+    },
+    {
+        "id": 1270,
+        "name": "2-darajali temirchi-shtampovkachi",
+        "category": 4
+    },
+    {
+        "id": 1271,
+        "name": "3-darajali temirchi-shtampovkachi",
+        "category": 4
+    },
+    {
+        "id": 1272,
+        "name": "4-darajali temirchi-shtampovkachi",
+        "category": 4
+    },
+    {
+        "id": 1273,
+        "name": "5-darajali temirchi-shtampovkachi",
+        "category": 4
+    },
+    {
+        "id": 1274,
+        "name": "temir-yo'l suv ta'minoti mashinisti",
+        "category": 3
+    },
+    {
+        "id": 1275,
+        "name": "temir-yo'l suv ta'minoti katta mashinisti",
+        "category": 3
+    },
+    {
+        "id": 1276,
+        "name": "termisti",
+        "category": 4
+    },
+    {
+        "id": 1277,
+        "name": "1-darajali termisti",
+        "category": 4
+    },
+    {
+        "id": 1278,
+        "name": "2-darajali termisti",
+        "category": 4
+    },
+    {
+        "id": 1279,
+        "name": "3-darajali termisti",
+        "category": 4
+    },
+    {
+        "id": 1280,
+        "name": "4-darajali termisti",
+        "category": 4
+    },
+    {
+        "id": 1281,
+        "name": "5-darajali termisti",
+        "category": 4
+    },
+    {
+        "id": 1282,
+        "name": "texnik xujjatlarni yuritish texnigi",
+        "category": 3
+    },
+    {
+        "id": 1283,
+        "name": "texnika xavfsizligi va yong‘indan muhofazani\ntashkil etish muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1284,
+        "name": "vagonlarni ko’zdan kechirish va ta’mirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 1285,
+        "name": "texnik xujjatlar muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1286,
+        "name": "texnik xujjatlar yetakchi mutaxassisi",
+        "category": 2
+    },
+    {
+        "id": 1287,
+        "name": "texnik-noziri",
+        "category": 3
+    },
+    {
+        "id": 1288,
+        "name": "texnik-konstruktori",
+        "category": 3
+    },
+    {
+        "id": 1289,
+        "name": "texnik-laboranti",
+        "category": 3
+    },
+    {
+        "id": 1290,
+        "name": "texnik-texnologi",
+        "category": 2
+    },
+    {
+        "id": 1291,
+        "name": "texnologi",
+        "category": 2
+    },
+    {
+        "id": 1292,
+        "name": "yetakchi texnologi",
+        "category": 2
+    },
+    {
+        "id": 1293,
+        "name": "texnologik jarayon va maxsulot sifati nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 1294,
+        "name": "texnologik jarayonlarni avtomatlashtirilgan boshqaruv tizimlari texnigi",
+        "category": 4
+    },
+    {
+        "id": 1295,
+        "name": "texnologik jarayonlarni avtomatlashtirilgan boshqaruv tizimlari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1296,
+        "name": "texnologik jihozlar sozlovchisi",
+        "category": 5
+    },
+    {
+        "id": 1297,
+        "name": "tibbiyot punkti mudiri",
+        "category": 1
+    },
+    {
+        "id": 1298,
+        "name": "tijorat agenti",
+        "category": 2
+    },
+    {
+        "id": 1299,
+        "name": "tijorat direktori",
+        "category": 1
+    },
+    {
+        "id": 1300,
+        "name": "tish kesuvchisi",
+        "category": 1
+    },
+    {
+        "id": 1301,
+        "name": "1-darajali tish kesuvchisi",
+        "category": 1
+    },
+    {
+        "id": 1302,
+        "name": "2-darajali tish kesuvchisi",
+        "category": 1
+    },
+    {
+        "id": 1303,
+        "name": "3-darajali tish kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 1304,
+        "name": "4-darajali tish kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 1305,
+        "name": "5-darajali tish kesuvchisi",
+        "category": 4
+    },
+    {
+        "id": 1306,
+        "name": "toblash asbobini abraziv doira (qayroq tosh) bilan charxlovchi",
+        "category": 4
+    },
+    {
+        "id": 1307,
+        "name": "tokari",
+        "category": 4
+    },
+    {
+        "id": 1308,
+        "name": "1-darajali tokari",
+        "category": 4
+    },
+    {
+        "id": 1309,
+        "name": "2-darajali tokari",
+        "category": 4
+    },
+    {
+        "id": 1310,
+        "name": "3-darajali tokari",
+        "category": 4
+    },
+    {
+        "id": 1311,
+        "name": "4-darajali tokari",
+        "category": 4
+    },
+    {
+        "id": 1312,
+        "name": "5-darajali tokari",
+        "category": 4
+    },
+    {
+        "id": 1313,
+        "name": "tokar-operatori",
+        "category": 4
+    },
+    {
+        "id": 1314,
+        "name": "tokar-revolverchisi",
+        "category": 4
+    },
+    {
+        "id": 1315,
+        "name": "topshiriqlarning bajarilishini nazorat etish noziri",
+        "category": 2
+    },
+    {
+        "id": 1316,
+        "name": "tovar (yuk) kassiri",
+        "category": 3
+    },
+    {
+        "id": 1317,
+        "name": "katta tovar (yuk) kassiri",
+        "category": 3
+    },
+    {
+        "id": 1318,
+        "name": "yuk idorasi boshlig'i",
+        "category": 1
+    },
+    {
+        "id": 1319,
+        "name": "tovarshunosi",
+        "category": 2
+    },
+    {
+        "id": 1320,
+        "name": "tozalash inshootlari ishchisi",
+        "category": 4
+    },
+    {
+        "id": 1321,
+        "name": "tozalash jihozlari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1322,
+        "name": "transportni taʼmirlash bosh mexanigi",
+        "category": 4
+    },
+    {
+        "id": 1323,
+        "name": "tuproqchisi",
+        "category": 4
+    },
+    {
+        "id": 1324,
+        "name": "1-darajali tuproqchisi",
+        "category": 4
+    },
+    {
+        "id": 1325,
+        "name": "2-darajali tuproqchisi",
+        "category": 4
+    },
+    {
+        "id": 1326,
+        "name": "3-darajali tuproqchisi",
+        "category": 4
+    },
+    {
+        "id": 1327,
+        "name": "4-darajali tuproqchisi",
+        "category": 4
+    },
+    {
+        "id": 1328,
+        "name": "5-darajali tuproqchisi",
+        "category": 4
+    },
+    {
+        "id": 1329,
+        "name": "uchastka boshlig‘i o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1330,
+        "name": "uchastka elektromexanigi",
+        "category": 3
+    },
+    {
+        "id": 1331,
+        "name": "uchastka mudiri",
+        "category": 1
+    },
+    {
+        "id": 1332,
+        "name": "uchish apparatlarini yig‘uvchi-chilangari",
+        "category": 4
+    },
+    {
+        "id": 1333,
+        "name": "uchish apparatlarining elektr jihozlari montajchisi",
+        "category": 4
+    },
+    {
+        "id": 1334,
+        "name": "ultrotovushli nazorat defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 1335,
+        "name": "1-darajali ultrotovushli nazorat defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 1336,
+        "name": "2-darajali ultrotovushli nazorat defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 1337,
+        "name": "3-darajali ultrotovushli nazorat defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 1338,
+        "name": "4-darajali ultrotovushli nazorat defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 1339,
+        "name": "5-darajali ultrotovushli nazorat defektoskopchisi",
+        "category": 4
+    },
+    {
+        "id": 1340,
+        "name": "umumiy amaliyot vrachi",
+        "category": 2
+    },
+    {
+        "id": 1341,
+        "name": "ustaxona boshlig‘i",
+        "category": 1
+    },
+    {
+        "id": 1342,
+        "name": "vagon nazoratchisi",
+        "category": 2
+    },
+    {
+        "id": 1343,
+        "name": "vagonlar xarakati tezligini muvofiqlashtiruvchisi",
+        "category": 4
+    },
+    {
+        "id": 1344,
+        "name": "vagonlarni qabul qiluvchisi",
+        "category": 4
+    },
+    {
+        "id": 1345,
+        "name": "vanna sozlovchisi",
+        "category": 4
+    },
+    {
+        "id": 1346,
+        "name": "veterinariya feldsheri",
+        "category": 3
+    },
+    {
+        "id": 1347,
+        "name": "vibrokat mashinisti",
+        "category": 3
+    },
+    {
+        "id": 1348,
+        "name": "videoyozuv va videoko‘rsatuv operatori",
+        "category": 3
+    },
+    {
+        "id": 1349,
+        "name": "xaridlar bo'yicha bosh mutaxassisi",
+        "category": 1
+    },
+    {
+        "id": 1350,
+        "name": "xizmat-texnik vagoni provodnigi",
+        "category": 4
+    },
+    {
+        "id": 1351,
+        "name": "xom ashyo va tayyor mahsulotlar hisobini yuritish texnigi",
+        "category": 3
+    },
+    {
+        "id": 1352,
+        "name": "xom-ashyo va yonilg‘ini ortuvchi-bo‘shatuvchisi",
+        "category": 4
+    },
+    {
+        "id": 1353,
+        "name": "xopper-dozator mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1354,
+        "name": "yuriskonsulti",
+        "category": 2
+    },
+    {
+        "id": 1355,
+        "name": "yegeri",
+        "category": 4
+    },
+    {
+        "id": 1356,
+        "name": "yig‘ish-o‘rnatish va taʼmirlash ishlari nazoratchisi",
+        "category": 4
+    },
+    {
+        "id": 1357,
+        "name": "yig‘uvchi-parchinlovchisi",
+        "category": 4
+    },
+    {
+        "id": 1358,
+        "name": "yo‘l mashinalari va mexanizmlari mashinisti",
+        "category": 4
+    },
+    {
+        "id": 1359,
+        "name": "yo‘l brigadiri",
+        "category": 4
+    },
+    {
+        "id": 1360,
+        "name": "poyezdlarni nazorat etish bo‘yicha taftishchi-yo‘riqchisi",
+        "category": 2
+    },
+    {
+        "id": 1361,
+        "name": "yo‘l-qurilish mashinalari va traktorlarni taʼmirlash chilangari",
+        "category": 4
+    },
+    {
+        "id": 1362,
+        "name": "yo‘nuvchi-tokari",
+        "category": 4
+    },
+    {
+        "id": 1363,
+        "name": "noziri",
+        "category": 2
+    },
+    {
+        "id": 1364,
+        "name": "katta noziri",
+        "category": 2
+    },
+    {
+        "id": 1365,
+        "name": "o'qitish noziri",
+        "category": 2
+    },
+    {
+        "id": 1366,
+        "name": "yog‘och modellar modelchisi",
+        "category": 4
+    },
+    {
+        "id": 1367,
+        "name": "yong'inga qarshi profilaktika yo'riqchisi",
+        "category": 2
+    },
+    {
+        "id": 1368,
+        "name": "yong'inga qarshi profilaktika katta yo'riqchisi",
+        "category": 2
+    },
+    {
+        "id": 1369,
+        "name": "yoqilg‘i apparaturasi chilangari",
+        "category": 5
+    },
+    {
+        "id": 1370,
+        "name": "yoqilg'i-moylash materiallari muhandisi",
+        "category": 2
+    },
+    {
+        "id": 1371,
+        "name": "yuklarni eltish ekspeditori",
+        "category": 3
+    },
+    {
+        "id": 1372,
+        "name": "yuk ortish-tushirish ishlari kompleks brigadasi mexanizatori",
+        "category": 4
+    },
+    {
+        "id": 1373,
+        "name": "yukchisi",
+        "category": 4
+    },
+    {
+        "id": 1374,
+        "name": "1-darajali yukchisi",
+        "category": 4
+    },
+    {
+        "id": 1375,
+        "name": "2-darajali yukchisi",
+        "category": 4
+    },
+    {
+        "id": 1376,
+        "name": "3-darajali yukchisi",
+        "category": 4
+    },
+    {
+        "id": 1377,
+        "name": "4-darajali yukchisi",
+        "category": 4
+    },
+    {
+        "id": 1378,
+        "name": "5-darajali yukchisi",
+        "category": 4
+    },
+    {
+        "id": 1379,
+        "name": "yuk tashuvchi poyezdlar konduktori",
+        "category": 4
+    },
+    {
+        "id": 1380,
+        "name": "katta yuk tashuvchi poyezdlar konduktori",
+        "category": 4
+    },
+    {
+        "id": 1381,
+        "name": "bosh yuk tashuvchi poyezdlar konduktori",
+        "category": 4
+    },
+    {
+        "id": 1382,
+        "name": "yuk va bagajni qidirish agenti",
+        "category": 2
+    },
+    {
+        "id": 1383,
+        "name": "yuklarni topshirish bo‘yicha agenti",
+        "category": 2
+    },
+    {
+        "id": 1384,
+        "name": "yuqori chastotali tok qurilmalari payvandchisi",
+        "category": 4
+    },
+    {
+        "id": 1385,
+        "name": "biokimyoviy-klinik laboratoriya vrach laboranti",
+        "category": 2
+    },
+    {
+        "id": 1386,
+        "name": "ansambl solisti",
+        "category": 2
+    },
+    {
+        "id": 1387,
+        "name": "vokal solisti",
+        "category": 2
+    },
+    {
+        "id": 1388,
+        "name": "bo'lim mudiri-vrach epidemiolog",
+        "category": 1
+    },
+    {
+        "id": 1389,
+        "name": "bosh pediatri",
+        "category": 1
+    },
+    {
+        "id": 1390,
+        "name": "bosh terapevti",
+        "category": 1
+    },
+    {
+        "id": 1391,
+        "name": "bosh shifokor o‘rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1392,
+        "name": "muassasa boshlig‘i o'rinbosari",
+        "category": 1
+    },
+    {
+        "id": 1393,
+        "name": "dezinstruktori",
+        "category": 2
+    },
+    {
+        "id": 1394,
+        "name": "dietolog-hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1395,
+        "name": "epidemiolog yordamchisi",
+        "category": 2
+    },
+    {
+        "id": 1396,
+        "name": "farmatsevti",
+        "category": 2
+    },
+    {
+        "id": 1397,
+        "name": "fond saqlovchisi",
+        "category": 2
+    },
+    {
+        "id": 1398,
+        "name": "kommunal gigiena bo‘yicha sanitariya vrachi",
+        "category": 2
+    },
+    {
+        "id": 1399,
+        "name": "jo‘rnavozi",
+        "category": 2
+    },
+    {
+        "id": 1400,
+        "name": "liftchi",
+        "category": 3
+    },
+    {
+        "id": 1401,
+        "name": "logopedi",
+        "category": 2
+    },
+    {
+        "id": 1402,
+        "name": "madaniy tadbirlarni tashkil etuvchisi",
+        "category": 2
+    },
+    {
+        "id": 1403,
+        "name": "maʼmuri",
+        "category": 2
+    },
+    {
+        "id": 1404,
+        "name": "muhandis-dasturchisi",
+        "category": 2
+    },
+    {
+        "id": 1405,
+        "name": "muzey direktori",
+        "category": 1
+    },
+    {
+        "id": 1406,
+        "name": "tibbiy punkt feldsheri",
+        "category": 2
+    },
+    {
+        "id": 1407,
+        "name": "tibbiy punkt hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1408,
+        "name": "tibbiy punkt mudiri",
+        "category": 2
+    },
+    {
+        "id": 1409,
+        "name": "raqs o'qituvchisi",
+        "category": 2
+    },
+    {
+        "id": 1410,
+        "name": "ofitsianti",
+        "category": 5
+    },
+    {
+        "id": 1411,
+        "name": "ovoz rejissyori",
+        "category": 2
+    },
+    {
+        "id": 1412,
+        "name": "oziq-ovqat gigiyenasi bo‘yicha sanitariya vrachi",
+        "category": 2
+    },
+    {
+        "id": 1413,
+        "name": "pediatriyada funksiyonal diagnostika vrachi",
+        "category": 2
+    },
+    {
+        "id": 1414,
+        "name": "radiatsion gigiena bo‘yicha sanitariya vrachi",
+        "category": 2
+    },
+    {
+        "id": 1415,
+        "name": "sanitariya vrach yordamchisi",
+        "category": 5
+    },
+    {
+        "id": 1416,
+        "name": "statist hamshirasi",
+        "category": 2
+    },
+    {
+        "id": 1417,
+        "name": "sut tarqatuvchisi",
+        "category": 5
+    },
+    {
+        "id": 1418,
+        "name": "1-toifali vrach-laboranti",
+        "category": 3
+    },
+    {
+        "id": 1419,
+        "name": "to‘garak rahbari",
+        "category": 2
+    },
+    {
+        "id": 1420,
+        "name": "uchastka (sex, vaxtva va bosh-r) terapevti",
+        "category": 2
+    },
+    {
+        "id": 1421,
+        "name": "ultratovush diagnostika vrachi",
+        "category": 2
+    },
+    {
+        "id": 1422,
+        "name": "umumiy amaliyot stomatolog vrachi",
+        "category": 2
+    },
+    {
+        "id": 1423,
+        "name": "vrach bakteriologi",
+        "category": 2
+    },
+    {
+        "id": 1424,
+        "name": "vrach dermatovenerologi",
+        "category": 2
+    },
+    {
+        "id": 1425,
+        "name": "vrach endokrinologi",
+        "category": 2
+    },
+    {
+        "id": 1426,
+        "name": "vrach gastroenterologi",
+        "category": 2
+    },
+    {
+        "id": 1427,
+        "name": "vrach ginekologi",
+        "category": 2
+    },
+    {
+        "id": 1428,
+        "name": "vrach nevrologi",
+        "category": 2
+    },
+    {
+        "id": 1429,
+        "name": "vrach oftalmologi",
+        "category": 2
+    },
+    {
+        "id": 1430,
+        "name": "vrach otorinolaringologi",
+        "category": 2
+    },
+    {
+        "id": 1431,
+        "name": "vrach pediatri",
+        "category": 2
+    },
+    {
+        "id": 1432,
+        "name": "vrach rentgenologi",
+        "category": 2
+    },
+    {
+        "id": 1433,
+        "name": "vrach travmatologi",
+        "category": 2
+    },
+    {
+        "id": 1434,
+        "name": "vrach virusologi",
+        "category": 2
+    },
+    {
+        "id": 1435,
+        "name": "vrach-mutaxassisi",
+        "category": 2
+    }
+]

@@ -1,0 +1,62 @@
+[
+    {
+        "id": "1",
+        "name": "O'zbek tili",
+        "name_ru": "Узбекский язык",
+        "name_en": "Uzbek language"
+    },
+    {
+        "id": "2",
+        "name": "Rus tili",
+        "name_ru": "Русский язык",
+        "name_en": "Russian language"
+    },
+    {
+        "id": "3",
+        "name": "Ingliz tili",
+        "name_ru": "Английский язык",
+        "name_en": "English language"
+    },
+    {
+        "id": "4",
+        "name": "Tojik tili",
+        "name_ru": "Таджикский язык",
+        "name_en": "Tajik language"
+    },
+    {
+        "id": "5",
+        "name": "Fransuz tili",
+        "name_ru": "Французский язык",
+        "name_en": "French language"
+    },
+    {
+        "id": "6",
+        "name": "Qozoq tili",
+        "name_ru": "Казахский язык",
+        "name_en": "Kazakh language"
+    },
+    {
+        "id": "7",
+        "name": "Koreys tili",
+        "name_ru": "Корейский язык",
+        "name_en": "Korean language"
+    },
+    {
+        "id": "8",
+        "name": "Xitoy tili",
+        "name_ru": "Китайский язык",
+        "name_en": "Chinese language"
+    },
+    {
+        "id": "9",
+        "name": "Nemis tili",
+        "name_ru": "Немецкий язык",
+        "name_en": "German language"
+    },
+    {
+        "id": "10",
+        "name": "Turkman tili",
+        "name_ru": "Туркменский язык",
+        "name_en": "Turkmen language"
+    }
+]

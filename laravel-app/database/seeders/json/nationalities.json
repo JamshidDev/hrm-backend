@@ -1,0 +1,236 @@
+[
+    {
+        "id": "1",
+        "name": "O'zbek",
+        "name_ru": "Узбек",
+        "name_en": "Uzbek"
+    },
+    {
+        "id": "2",
+        "name": "Rus",
+        "name_ru": "Русский",
+        "name_en": "Russian"
+    },
+    {
+        "id": "3",
+        "name": "Qozoq",
+        "name_ru": "Казах",
+        "name_en": "Kazakh"
+    },
+    {
+        "id": "4",
+        "name": "Tojik",
+        "name_ru": "Таджик",
+        "name_en": "Tajik"
+    },
+    {
+        "id": "5",
+        "name": "Turkman",
+        "name_ru": "Туркмен",
+        "name_en": "Turkmen"
+    },
+    {
+        "id": "6",
+        "name": "Ukrain",
+        "name_ru": "Украинец",
+        "name_en": "Ukrainian"
+    },
+    {
+        "id": "7",
+        "name": "Qoraqalpoq",
+        "name_ru": "Каракалпак",
+        "name_en": "Karakalpak"
+    },
+    {
+        "id": "8",
+        "name": "Qirg'iz",
+        "name_ru": "Киргиз",
+        "name_en": "Kyrgyz"
+    },
+    {
+        "id": "9",
+        "name": "Tatar",
+        "name_ru": "Татар",
+        "name_en": "Tatar"
+    },
+    {
+        "id": "10",
+        "name": "Koreys",
+        "name_ru": "Кореец",
+        "name_en": "Korean"
+    },
+    {
+        "id": "11",
+        "name": "Ozarbayjon",
+        "name_ru": "Азербайджанец",
+        "name_en": "Azerbaijani"
+    },
+    {
+        "id": "12",
+        "name": "Belarus",
+        "name_ru": "Белорус",
+        "name_en": "Belarusian"
+    },
+    {
+        "id": "13",
+        "name": "Nemis",
+        "name_ru": "Немец",
+        "name_en": "German"
+    },
+    {
+        "id": "14",
+        "name": "Lo'li",
+        "name_ru": "Цыган",
+        "name_en": "Gypsy"
+    },
+    {
+        "id": "15",
+        "name": "Turk",
+        "name_ru": "Турок",
+        "name_en": "Turk"
+    },
+    {
+        "id": "16",
+        "name": "Arman",
+        "name_ru": "Армянин",
+        "name_en": "Armenian"
+    },
+    {
+        "id": "17",
+        "name": "Gruzin",
+        "name_ru": "Грузин",
+        "name_en": "Georgian"
+    },
+    {
+        "id": "18",
+        "name": "Boshqird",
+        "name_ru": "Башкир",
+        "name_en": "Bashkir"
+    },
+    {
+        "id": "19",
+        "name": "Uyg'ur",
+        "name_ru": "Уйгур",
+        "name_en": "Uyghur"
+    },
+    {
+        "id": "20",
+        "name": "Yahudiy",
+        "name_ru": "Еврей",
+        "name_en": "Jew"
+    },
+    {
+        "id": "21",
+        "name": "Eronlik",
+        "name_ru": "Иранец",
+        "name_en": "Iranian"
+    },
+    {
+        "id": "22",
+        "name": "Afg'on",
+        "name_ru": "Афганец",
+        "name_en": "Afghan"
+    },
+    {
+        "id": "23",
+        "name": "Arab",
+        "name_ru": "Араб",
+        "name_en": "Arab"
+    },
+    {
+        "id": "24",
+        "name": "Moldovan",
+        "name_ru": "Молдаванин",
+        "name_en": "Moldovan"
+    },
+    {
+        "id": "25",
+        "name": "Dungan",
+        "name_ru": "Дунганин",
+        "name_en": "Dungan"
+    },
+    {
+        "id": "26",
+        "name": "Avar",
+        "name_ru": "Аварец",
+        "name_en": "Avar"
+    },
+    {
+        "id": "27",
+        "name": "Rumun",
+        "name_ru": "Румын",
+        "name_en": "Romanian"
+    },
+    {
+        "id": "28",
+        "name": "Chechen",
+        "name_ru": "Чеченец",
+        "name_en": "Chechen"
+    },
+    {
+        "id": "29",
+        "name": "Osetin",
+        "name_ru": "Осетин",
+        "name_en": "Ossetian"
+    },
+    {
+        "id": "30",
+        "name": "Venger",
+        "name_ru": "Венгр",
+        "name_en": "Hungarian"
+    },
+    {
+        "id": "31",
+        "name": "Xitoy",
+        "name_ru": "Китаец",
+        "name_en": "Chinese"
+    },
+    {
+        "id": "32",
+        "name": "Dog'istonlik",
+        "name_ru": "Дагестанец",
+        "name_en": "Dagestani"
+    },
+    {
+        "id": "33",
+        "name": "Dargin",
+        "name_ru": "Даргинец",
+        "name_en": "Dargin"
+    },
+    {
+        "id": "34",
+        "name": "Kurd",
+        "name_ru": "Курд",
+        "name_en": "Kurd"
+    },
+    {
+        "id": "35",
+        "name": "Eston",
+        "name_ru": "Эстонец",
+        "name_en": "Estonian"
+    },
+    {
+        "id": "36",
+        "name": "Latish",
+        "name_ru": "Латыш",
+        "name_en": "Latvian"
+    },
+    {
+        "id": "37",
+        "name": "Grek",
+        "name_ru": "Грек",
+        "name_en": "Greek"
+    },
+    {
+        "id": "38",
+        "name": "Polyak",
+        "name_ru": "Поляк",
+        "name_en": "Polish"
+    },
+    {
+        "id": "39",
+        "name": "Boshqa",
+        "name_ru": "Другие",
+        "name_en": "Other"
+    }
+]
