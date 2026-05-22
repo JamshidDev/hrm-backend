@@ -8,7 +8,7 @@ import type { DataSource } from '@/db/types';
 import { worker_languages, languages as languagesTable } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
-import { MinioService } from '@/shared/minio/minio.service';
+import { MinioService, type UploadedFile } from '@/shared/minio/minio.service';
 import { WorkerUuidLookup } from '@/modules/hr/_shared/worker-uuid.helper';
 import { toLaravelTimestamp as toLaravelTs } from '@/common/utils/datetime.util';
 import {
@@ -72,22 +72,53 @@ export class WorkerLanguageService {
     );
   }
 
-  async create(dto: CreateWorkerLanguageDto): Promise<void> {
+  async create(
+    dto: CreateWorkerLanguageDto,
+    file?: UploadedFile,
+  ): Promise<void> {
+    // Laravel: Helper::idUuid($uuid) — resolve worker uuid → id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-languages', [
+          'png',
+          'jpg',
+          'jpeg',
+          'pdf',
+          'docx',
+        ])
+      : (dto.file ?? null);
+
     await this.db.insert(worker_languages).values({
-      worker_id: dto.worker_id,
+      worker_id: workerId,
       language_id: dto.language_id,
-      file: dto.file ?? null,
+      file: filePath,
     });
   }
 
-  async update(id: number, dto: UpdateWorkerLanguageDto): Promise<void> {
+  async update(
+    id: number,
+    dto: UpdateWorkerLanguageDto,
+    file?: UploadedFile,
+  ): Promise<void> {
     await this.assertExists(id);
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-languages', [
+          'png',
+          'jpg',
+          'jpeg',
+          'pdf',
+          'docx',
+        ])
+      : (dto.file ?? null);
+
     await this.db
       .update(worker_languages)
       .set({
-        worker_id: dto.worker_id,
         language_id: dto.language_id,
-        file: dto.file ?? null,
+        file: filePath,
       })
       .where(eq(worker_languages.id, id));
   }

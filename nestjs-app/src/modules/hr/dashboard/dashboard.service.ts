@@ -11,12 +11,9 @@ import {
   and,
   count,
   countDistinct,
-  desc,
   eq,
   gte,
-  inArray,
   isNotNull,
-  isNull,
   lte,
   sql,
 } from 'drizzle-orm';
@@ -31,7 +28,6 @@ import {
   organization_incentives,
   vacations,
   worker_disabilities,
-  worker_passports,
   worker_positions,
   worker_relative_disabilities,
   worker_relatives,
@@ -78,13 +74,24 @@ export class DashboardService {
       vacationTypes,
     ] = await Promise.all([
       this.db
-        .select({ dp_rate: sql<number>`COALESCE(SUM(${department_positions.rate}), 0)` })
+        .select({
+          dp_rate: sql<number>`COALESCE(SUM(${department_positions.rate}), 0)`,
+        })
         .from(department_positions)
         .where(notDeleted(department_positions)),
       this.db
-        .select({ wp_rate: sql<number>`COALESCE(SUM(${worker_positions.rate}), 0)` })
+        .select({
+          wp_rate: sql<number>`COALESCE(SUM(${worker_positions.rate}), 0)`,
+        })
         .from(worker_positions)
-        .where(notDeleted(worker_positions)),
+        .where(
+          and(
+            notDeleted(worker_positions),
+            // Laravel scopeFilter: status = ACTIVE (2) + organization_id IN valid orgs.
+            eq(worker_positions.status, 2),
+            sql`EXISTS (SELECT 1 FROM organizations o WHERE o.id = ${worker_positions.organization_id} AND o.deleted_at IS NULL)`,
+          ),
+        ),
       this.birthdays(today),
       this.workersFilter(),
       this.contractsByMonth(),
@@ -127,16 +134,24 @@ export class DashboardService {
     const nextMonth = this.formatDate(next);
     const currentYear = new Date().getFullYear();
 
-    // Latest med per worker_id, then count: finished (<=today) / approaching (>today & <nextMonth).
+    // Laravel: WorkerPosition::filter($user, status=ACTIVE)->select('worker_id') ichidagi xodimlar
+    // bo'yicha sub-query. Parity uchun bizda ham EXISTS active worker_positions filter qo'shamiz.
     const [medsStats] = await this.db.execute(sql`
       SELECT
         COALESCE(SUM(CASE WHEN latest_to <= ${today}::date THEN 1 ELSE 0 END), 0)::int AS meds_finished,
         COALESCE(SUM(CASE WHEN latest_to > ${today}::date AND latest_to < ${nextMonth}::date THEN 1 ELSE 0 END), 0)::int AS meds_approaching
       FROM (
-        SELECT worker_id, MAX("to") AS latest_to
-        FROM ${meds}
-        WHERE deleted_at IS NULL
-        GROUP BY worker_id
+        SELECT m.worker_id, MAX(m."to") AS latest_to
+        FROM ${meds} m
+        WHERE m.deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM worker_positions wp
+            JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL
+            WHERE wp.worker_id = m.worker_id
+              AND wp.status = 2
+              AND wp.deleted_at IS NULL
+          )
+        GROUP BY m.worker_id
       ) latest_meds
     `);
 
@@ -166,7 +181,10 @@ export class DashboardService {
         ),
       );
 
-    const medsRow = medsStats as { meds_finished: number; meds_approaching: number };
+    const medsRow = medsStats as {
+      meds_finished: number;
+      meds_approaching: number;
+    };
     const discTotal = Number(discStats?.total ?? 0);
     const discFine = Number(discStats?.fineType1 ?? 0);
     const incTotal = Number(incStats?.total ?? 0);
@@ -198,7 +216,9 @@ export class DashboardService {
 
   // ---- private helpers ----
 
-  private async birthdays(today: Date): Promise<DashboardIndexResponse['birthdays']> {
+  private async birthdays(
+    today: Date,
+  ): Promise<DashboardIndexResponse['birthdays']> {
     const lastDay = new Date(today);
     lastDay.setDate(lastDay.getDate() + 4);
 
@@ -224,6 +244,8 @@ export class DashboardService {
       .where(
         and(
           notDeleted(workers),
+          // Laravel: whereHas('positions', scopeFilter status=ACTIVE + valid org).
+          sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.worker_id = ${workers.id} AND wp.status = 2 AND wp.deleted_at IS NULL)`,
           fromMonth === toMonth
             ? and(
                 eq(workers.birth_month, fromMonth),
@@ -247,7 +269,9 @@ export class DashboardService {
     // All dates in range.
     const allDates: string[] = [];
     for (let d = new Date(today); d <= lastDay; d.setDate(d.getDate() + 1)) {
-      allDates.push(`${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+      allDates.push(
+        `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      );
     }
 
     if (rows.length === 0) {
@@ -291,6 +315,8 @@ export class DashboardService {
   }
 
   // Single aggregate row with all worker counts (matches Laravel selectRaw chain).
+  // Laravel: Worker::whereHas('positions', scopeFilter status=ACTIVE) — count
+  // only workers with at least one active worker_position.
   private async workersFilter(): Promise<Record<string, number>> {
     const rows = await this.db.execute(sql`
       SELECT
@@ -315,6 +341,13 @@ export class DashboardService {
         ORDER BY worker_id, id DESC
       ) p ON p.worker_id = workers.id
       WHERE workers.deleted_at IS NULL
+        AND EXISTS (
+          SELECT 1 FROM worker_positions wp
+          JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL
+          WHERE wp.worker_id = workers.id
+            AND wp.status = 2
+            AND wp.deleted_at IS NULL
+        )
     `);
     return (rows[0] ?? {}) as Record<string, number>;
   }
@@ -331,7 +364,9 @@ export class DashboardService {
 
     const newRows = await this.db
       .select({
-        month: sql<string>`TO_CHAR(${contracts.contract_date}, 'YYYY-MM')`.as('month'),
+        month: sql<string>`TO_CHAR(${contracts.contract_date}, 'YYYY-MM')`.as(
+          'month',
+        ),
         cnt: countDistinct(contracts.worker_id),
       })
       .from(contracts)
@@ -349,7 +384,10 @@ export class DashboardService {
 
     const endedRows = await this.db
       .select({
-        month: sql<string>`TO_CHAR(${contracts.contract_to_date}, 'YYYY-MM')`.as('month'),
+        month:
+          sql<string>`TO_CHAR(${contracts.contract_to_date}, 'YYYY-MM')`.as(
+            'month',
+          ),
         cnt: countDistinct(contracts.worker_id),
       })
       .from(contracts)
@@ -370,7 +408,11 @@ export class DashboardService {
     const endedMap = new Map(endedRows.map((r) => [r.month, Number(r.cnt)]));
 
     // Build all months in range.
-    const result: Array<{ month: string; new_contracts: number; ended_contracts: number }> = [];
+    const result: Array<{
+      month: string;
+      new_contracts: number;
+      ended_contracts: number;
+    }> = [];
     const cur = new Date(from);
     while (cur <= to) {
       const m = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`;
@@ -458,7 +500,13 @@ export class DashboardService {
         cnt: count(),
       })
       .from(worker_disabilities)
-      .where(notDeleted(worker_disabilities))
+      .where(
+        and(
+          notDeleted(worker_disabilities),
+          // Laravel: whereIn worker_id WorkerPosition filter (status=ACTIVE).
+          sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.worker_id = ${worker_disabilities.worker_id} AND wp.status = 2 AND wp.deleted_at IS NULL)`,
+        ),
+      )
       .groupBy(worker_disabilities.level);
     const levels = rows.map((r) => ({ level: r.level, count: Number(r.cnt) }));
     const total_count = levels.reduce((sum, l) => sum + l.count, 0);
@@ -477,9 +525,18 @@ export class DashboardService {
       .from(worker_relative_disabilities)
       .innerJoin(
         worker_relatives,
-        eq(worker_relatives.id, worker_relative_disabilities.worker_relative_id),
+        eq(
+          worker_relatives.id,
+          worker_relative_disabilities.worker_relative_id,
+        ),
       )
-      .where(notDeleted(worker_relative_disabilities))
+      .where(
+        and(
+          notDeleted(worker_relative_disabilities),
+          // Laravel: whereHas workerRelative.worker.positions filter (status=ACTIVE).
+          sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.worker_id = ${worker_relatives.worker_id} AND wp.status = 2 AND wp.deleted_at IS NULL)`,
+        ),
+      )
       .groupBy(worker_relative_disabilities.level);
     const levels = rows.map((r) => ({ level: r.level, count: Number(r.cnt) }));
     const total_count = levels.reduce((sum, l) => sum + l.count, 0);
@@ -493,6 +550,9 @@ export class DashboardService {
     types: Array<{ type: number; count: number }>;
   }> {
     const today = this.formatDate(new Date());
+    // Laravel: whereHas workerPosition filter (status=ACTIVE).
+    const wpFilter = sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.id = ${worker_sick_leaves.worker_position_id} AND wp.status = 2 AND wp.deleted_at IS NULL)`;
+
     const [stats] = await this.db
       .select({
         total: count(),
@@ -500,14 +560,14 @@ export class DashboardService {
         finished: sql<number>`COALESCE(SUM(CASE WHEN ${worker_sick_leaves.to_date} < ${today}::date THEN 1 ELSE 0 END), 0)::int`,
       })
       .from(worker_sick_leaves)
-      .where(notDeleted(worker_sick_leaves));
+      .where(and(notDeleted(worker_sick_leaves), wpFilter));
     const types = await this.db
       .select({
         type: worker_sick_leaves.type,
         cnt: count(),
       })
       .from(worker_sick_leaves)
-      .where(notDeleted(worker_sick_leaves))
+      .where(and(notDeleted(worker_sick_leaves), wpFilter))
       .groupBy(worker_sick_leaves.type);
     return {
       total_count: Number(stats?.total ?? 0),

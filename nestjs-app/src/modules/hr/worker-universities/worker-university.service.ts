@@ -15,7 +15,7 @@ import {
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
-import { MinioService } from '@/shared/minio/minio.service';
+import { MinioService, type UploadedFile } from '@/shared/minio/minio.service';
 import { WorkerUuidLookup } from '@/modules/hr/_shared/worker-uuid.helper';
 import { WorkerUniversityMapper } from '@/modules/hr/worker-universities/worker-university.mapper';
 import {
@@ -108,28 +108,59 @@ export class WorkerUniversityService {
     };
   }
 
-  async create(dto: CreateWorkerUniversityDto): Promise<void> {
+  async create(
+    dto: CreateWorkerUniversityDto,
+    file?: UploadedFile,
+  ): Promise<void> {
+    // Laravel: Helper::idUuid($uuid) — worker uuid → id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-universities', [
+          'png',
+          'jpg',
+          'jpeg',
+          'pdf',
+          'docx',
+        ])
+      : (dto.file ?? null);
+
     await this.db.insert(worker_universities).values({
-      worker_id: dto.worker_id,
+      worker_id: workerId,
       university_id: dto.university_id,
       speciality_id: dto.speciality_id,
-      from_date: dto.from_date ?? null,
-      to_date: dto.to_date ?? null,
-      file: dto.file ?? null,
+      from_date: dto.from_date,
+      to_date: dto.to_date,
+      file: filePath,
     });
   }
 
-  async update(id: number, dto: UpdateWorkerUniversityDto): Promise<void> {
+  async update(
+    id: number,
+    dto: UpdateWorkerUniversityDto,
+    file?: UploadedFile,
+  ): Promise<void> {
     await this.assertExists(id);
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-universities', [
+          'png',
+          'jpg',
+          'jpeg',
+          'pdf',
+          'docx',
+        ])
+      : (dto.file ?? null);
+
     await this.db
       .update(worker_universities)
       .set({
-        worker_id: dto.worker_id,
         university_id: dto.university_id,
         speciality_id: dto.speciality_id,
-        from_date: dto.from_date ?? null,
-        to_date: dto.to_date ?? null,
-        file: dto.file ?? null,
+        from_date: dto.from_date,
+        to_date: dto.to_date,
+        file: filePath,
       })
       .where(eq(worker_universities.id, id));
   }

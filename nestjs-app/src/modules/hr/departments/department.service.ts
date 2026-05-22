@@ -6,7 +6,6 @@ import {
   asc,
   desc,
   eq,
-  exists,
   ilike,
   inArray,
   isNull,
@@ -87,7 +86,10 @@ export class DepartmentService {
       mapper: (row) => DepartmentMapper.toWithJoinItem(row, this.i18n, lang),
     });
 
-    return result;
+    // Laravel PaginateResource: {current_page, total, data} — `per_page` yo'q.
+    const { per_page: _pp, ...rest } = result;
+    void _pp;
+    return rest as DepartmentListResponseDto;
   }
 
   // GET /department-list — minimal {id, name, level}, paginated.
@@ -117,7 +119,7 @@ export class DepartmentService {
         : undefined,
     );
 
-    return paginate({
+    const result = await paginate({
       db: this.db,
       countTable: departments,
       countWhere: where,
@@ -136,6 +138,10 @@ export class DepartmentService {
       perPage,
       mapper: DepartmentMapper.toListMin,
     });
+    // Laravel PaginateResource: `per_page` yo'q.
+    const { per_page: _pp, ...rest } = result;
+    void _pp;
+    return rest as DepartmentListMinResponseDto;
   }
 
   levels(): DepartmentLevelDto[] {
@@ -165,9 +171,15 @@ export class DepartmentService {
     };
   }
 
-  // GET /departments-tree — full tree (Laravel: DepartmentTreeResource recursive).
-  async tree(): Promise<DepartmentTreeNodeDto[]> {
+  // GET /departments-tree — Laravel: where('organization_id', (int)(organization_id ?? organizations)).
+  // Param berilmasa → (int)null = 0 → hech narsa topilmaydi → bo'sh tree.
+  async tree(
+    organizationId?: number,
+    organizations?: string,
+  ): Promise<DepartmentTreeNodeDto[]> {
     const lang = this.ctx.lang;
+    // Laravel: (int)(request('organization_id') ?? request('organizations')).
+    const orgId = Number(organizationId ?? organizations ?? 0) || 0;
 
     const flat = await this.db
       .select({
@@ -175,10 +187,13 @@ export class DepartmentService {
         name: departments.name,
         level: departments.level,
         parent_id: departments.parent_id,
+        organization_id: departments.organization_id,
         _lft: departments._lft,
       })
       .from(departments)
-      .where(notDeleted(departments))
+      .where(
+        and(notDeleted(departments), eq(departments.organization_id, orgId)),
+      )
       .orderBy(asc(departments._lft));
 
     return this.buildTree(flat, lang);
@@ -187,29 +202,38 @@ export class DepartmentService {
   // CRUD — basic (NestedSet rebalancing Laravel parallel ishlatib turibdi).
 
   async create(dto: CreateDepartmentDto): Promise<void> {
+    // Laravel: organization_id ?? $user->organization_id.
+    const organizationId =
+      dto.organization_id ?? this.ctx.user_or_fail.organization_id;
+    if (organizationId == null) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.organization_not_found'),
+      );
+    }
     await this.db.insert(departments).values({
-      organization_id: dto.organization_id,
+      organization_id: organizationId,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
       name_en: dto.name_en ?? null,
+      comment: dto.comment ?? null,
       level: dto.level,
       parent_id: dto.parent_id ?? null,
-      active: dto.active ?? true,
     });
   }
 
   async update(id: number, dto: UpdateDepartmentDto): Promise<void> {
     await this.assertExists(id);
+    // Laravel update: organization_id qabul qilinmaydi — mavjudi saqlanadi.
     await this.db
       .update(departments)
       .set({
-        organization_id: dto.organization_id,
         name: dto.name,
         name_ru: dto.name_ru ?? null,
         name_en: dto.name_en ?? null,
+        comment: dto.comment ?? null,
         level: dto.level,
         parent_id: dto.parent_id ?? null,
-        active: dto.active ?? true,
       })
       .where(eq(departments.id, id));
   }
@@ -395,31 +419,40 @@ export class DepartmentService {
   }
 
   // Flat list → recursive tree by parent_id.
+  // Laravel DepartmentTreeResource: {id, name, level:{id,name}, parent:{id,name}|null,
+  //   children:[...], organization_id}.
   private buildTree(
     flat: {
       id: number;
       name: string;
       level: number;
       parent_id: number | null;
+      organization_id: number;
       _lft: number;
     }[],
     lang: string,
   ): DepartmentTreeNodeDto[] {
+    const nameById = new Map<number, string>();
+    for (const f of flat) nameById.set(f.id, f.name);
+
     const allNodes = new Map<number, DepartmentTreeNodeDto>();
     for (const f of flat) {
+      const key = DEPARTMENT_LEVEL_KEYS[f.level];
+      const localized = key ? this.i18n.t(key, { lang }) : '';
       const node: DepartmentTreeNodeDto = {
         id: f.id,
         name: f.name,
-        level: { id: f.level, name: '' },
-        parent_id: f.parent_id,
+        level: {
+          id: f.level,
+          name: typeof localized === 'string' ? localized : '',
+        },
+        parent:
+          f.parent_id != null
+            ? { id: f.parent_id, name: nameById.get(f.parent_id) ?? null }
+            : null,
         children: [],
+        organization_id: f.organization_id,
       };
-      // Apply level i18n.
-      const key = DEPARTMENT_LEVEL_KEYS[f.level];
-      if (key) {
-        const localized = this.i18n.t(key, { lang });
-        node.level.name = typeof localized === 'string' ? localized : '';
-      }
       allNodes.set(f.id, node);
     }
 
@@ -434,8 +467,6 @@ export class DepartmentService {
         else roots.push(node);
       }
     }
-    // Silencer.
-    void exists;
     return roots;
   }
 }

@@ -27,12 +27,16 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { ConvertService } from '@/shared/convert/convert.service';
 import { CommandMapper } from '@/modules/hr/commands/command.mapper';
+import { CommandReplaceService } from '@/modules/hr/commands/command-replace.service';
 import {
   CommandListResponseDto,
+  CreateCommandDto,
   QueryCommandDto,
 } from '@/modules/hr/commands/dto/command.dto';
 import type { CommandWorkerConfirmationRow } from '@/modules/hr/commands/command.types';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class CommandService {
@@ -41,6 +45,8 @@ export class CommandService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly replace: CommandReplaceService,
+    private readonly convert: ConvertService,
   ) {}
 
   async findAll(filters: QueryCommandDto): Promise<CommandListResponseDto> {
@@ -146,11 +152,13 @@ export class CommandService {
   }
 
   // POST /api/v1/hr/commands
-  // Soddalashtirilgan implementation — asosiy command record yaratiladi.
-  // Laravel'da DocumentReplace + confirmations + worker_position effects bor.
-  async create(dto: import('@/modules/hr/commands/dto/command.dto').CreateCommandDto) {
+  // Laravel: Command model `creating` boot event `file` + `confirmation_file`
+  // avtomatik o'rnatadi, CommandReplaceService DOCX hosil qiladi → MinIO,
+  // DocxToPdfJob esa PDF konvertatsiya qiladi (generate: 2→3).
+  async create(dto: CreateCommandDto) {
     const userId = this.ctx.user_or_fail.id;
-    const organizationId = dto.organization_id ?? this.ctx.user_or_fail.organization_id;
+    const organizationId =
+      dto.organization_id ?? this.ctx.user_or_fail.organization_id;
     if (!organizationId) {
       throw new BusinessException(
         400,
@@ -158,19 +166,97 @@ export class CommandService {
       );
     }
 
-    const [cmd] = await this.db
-      .insert(commands)
-      .values({
-        uuid: sql`uuid_generate_v4()`,
-        organization_id: organizationId,
-        type: dto.command_type,
-        user_id: userId,
-        director_id: dto.director_id,
-        command_date: dto.command_date,
-        command_number: dto.command_number ?? null,
-      })
-      .returning({ id: commands.id });
+    const uuid = randomUUID();
+    // Laravel Command model boot('creating') bilan bir xil yo'l shabloni.
+    const docxKey = `commands/${uuid}.docx`;
+    const pdfKey = `documents/commands/${uuid}.pdf`;
+
+    // DOCX + confirmations'ni OLDIN tayyorlaymiz — generatsiya xato bo'lsa
+    // command yozilmaydi (Laravel: DB::transaction ichida replace() rollback).
+    let docxBuffer: Buffer | null = null;
+    let confRows: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
+    if (CommandReplaceService.SUPPORTED_TYPES.includes(dto.command_type)) {
+      docxBuffer = await this.replace.buildDeleteTypeDocx(dto);
+      confRows = await this.replace.buildDeleteTypeConfirmations(dto);
+    }
+
+    // Command + command_confirmations'ni bitta transaction ichida yozamiz.
+    const cmd = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(commands)
+        .values({
+          uuid,
+          organization_id: organizationId,
+          type: dto.command_type,
+          user_id: userId,
+          director_id: dto.director_id,
+          command_date: dto.command_date,
+          command_number: dto.command_number ?? null,
+          file: docxKey,
+          confirmation_file: pdfKey,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        })
+        .returning({ id: commands.id });
+
+      // command_confirmations — hodim (w) + imzolovchilar (s) + direktor (d).
+      if (confRows.length) {
+        await tx.insert(command_confirmations).values(
+          confRows.map((r) => ({
+            command_id: created.id,
+            worker_id: r.worker_id,
+            position: r.position,
+            type: r.type,
+            order: r.order,
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
+          })),
+        );
+      }
+      return created;
+    });
+
+    // DOCX'ni MinIO'ga yuklash (sinxron — `doc_url` darhol ishlashi uchun).
+    if (docxBuffer) {
+      await this.minio.putObject(
+        docxKey,
+        docxBuffer,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+      // PDF konvertatsiya — fon rejimida (Laravel DocxToPdfJob async).
+      // generate: 2=jarayonda, 3=tayyor, 4=xato.
+      void this.generateCommandPdf(cmd.id, docxBuffer, pdfKey);
+    }
+
     return { command_id: cmd.id };
+  }
+
+  // DOCX→PDF konvertatsiya + MinIO yuklash + `generate` statusini yangilash.
+  // Laravel DocxToPdfJob ekvivalenti — fon jarayoni sifatida ishlaydi.
+  private async generateCommandPdf(
+    commandId: number,
+    docxBuffer: Buffer,
+    pdfKey: string,
+  ): Promise<void> {
+    try {
+      const pdfBuffer = await this.convert.docxToPdf(docxBuffer);
+      await this.minio.putObject(pdfKey, pdfBuffer, 'application/pdf');
+      await this.db
+        .update(commands)
+        .set({ generate: 3 })
+        .where(eq(commands.id, commandId));
+    } catch {
+      // Konvertatsiya muvaffaqiyatsiz — generate=4 (xato).
+      await this.db
+        .update(commands)
+        .set({ generate: 4 })
+        .where(eq(commands.id, commandId));
+    }
   }
 
   // DELETE /api/v1/hr/commands/{id}

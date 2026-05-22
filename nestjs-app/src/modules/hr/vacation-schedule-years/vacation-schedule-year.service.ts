@@ -13,11 +13,15 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import PizZip from 'pizzip';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
   vacation_schedule_years,
+  vacation_schedule_confirmations,
   vacation_schedules,
   confirmation_workers,
   worker_positions,
@@ -28,14 +32,18 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { ConvertService } from '@/shared/convert/convert.service';
+import { escapeXml } from '@/shared/docx/docx-template.util';
 import { VacationScheduleYearMapper } from '@/modules/hr/vacation-schedule-years/vacation-schedule-year.mapper';
 import {
   QueryVacationScheduleYearDto,
   StoreVacationScheduleYearDto,
   VacationScheduleYearListResponseDto,
 } from '@/modules/hr/vacation-schedule-years/dto/vacation-schedule-year.dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class VacationScheduleYearService {
@@ -44,6 +52,7 @@ export class VacationScheduleYearService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly convert: ConvertService,
   ) {}
 
   async findAll(
@@ -175,10 +184,14 @@ export class VacationScheduleYearService {
       );
     }
 
-    await this.db.transaction(async (tx) => {
+    const txResult = await this.db.transaction(async (tx) => {
       // updateOrCreate by (year, organization_id).
       const [existing] = await tx
-        .select({ id: vacation_schedule_years.id })
+        .select({
+          id: vacation_schedule_years.id,
+          file: vacation_schedule_years.file,
+          confirmation_file: vacation_schedule_years.confirmation_file,
+        })
         .from(vacation_schedule_years)
         .where(
           and(
@@ -190,6 +203,8 @@ export class VacationScheduleYearService {
         .limit(1);
 
       let vsyId: number;
+      let vsyFile: string | null;
+      let vsyConfFile: string | null;
       if (existing) {
         await tx
           .update(vacation_schedule_years)
@@ -203,11 +218,16 @@ export class VacationScheduleYearService {
           })
           .where(eq(vacation_schedule_years.id, existing.id));
         vsyId = existing.id;
+        vsyFile = existing.file;
+        vsyConfFile = existing.confirmation_file;
       } else {
+        const newUuid = randomUUID();
+        vsyFile = `vacation-schedule/${newUuid}.docx`;
+        vsyConfFile = `documents/vacation-schedule/${newUuid}.pdf`;
         const [created] = await tx
           .insert(vacation_schedule_years)
           .values({
-            uuid: sql`uuid_generate_v4()`,
+            uuid: newUuid,
             year: dto.year,
             organization_id: orgId,
             user_id: userId,
@@ -215,6 +235,11 @@ export class VacationScheduleYearService {
             trade_union_id: dto.trade_union_id,
             creator_id: dto.creator_id,
             date: dto.date,
+            // Laravel VacationScheduleYear boot('creating') — file yo'llari.
+            file: vsyFile,
+            confirmation_file: vsyConfFile,
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
           })
           .returning({ id: vacation_schedule_years.id });
         vsyId = created.id;
@@ -264,7 +289,181 @@ export class VacationScheduleYearService {
           });
         }
       }
+
+      // Tasdiqlovchilar — direktor / kasaba uyushmasi / yaratuvchi
+      // (Laravel DocumentReplace::createConfirmations).
+      await this.createScheduleConfirmations(
+        tx,
+        vsyId,
+        dto.director_id,
+        dto.trade_union_id,
+        dto.creator_id,
+      );
+
+      return { vsyId, file: vsyFile, confirmationFile: vsyConfFile };
     });
+
+    // DOCX + PDF — transaction tashqarisida (Laravel DocumentReplace::generate).
+    if (dto.worker_position_ids.length > 0 && txResult.file) {
+      try {
+        const docx = await this.buildScheduleDocx(dto.year);
+        await this.minio.putObject(
+          txResult.file,
+          docx,
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        );
+        if (txResult.confirmationFile) {
+          void this.generateSchedulePdf(
+            txResult.vsyId,
+            docx,
+            txResult.confirmationFile,
+          );
+        }
+      } catch {
+        await this.db
+          .update(vacation_schedule_years)
+          .set({ generate: 4 })
+          .where(eq(vacation_schedule_years.id, txResult.vsyId));
+      }
+    }
+  }
+
+  // Laravel DocumentReplace::createConfirmations — direktor (order 4),
+  // kasaba uyushmasi (order 3), yaratuvchi (order 2). type='s'.
+  private async createScheduleConfirmations(
+    tx: DataSource,
+    vsyId: number,
+    directorId: number,
+    tradeUnionId: number,
+    creatorId: number,
+  ): Promise<void> {
+    // director / tradeUnion — confirmation_workers (position — satr).
+    const [director] = await tx
+      .select({
+        position: confirmation_workers.position,
+        worker_id: confirmation_workers.worker_id,
+      })
+      .from(confirmation_workers)
+      .where(eq(confirmation_workers.id, directorId))
+      .limit(1);
+    const [tradeUnion] = await tx
+      .select({
+        position: confirmation_workers.position,
+        worker_id: confirmation_workers.worker_id,
+      })
+      .from(confirmation_workers)
+      .where(eq(confirmation_workers.id, tradeUnionId))
+      .limit(1);
+    // creator — worker_position (position nomi → positions.name).
+    const [creator] = await tx
+      .select({
+        worker_id: worker_positions.worker_id,
+        pos_name: positionsTable.name,
+      })
+      .from(worker_positions)
+      .leftJoin(
+        positionsTable,
+        eq(positionsTable.id, worker_positions.position_id),
+      )
+      .where(eq(worker_positions.id, creatorId))
+      .limit(1);
+
+    const rows: Array<{
+      position: string | null;
+      worker_id: number;
+      order: number;
+    }> = [];
+    if (director?.worker_id != null) {
+      rows.push({ position: director.position, worker_id: director.worker_id, order: 4 });
+    }
+    if (
+      tradeUnion?.worker_id != null &&
+      tradeUnion.worker_id !== director?.worker_id
+    ) {
+      rows.push({
+        position: tradeUnion.position,
+        worker_id: tradeUnion.worker_id,
+        order: 3,
+      });
+    }
+    if (
+      creator?.worker_id != null &&
+      [director?.worker_id, tradeUnion?.worker_id].includes(creator.worker_id)
+    ) {
+      rows.push({ position: creator.pos_name, worker_id: creator.worker_id, order: 2 });
+    }
+
+    for (const r of rows) {
+      await tx
+        .insert(vacation_schedule_confirmations)
+        .values({
+          vacation_schedule_year_id: vsyId,
+          worker_id: r.worker_id,
+          position: r.position,
+          type: 's',
+          order: r.order,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        })
+        .onConflictDoUpdate({
+          target: [
+            vacation_schedule_confirmations.vacation_schedule_year_id,
+            vacation_schedule_confirmations.worker_id,
+          ],
+          set: {
+            position: r.position,
+            type: 's',
+            order: r.order,
+            updated_at: sql`NOW()`,
+          },
+        });
+    }
+  }
+
+  // Laravel DocumentReplace::generate — `vacation_schedule.docx` shabloni,
+  // faqat `${year}` to'ldiriladi (qolgan placeholderlar keyingi bosqich uchun).
+  private async buildScheduleDocx(year: number): Promise<Buffer> {
+    const templatePath = join(
+      process.cwd(),
+      'public',
+      'resumes',
+      'vacation_schedule.docx',
+    );
+    const content = await readFile(templatePath);
+    const zip = new PizZip(content);
+    const xmlFile = zip.file('word/document.xml');
+    if (!xmlFile) {
+      throw new BusinessException(500, 'document.xml topilmadi');
+    }
+    // Faqat `${year}` to'ldiriladi — u shablonda yaxlit (split emas), shu sabab
+    // normalizePlaceholders shart emas (qolgan placeholderlar literal qoladi).
+    const xml = xmlFile
+      .asText()
+      .split('${year}')
+      .join(escapeXml(String(year)));
+    zip.file('word/document.xml', xml);
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+  }
+
+  // DOCX→PDF (fon) — Laravel DocxToPdfJob. generate: 3=tayyor, 4=xato.
+  private async generateSchedulePdf(
+    vsyId: number,
+    docx: Buffer,
+    pdfKey: string,
+  ): Promise<void> {
+    try {
+      const pdf = await this.convert.docxToPdf(docx);
+      await this.minio.putObject(pdfKey, pdf, 'application/pdf');
+      await this.db
+        .update(vacation_schedule_years)
+        .set({ generate: 3 })
+        .where(eq(vacation_schedule_years.id, vsyId));
+    } catch {
+      await this.db
+        .update(vacation_schedule_years)
+        .set({ generate: 4 })
+        .where(eq(vacation_schedule_years.id, vsyId));
+    }
   }
 
   // GET /api/v1/hr/vacation-schedule-workers
@@ -276,12 +475,7 @@ export class VacationScheduleYearService {
     const where = and(
       notDeleted(worker_positions),
       eq(worker_positions.status, 2),
-      filters.search
-        ? or(
-            ilike(workers.last_name, `%${filters.search}%`),
-            ilike(workers.first_name, `%${filters.search}%`),
-          )
-        : undefined,
+      buildWorkerSearchCond(filters.search),
     );
 
     const [rows, [{ total }]] = await Promise.all([

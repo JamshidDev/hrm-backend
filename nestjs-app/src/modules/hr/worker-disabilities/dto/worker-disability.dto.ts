@@ -7,6 +7,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
@@ -14,20 +15,33 @@ export class QueryWorkerDisabilityDto {
   @ApiPropertyOptional() @IsOptional() @IsString() uuid?: string;
 }
 
+// Laravel WorkerDisabilityStoreRequest: { uuid, level, number, from?, to?, comment? }
+// where `uuid` is the WORKER uuid (not the disability id).
 export class CreateWorkerDisabilityDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
-  worker_id!: number;
+  @ApiProperty({ example: 'bfba2d64-eb91-4699-82ef-0d3677810771' })
+  @IsUUID()
+  @Exists('workers', 'uuid')
+  uuid!: string;
 
   @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt()
   level!: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() number?: string;
+  @ApiProperty() @IsString() number!: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() from?: string;
-  @ApiPropertyOptional() @IsOptional() @IsDateString() to?: string;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() to?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
 }
 
-export class UpdateWorkerDisabilityDto extends CreateWorkerDisabilityDto {}
+// Update: no `uuid` (worker is taken from existing row).
+export class UpdateWorkerDisabilityDto {
+  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt()
+  level!: number;
+
+  @ApiProperty() @IsString() number!: string;
+  @ApiPropertyOptional() @IsOptional() @IsDateString() from?: string;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() to?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
+}
 
 // ---------- Response ----------
 

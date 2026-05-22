@@ -17,10 +17,12 @@ import type { DataSource } from '@/db/types';
 import {
   contract_additional,
   organizations,
+  worker_positions,
   workers,
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { sql } from 'drizzle-orm';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -30,6 +32,7 @@ import {
   CreateContractAdditionalDto,
   QueryContractAdditionalDto,
 } from '@/modules/hr/contract-additional/dto/contract-additional.dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ContractAdditionalService {
@@ -51,13 +54,8 @@ export class ContractAdditionalService {
       ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
       : [];
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
 
     const where = and(
       isNull(contract_additional.deleted_at),
@@ -99,7 +97,18 @@ export class ContractAdditionalService {
           org_group: organizations.group,
         })
         .from(contract_additional)
-        .leftJoin(workers, eq(workers.id, contract_additional.worker_id))
+        .leftJoin(
+          worker_positions,
+          eq(worker_positions.id, contract_additional.worker_position_id),
+        )
+        // worker_id bo'sh bo'lsa — worker_position orqali hodimni topamiz.
+        .leftJoin(
+          workers,
+          eq(
+            workers.id,
+            sql`COALESCE(${contract_additional.worker_id}, ${worker_positions.worker_id})`,
+          ),
+        )
         .leftJoin(
           organizations,
           eq(organizations.id, contract_additional.organization_id),
@@ -111,13 +120,23 @@ export class ContractAdditionalService {
       this.db
         .select({ total: count() })
         .from(contract_additional)
-        .leftJoin(workers, eq(workers.id, contract_additional.worker_id))
+        .leftJoin(
+          worker_positions,
+          eq(worker_positions.id, contract_additional.worker_position_id),
+        )
+        .leftJoin(
+          workers,
+          eq(
+            workers.id,
+            sql`COALESCE(${contract_additional.worker_id}, ${worker_positions.worker_id})`,
+          ),
+        )
         .where(where),
     ]);
 
+    // Laravel paginate() javobida `per_page` yo'q — parity uchun qaytarmaymiz.
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map((r) =>
@@ -146,8 +165,9 @@ export class ContractAdditionalService {
           : 2
         : Number(dto.command_status);
 
+    const uuid = randomUUID();
     await this.db.insert(contract_additional).values({
-      uuid: sql`uuid_generate_v4()`,
+      uuid,
       organization_id: organizationId,
       worker_position_id: dto.worker_position_id,
       user_id: userId,
@@ -158,6 +178,12 @@ export class ContractAdditionalService {
       contract_date: dto.contract_date,
       contract_to_date: dto.contract_to_date ?? null,
       type: dto.type,
+      // Laravel ContractAdditional model boot('creating') — file yo'llari va
+      // vaqt belgilarini avtomatik o'rnatadi (aks holda show 404 beradi).
+      file: `contract-additional/${uuid}.docx`,
+      confirmation_file: `documents/contract-additional/${uuid}.pdf`,
+      created_at: sql`NOW()`,
+      updated_at: sql`NOW()`,
     });
   }
 

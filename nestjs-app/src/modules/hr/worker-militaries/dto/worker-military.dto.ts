@@ -2,26 +2,38 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerMilitaryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() uuid?: string;
 }
 
+// Laravel WorkerMilitaryStoreRequest: { uuid, status, name?, number?, speciality?, commissariat? }
+// `uuid` — worker UUID; resolved server-side to worker_id.
 export class CreateWorkerMilitaryDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
-  worker_id!: number;
+  @ApiProperty({ example: '63fc3e7a-9798-4250-9d92-2262165a1132' })
+  @IsUUID()
+  @Exists('workers', 'uuid')
+  uuid!: string;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() number?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() speciality?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() commissariat?: string;
   @ApiProperty({ example: 1, description: 'MilitaryStatusEnum 1..3' })
   @Type(() => Number) @IsInt() status!: number;
+
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() number?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() speciality?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() commissariat?: string | null;
 }
 
-export class UpdateWorkerMilitaryDto extends CreateWorkerMilitaryDto {}
+// Update — no `uuid` (worker unchanged).
+export class UpdateWorkerMilitaryDto {
+  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() status!: number;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() number?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() speciality?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() commissariat?: string | null;
+}
 
 // ---------- Response ----------
 

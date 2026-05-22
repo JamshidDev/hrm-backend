@@ -63,8 +63,13 @@ export class WorkerMilitaryService {
   }
 
   async create(dto: CreateWorkerMilitaryDto): Promise<void> {
+    // Laravel: Helper::idUuid($uuid) — worker uuid → id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(400, this.i18n.t('messages.not_found'));
+    }
     await this.db.insert(worker_military_services).values({
-      worker_id: dto.worker_id,
+      worker_id: workerId,
       name: dto.name ?? null,
       number: dto.number ?? null,
       speciality: dto.speciality ?? null,
@@ -78,7 +83,6 @@ export class WorkerMilitaryService {
     await this.db
       .update(worker_military_services)
       .set({
-        worker_id: dto.worker_id,
         name: dto.name ?? null,
         number: dto.number ?? null,
         speciality: dto.speciality ?? null,

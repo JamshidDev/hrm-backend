@@ -27,10 +27,15 @@ export class UpdateLeaderDto {
 }
 
 export class QueryLeaderDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
 }
 

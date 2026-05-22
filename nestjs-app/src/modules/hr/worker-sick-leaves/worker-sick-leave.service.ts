@@ -58,7 +58,8 @@ export class WorkerSickLeaveService {
       .from(worker_sick_leaves)
       .where(and(eq(worker_sick_leaves.id, id), notDeleted(worker_sick_leaves)))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     return row;
   }
 

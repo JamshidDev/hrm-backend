@@ -2,16 +2,19 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt } from 'class-validator';
+import { ArrayMinSize, IsArray, IsInt } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryPolyclinicDto extends SearchPaginationQueryDto {}
 
+// POST /api/v1/hr/polyclinics — Laravel: validate('polyclinics' => 'required|array').
 export class CreatePolyclinicDto {
-  @ApiProperty({ example: 1 })
+  @ApiProperty({ example: [161], type: [Number] })
+  @IsArray()
+  @ArrayMinSize(1)
   @Type(() => Number)
-  @IsInt()
-  polyclinic_id!: number;
+  @IsInt({ each: true })
+  polyclinics!: number[];
 }
 
 // ---------- Response ----------

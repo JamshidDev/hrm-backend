@@ -12,8 +12,16 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
@@ -52,18 +60,26 @@ export class MedController {
 
   @Post()
   @UseGuards(PermissionGuard) @Permission('hr')
-  async create(@Body() dto: CreateMedDto) {
-    await this.service.create(dto);
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
+  async create(
+    @Body() dto: CreateMedDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    await this.service.create(dto, file);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
   @UseGuards(PermissionGuard) @Permission('hr')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMedDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ) {
-    await this.service.update(id, dto);
+    await this.service.update(id, dto, file);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

@@ -10,9 +10,12 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
@@ -44,18 +47,28 @@ export class WorkerPassportController {
 
   @Post()
   @UseGuards(PermissionGuard) @Permission('hr')
-  async create(@Body() dto: CreateWorkerPassportDto) {
-    await this.service.create(dto);
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiOperation({ summary: 'Create worker passport (with optional PDF/image)' })
+  async create(
+    @Body() dto: CreateWorkerPassportDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    await this.service.create(dto, file);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
   @UseGuards(PermissionGuard) @Permission('hr')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiOperation({ summary: 'Update worker passport' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWorkerPassportDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ) {
-    await this.service.update(id, dto);
+    await this.service.update(id, dto, file);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

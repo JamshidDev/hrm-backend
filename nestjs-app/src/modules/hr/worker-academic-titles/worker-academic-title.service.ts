@@ -9,7 +9,7 @@ import { worker_academic_titles } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
-import { MinioService } from '@/shared/minio/minio.service';
+import { MinioService, type UploadedFile } from '@/shared/minio/minio.service';
 import { WorkerUuidLookup } from '@/modules/hr/_shared/worker-uuid.helper';
 import {
   CreateWorkerAcademicTitleDto,
@@ -61,22 +61,53 @@ export class WorkerAcademicTitleService {
     );
   }
 
-  async create(dto: CreateWorkerAcademicTitleDto): Promise<void> {
+  async create(
+    dto: CreateWorkerAcademicTitleDto,
+    file?: UploadedFile,
+  ): Promise<void> {
+    // Laravel: Helper::idUuid($uuid) — worker uuid → id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(400, this.i18n.t('messages.not_found'));
+    }
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-academic-titles', [
+          'png',
+          'jpg',
+          'jpeg',
+          'pdf',
+          'docx',
+        ])
+      : (dto.file ?? null);
+
     await this.db.insert(worker_academic_titles).values({
-      worker_id: dto.worker_id,
+      worker_id: workerId,
       type: dto.type,
-      file: dto.file ?? null,
+      file: filePath,
     });
   }
 
-  async update(id: number, dto: UpdateWorkerAcademicTitleDto): Promise<void> {
+  async update(
+    id: number,
+    dto: UpdateWorkerAcademicTitleDto,
+    file?: UploadedFile,
+  ): Promise<void> {
     await this.assertExists(id);
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-academic-titles', [
+          'png',
+          'jpg',
+          'jpeg',
+          'pdf',
+          'docx',
+        ])
+      : (dto.file ?? null);
+
     await this.db
       .update(worker_academic_titles)
       .set({
-        worker_id: dto.worker_id,
         type: dto.type,
-        file: dto.file ?? null,
+        file: filePath,
       })
       .where(eq(worker_academic_titles.id, id));
   }

@@ -14,11 +14,23 @@ import {
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryVacationDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
+
+  @ApiPropertyOptional({
+    description: "true bo'lsa — Excel export taskga yuboriladi",
+  })
+  @IsOptional()
+  @IsString()
+  download?: string;
 }
 
 // POST /vacations/create — getLastVacations(worker_positions: int[])

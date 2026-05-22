@@ -21,6 +21,7 @@ import type {
   VacancyRegisterDto,
   VacancyUpdateDto,
 } from '@/modules/vacancy/vacancy-auth/dto/vacancy-auth.dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class VacancyAuthService {
@@ -84,7 +85,7 @@ export class VacancyAuthService {
     const [created] = await this.db
       .insert(vacancy_users)
       .values({
-        uuid: sql`uuid_generate_v4()`,
+        uuid: randomUUID(),
         password: hashed,
         phone: dto.phone,
         last_name: dto.last_name,

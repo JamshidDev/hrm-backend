@@ -1,12 +1,10 @@
 // Export service. Laravel: ExportTaskController + ReportExportController.
 //
-// Hozirgi qamrov (3 endpoint):
+// Hozirgi qamrov (4 endpoint):
 //   - GET    /export/tasks-count    — count unread tasks (user'ga tegishli)
 //   - POST   /export/tasks-read     — mark as read (single yoki all)
 //   - GET    /report-export          — ReportExport list
-//
-// Skip (job queue kerak):
-//   - POST   /report-export          — dispatch BullMQ/Queue job
+//   - POST   /report-export          — fonda Excel hisobot eksporti (ExportTaskRunner)
 
 import { Injectable } from '@nestjs/common';
 import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm';
@@ -21,6 +19,11 @@ import {
   roles,
 } from '@/db/schema';
 import { RequestContext } from '@/common/context/request.context';
+import { BusinessException } from '@/common/exceptions/business.exception';
+import { ExcelService } from '@/shared/excel/excel.service';
+import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
+import { ReportExportDto } from '@/modules/structure/export/dto/report-export.dto';
+import { buildReportExportExcel } from '@/modules/structure/export/report-export.builder';
 
 // ExportTaskEnum keys — `messages.export.types.{key}`.
 // Bizning enums.constants.ts'da yo'q, alohida ro'yxat (Laravel cases bilan mos).
@@ -70,6 +73,8 @@ export class ExportService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly config: ConfigService,
+    private readonly excel: ExcelService,
+    private readonly exportRunner: ExportTaskRunner,
   ) {
     this.assetBaseUrl = (
       this.config.get<string>('LARAVEL_APP_URL') ?? 'http://localhost:8000'
@@ -165,10 +170,30 @@ export class ExportService {
     }));
   }
 
+  // POST /report-export — Laravel: ReportExportController::export().
+  // `type` ga qarab fonda Excel hisobot eksport vazifasini boshlaydi.
+  async reportExport(dto: ReportExportDto): Promise<void> {
+    // Laravel `match($type)` — faqat 'by-education-age-invalid' qo'llab-quvvatlanadi.
+    if (dto.type !== 'by-education-age-invalid') {
+      throw new BusinessException(422, this.i18n.t('messages.invalid_type'));
+    }
+
+    const user = this.ctx.user_or_fail;
+    await this.exportRunner.run({
+      type: 30, // ExportTaskEnum.REPORT_EXPORT_BY_EDUCATION
+      folder: 'report-export',
+      build: () =>
+        buildReportExportExcel(this.db, this.excel, {
+          userOrgId: user.organization_id,
+          organizations: dto.organizations,
+          type: dto.type,
+        }),
+    });
+  }
+
   // EXPORT_TASK_TYPE_KEYS — kelajakda UserTaskResource uchun ishlatamiz.
   // Hozircha silencer.
   private _silencer(): void {
     void EXPORT_TASK_TYPE_KEYS;
-    void this.i18n;
   }
 }

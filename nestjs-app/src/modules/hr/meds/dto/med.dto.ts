@@ -13,11 +13,20 @@ import {
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 
+// Laravel MedIndexRequest: per_page, search, status, departments, organizations.
+// (organization_id qabul qilinmaydi.)
 export class QueryMedDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
-  organization_id?: number;
-
   @ApiPropertyOptional() @IsOptional() @IsString() organizations?: string;
+
+  @ApiPropertyOptional({ description: 'MedStatusEnum (1/2) bo\'yicha filter' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Vergul bilan ajratilgan department id lar' })
+  @IsOptional()
+  @IsString()
+  departments?: string;
 }
 
 export class CreateMedDto {

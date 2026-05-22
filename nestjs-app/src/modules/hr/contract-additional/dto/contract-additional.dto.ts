@@ -102,7 +102,6 @@ export class ContractAdditionalItemDto {
 
 export class ContractAdditionalListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [ContractAdditionalItemDto] })
   data!: ContractAdditionalItemDto[];

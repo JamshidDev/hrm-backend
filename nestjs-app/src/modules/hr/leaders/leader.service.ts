@@ -15,6 +15,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -43,8 +44,15 @@ export class LeaderService {
     const lang = this.ctx.lang;
 
     const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
+
+    // Laravel leaders endpointida search yo'q — bizda hodim F.I.SH bo'yicha
+    // qidiruv qo'shamiz (worker_position.worker bo'yicha).
+    const searchCond = buildWorkerSearchCond(filters.search);
 
     const where = and(
       isNull(organization_leaders.deleted_at),
@@ -54,6 +62,7 @@ export class LeaderService {
       orgIds.length > 0
         ? inArray(organization_leaders.organization_id, orgIds)
         : undefined,
+      searchCond,
     );
 
     const offset = (page - 1) * perPage;
@@ -76,7 +85,6 @@ export class LeaderService {
           worker_first: workers.first_name,
           worker_middle: workers.middle_name,
           dept_name: departments.name,
-          dept_level: departments.level,
           pos_name: positionsTable.name,
         })
         .from(organization_leaders)
@@ -89,7 +97,10 @@ export class LeaderService {
           eq(worker_positions.id, organization_leaders.worker_position_id),
         )
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -98,7 +109,16 @@ export class LeaderService {
         .orderBy(asc(organization_leaders.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(organization_leaders).where(where),
+      // count query'da ham worker join — `where` worker ustunlariga tayanadi.
+      this.db
+        .select({ total: count() })
+        .from(organization_leaders)
+        .leftJoin(
+          worker_positions,
+          eq(worker_positions.id, organization_leaders.worker_position_id),
+        )
+        .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+        .where(where),
     ]);
 
     return {
@@ -132,16 +152,19 @@ export class LeaderService {
                       middle_name: r.worker_middle,
                     }
                   : null,
+                // Laravel OrganizationLeaderService `department:id,name` —
+                // `level` ni yuklamaydi → getShort/FullPosition har doim bo'lim
+                // nomini qo'shadi (department_level=null bilan parity).
                 post_name: getFullPosition({
                   position_name: r.pos_name,
                   department_name: r.dept_name,
-                  department_level: r.dept_level,
+                  department_level: null,
                   organization_full_name: r.org_full_name,
                 }),
                 post_short_name: getShortPosition({
                   position_name: r.pos_name,
                   department_name: r.dept_name,
-                  department_level: r.dept_level,
+                  department_level: null,
                   organization_full_name: r.org_full_name,
                 }),
               }

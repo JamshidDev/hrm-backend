@@ -42,7 +42,8 @@ export class LeaderController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Organization leaders list' })
   @ApiOkResponse({ type: LeaderListResponseDto })
   async findAll(@Query() query: QueryLeaderDto) {
@@ -50,14 +51,16 @@ export class LeaderController {
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateLeaderDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateLeaderDto,
@@ -67,7 +70,8 @@ export class LeaderController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

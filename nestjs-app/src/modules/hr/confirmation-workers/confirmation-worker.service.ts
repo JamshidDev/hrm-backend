@@ -1,13 +1,24 @@
 // ConfirmationWorker service. ConfirmationWorkerLevelEnum 1..2.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { confirmation_workers, organizations, workers } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -39,17 +50,27 @@ export class ConfirmationWorkerService {
     const lang = this.ctx.lang;
     const orgId = this.ctx.user?.organization_id ?? 0;
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
+
+    // `organizations` — vergul bilan ajratilgan organization id lar.
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isFinite(n) && n > 0)
+      : [];
 
     const where = and(
       isNull(confirmation_workers.deleted_at),
-      eq(confirmation_workers.organization_id, orgId),
+      // `organizations` berilsa — shu organizationlar, aks holda — joriy user org.
+      orgIds.length > 0
+        ? inArray(confirmation_workers.organization_id, orgIds)
+        : eq(confirmation_workers.organization_id, orgId),
+      // `created` — yaratilgan sana bo'yicha filter (YYYY-MM-DD).
+      filters.created
+        ? sql`DATE(${confirmation_workers.created_at}) = ${filters.created}`
+        : undefined,
       searchCond,
     );
 

@@ -49,6 +49,7 @@ import {
   workers,
 } from '@/db/schema';
 import { MinioService } from '@/shared/minio/minio.service';
+import { randomUUID } from 'crypto';
 
 // ---- DTOs ----
 
@@ -264,7 +265,7 @@ class WorkerApplicationExtrasService {
       );
     }
     await this.db.insert(worker_applications).values({
-      uuid: sql`uuid_generate_v4()`,
+      uuid: randomUUID(),
       organization_id: orgId,
       worker_id: workerId,
       worker_position_id: dto.worker_position_id ?? null,

@@ -2,7 +2,13 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerRelativeDto {
@@ -10,27 +16,70 @@ export class QueryWorkerRelativeDto {
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
 }
 
+// Laravel WorkerRelativeStoreRequest:
+//   uuid (required) — worker UUID (whose relative this is)
+//   worker_id (nullable) — RELATIVE worker's id (if relative is also a worker)
+//   relative (int) — RelativeEnum 1..15
+//   last_name/first_name/middle_name/birthday/birth_place/post_name/address — optional
+//   sort, pin — optional
+// Naming convention:
+//   request field `worker_id` → db column `relative_worker_id`
+//   resolved from `uuid`     → db column `worker_id`
 export class CreateWorkerRelativeDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
-  worker_id!: number;
+  @ApiProperty({ example: '63fc3e7a-9798-4250-9d92-2262165a1132' })
+  @IsUUID()
+  @Exists('workers', 'uuid')
+  uuid!: string;
 
   @ApiProperty({ example: 1, description: 'RelativeEnum 1..15' })
-  @Type(() => Number) @IsInt() relative!: number;
+  @Type(() => Number) @IsInt()
+  relative!: number;
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
-  relative_worker_id?: number;
+  // Laravel field name: `worker_id` (the RELATIVE worker, nullable).
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('workers', 'id')
+  worker_id?: number | null;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() last_name?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() first_name?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() middle_name?: string;
-  @ApiPropertyOptional() @IsOptional() @IsDateString() birthday?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() birth_place?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() post_name?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() address?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() pin?: number;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Type(() => Number) @IsInt()
+  sort?: number | null;
+
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() last_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() first_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() middle_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() birthday?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() birth_place?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() post_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() address?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Type(() => Number) @IsInt() pin?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Type(() => Number) @IsInt() marital_status?: number | null;
 }
 
-export class UpdateWorkerRelativeDto extends CreateWorkerRelativeDto {}
+// Update — no `uuid` (worker unchanged).
+export class UpdateWorkerRelativeDto {
+  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt()
+  relative!: number;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('workers', 'id')
+  worker_id?: number | null;
+
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Type(() => Number) @IsInt() sort?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() last_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() first_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() middle_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() birthday?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() birth_place?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() post_name?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() address?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Type(() => Number) @IsInt() pin?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Type(() => Number) @IsInt() marital_status?: number | null;
+}
 
 export class SortableWorkerRelativeDto {
   @ApiPropertyOptional({ example: [{ id: 1, sort: 1 }] })

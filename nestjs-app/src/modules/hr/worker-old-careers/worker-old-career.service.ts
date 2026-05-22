@@ -45,11 +45,17 @@ export class WorkerOldCareerService {
   }
 
   async create(dto: CreateWorkerOldCareerDto): Promise<void> {
+    // Laravel: Helper::idUuid($uuid) — worker uuid → id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
     await this.db.insert(worker_old_careers).values({
-      worker_id: dto.worker_id,
-      from_date: dto.from_date ?? null,
-      to_date: dto.to_date ?? null,
-      post_name: dto.post_name ?? null,
+      worker_id: workerId,
+      from_date: dto.from_date,
+      to_date: dto.to_date,
+      post_name: dto.post_name,
+      sort: dto.sort ?? 0,
     });
   }
 
@@ -58,10 +64,10 @@ export class WorkerOldCareerService {
     await this.db
       .update(worker_old_careers)
       .set({
-        worker_id: dto.worker_id,
-        from_date: dto.from_date ?? null,
-        to_date: dto.to_date ?? null,
-        post_name: dto.post_name ?? null,
+        from_date: dto.from_date,
+        to_date: dto.to_date,
+        post_name: dto.post_name,
+        ...(dto.sort != null ? { sort: dto.sort } : {}),
       })
       .where(eq(worker_old_careers.id, id));
   }

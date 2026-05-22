@@ -141,26 +141,4 @@ export const DepartmentMapper = {
   ): DepartmentListMinimalDto {
     return { id: d.id, name: d.name, level: d.level };
   },
-
-  // Tree node — recursive.
-  toTreeNode(
-    this: void,
-    d: {
-      id: number;
-      name: string;
-      level: number;
-      parent_id: number | null;
-      children: DepartmentTreeNodeDto[];
-    },
-    i18n: I18nService,
-    lang: string,
-  ): DepartmentTreeNodeDto {
-    return {
-      id: d.id,
-      name: d.name,
-      level: levelToDto(i18n, d.level, lang),
-      parent_id: d.parent_id,
-      children: d.children,
-    };
-  },
 };

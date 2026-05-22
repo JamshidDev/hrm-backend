@@ -61,6 +61,8 @@ export class PolyclinicService {
   }
 
   // POST /api/v1/hr/polyclinics
+  // Laravel: $org->polyclinics()->sync(merge(mavjud, request->polyclinics)) —
+  // mavjudlar saqlanadi, yangilari qo'shiladi (idempotent — dublikat qo'shilmaydi).
   async create(dto: CreatePolyclinicDto): Promise<void> {
     const orgId = this.ctx.user_or_fail.organization_id;
     if (!orgId) {
@@ -69,30 +71,48 @@ export class PolyclinicService {
         this.i18n.t('messages.organization_not_found'),
       );
     }
-    await this.db.insert(organization_polyclinics).values({
-      organization_id: orgId,
-      polyclinic_id: dto.polyclinic_id,
-    });
-  }
 
-  // DELETE /api/v1/hr/polyclinics/{id}
-  async remove(id: number): Promise<void> {
-    const [row] = await this.db
-      .select({ id: organization_polyclinics.id })
+    // Tashkilotning hozirgi (o'chirilmagan) poliklinikalari.
+    const existing = await this.db
+      .select({ pid: organization_polyclinics.polyclinic_id })
       .from(organization_polyclinics)
       .where(
         and(
-          eq(organization_polyclinics.id, id),
+          eq(organization_polyclinics.organization_id, orgId),
           notDeleted(organization_polyclinics),
         ),
-      )
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+      );
+    const existingSet = new Set(existing.map((e) => e.pid));
+
+    // Faqat hali bog'lanmagan poliklinikalarni qo'shamiz.
+    const toAdd = [...new Set(dto.polyclinics)].filter(
+      (id) => !existingSet.has(id),
+    );
+    if (toAdd.length > 0) {
+      await this.db.insert(organization_polyclinics).values(
+        toAdd.map((pid) => ({
+          organization_id: orgId,
+          polyclinic_id: pid,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        })),
+      );
     }
+  }
+
+  // DELETE /api/v1/hr/polyclinics/{id}
+  // {id} — poliklinika id'si (index `id` sifatida shuni qaytaradi —
+  // OrganizationPolyclinicResource: `polyclinic->id`).
+  // Joriy tashkilot bilan bog'lanish butunlay o'chiriladi (Laravel: forceDelete).
+  async remove(id: number): Promise<void> {
+    const orgId = this.ctx.user_or_fail.organization_id ?? 0;
     await this.db
-      .update(organization_polyclinics)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(organization_polyclinics.id, id));
+      .delete(organization_polyclinics)
+      .where(
+        and(
+          eq(organization_polyclinics.organization_id, orgId),
+          eq(organization_polyclinics.polyclinic_id, id),
+        ),
+      );
   }
 }

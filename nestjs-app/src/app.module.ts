@@ -7,6 +7,8 @@ import * as path from 'path';
 import { DrizzleModule } from '@/db/drizzle.module';
 import { MinioModule } from '@/shared/minio/minio.module';
 import { ExcelModule } from '@/shared/excel/excel.module';
+import { ExportTaskRunnerModule } from '@/shared/export-task/export-task-runner.module';
+import { ConvertModule } from '@/shared/convert/convert.module';
 import { PermissionModule } from '@/shared/permission/permission.module';
 import { HrmClsModule } from '@/common/context/cls.module';
 import { RequestContext } from '@/common/context/request.context';
@@ -26,6 +28,10 @@ import { LmsModule } from '@/modules/lms/lms.module';
 import { IntegrationModule } from '@/modules/integration/integration.module';
 import { ChatModule } from '@/modules/chat/chat.module';
 import { ServicesModule } from '@/modules/services/services.module';
+import { AiModule } from '@/modules/ai/ai.module';
+import { UsefulModule } from '@/modules/useful/useful.module';
+import { TelegramBotModule } from '@/modules/telegram-bot/telegram-bot.module';
+import { OnlyOfficeModule } from '@/modules/only-office/only-office.module';
 import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 import { BusinessExceptionFilter } from '@/common/filters/business-exception.filter';
 import { ExistsConstraint } from '@/common/validators/exists.validator';
@@ -56,6 +62,8 @@ class RequestContextModule {}
     DrizzleModule,
     MinioModule,
     ExcelModule,
+    ExportTaskRunnerModule,
+    ConvertModule,
     PermissionModule,
     AuthModule,
     UserModule,
@@ -73,6 +81,10 @@ class RequestContextModule {}
     IntegrationModule,
     ChatModule,
     ServicesModule,
+    AiModule,
+    UsefulModule,
+    TelegramBotModule,
+    OnlyOfficeModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },

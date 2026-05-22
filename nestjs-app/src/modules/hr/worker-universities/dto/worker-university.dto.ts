@@ -2,7 +2,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerUniversityDto {
@@ -11,9 +11,13 @@ export class QueryWorkerUniversityDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() per_page?: number;
 }
 
+// Laravel WorkerUniversityStoreRequest: { uuid, university_id, speciality_id, from_date, to_date, file? }
+// `uuid` — worker UUID; resolved server-side to worker_id.
 export class CreateWorkerUniversityDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
-  worker_id!: number;
+  @ApiProperty({ example: '63fc3e7a-9798-4250-9d92-2262165a1132' })
+  @IsUUID()
+  @Exists('workers', 'uuid')
+  uuid!: string;
 
   @ApiProperty() @Type(() => Number) @IsInt() @Exists('universities', 'id')
   university_id!: number;
@@ -21,12 +25,23 @@ export class CreateWorkerUniversityDto {
   @ApiProperty() @Type(() => Number) @IsInt() @Exists('specialities', 'id')
   speciality_id!: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsDateString() from_date?: string;
-  @ApiPropertyOptional() @IsOptional() @IsDateString() to_date?: string;
+  @ApiProperty() @IsDateString() from_date!: string;
+  @ApiProperty() @IsDateString() to_date!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() file?: string;
 }
 
-export class UpdateWorkerUniversityDto extends CreateWorkerUniversityDto {}
+// Update — no `uuid` (worker unchanged).
+export class UpdateWorkerUniversityDto {
+  @ApiProperty() @Type(() => Number) @IsInt() @Exists('universities', 'id')
+  university_id!: number;
+
+  @ApiProperty() @Type(() => Number) @IsInt() @Exists('specialities', 'id')
+  speciality_id!: number;
+
+  @ApiProperty() @IsDateString() from_date!: string;
+  @ApiProperty() @IsDateString() to_date!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() file?: string;
+}
 
 // ---------- Response ----------
 

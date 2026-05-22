@@ -2,11 +2,19 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsOptional } from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 
-export class QueryTimeSheetWorkerDepartmentDto extends SearchPaginationQueryDto {}
+export class QueryTimeSheetWorkerDepartmentDto extends SearchPaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'Vergul bilan ajratilgan organization id lar',
+    example: '151,154,186',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+}
 
 export class AttachDto {
   @ApiProperty({ example: 1 })

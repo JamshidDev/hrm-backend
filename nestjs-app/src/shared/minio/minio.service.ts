@@ -35,6 +35,11 @@ export class MinioService {
       },
       // MinIO path-style endpoint: https://endpoint/bucket/key
       forcePathStyle: true,
+      // AWS SDK v3 default'da har GetObject/PutObject'ga `x-amz-checksum-*`
+      // qo'shadi — MinIO buni qo'llab-quvvatlamaydi, signed URL ishlamay qoladi.
+      // WHEN_REQUIRED — checksum'ni faqat zarur bo'lganda qo'shadi (Laravel parity).
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
   }
 
@@ -45,6 +50,39 @@ export class MinioService {
       this.client,
       new GetObjectCommand({ Bucket: this.bucket, Key: filePath }),
       { expiresIn: 1800 },
+    );
+  }
+
+  // Faylni MinIO'dan xom Buffer sifatida yuklab olish (stream → buffer).
+  async getObject(key: string): Promise<Buffer> {
+    const res = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    const stream = res.Body as NodeJS.ReadableStream;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(
+        Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as unknown as Uint8Array),
+      );
+    }
+    return Buffer.concat(chunks);
+  }
+
+  // Xom Buffer'ni MinIO'ga berilgan key bo'yicha saqlash.
+  async putObject(
+    key: string,
+    body: Buffer,
+    contentType = 'application/octet-stream',
+  ): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      }),
     );
   }
 

@@ -46,10 +46,15 @@ export class WorkerDisabilityService {
   }
 
   async create(dto: CreateWorkerDisabilityDto): Promise<void> {
+    // Laravel: Worker::whereUuid($data['uuid']) — resolve uuid → worker_id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
     await this.db.insert(worker_disabilities).values({
-      worker_id: dto.worker_id,
+      worker_id: workerId,
       level: dto.level,
-      number: dto.number ?? null,
+      number: dto.number,
       from: dto.from ?? null,
       to: dto.to ?? null,
       comment: dto.comment ?? null,
@@ -61,9 +66,8 @@ export class WorkerDisabilityService {
     await this.db
       .update(worker_disabilities)
       .set({
-        worker_id: dto.worker_id,
         level: dto.level,
-        number: dto.number ?? null,
+        number: dto.number,
         from: dto.from ?? null,
         to: dto.to ?? null,
         comment: dto.comment ?? null,

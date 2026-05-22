@@ -9,8 +9,10 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { I18nService } from 'nestjs-i18n';
 import {
   ApiBearerAuth,
@@ -23,6 +25,8 @@ import { PermissionGuard } from '@/common/guards/permission.guard';
 import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { CommandService } from '@/modules/hr/commands/command.service';
+import { CommandReplaceService } from '@/modules/hr/commands/command-replace.service';
+import { ConvertService } from '@/shared/convert/convert.service';
 import {
   CheckWorkerPositionAdditionalQueryDto,
   CommandListResponseDto,
@@ -38,6 +42,8 @@ export class CommandController {
   constructor(
     private readonly service: CommandService,
     private readonly i18n: I18nService,
+    private readonly replace: CommandReplaceService,
+    private readonly convert: ConvertService,
   ) {}
 
   @Get()
@@ -50,11 +56,36 @@ export class CommandController {
 
   @Post()
   @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Create command (basic record)' })
-  async create(@Body() dto: CreateCommandDto) {
-    return buildSuccess(
-      this.i18n.t('messages.successfully_stored'),
-      await this.service.create(dto),
+  @ApiOperation({ summary: 'Create command — status=view → PDF preview, else record' })
+  async create(@Body() dto: CreateCommandDto, @Res() res: Response) {
+    // Laravel: status='view' → command DB ga yozilmaydi, PDF preview qaytariladi.
+    if (dto.status === 'view') {
+      if (!CommandReplaceService.SUPPORTED_TYPES.includes(dto.command_type)) {
+        // Boshqa type'lar hali implement qilinmagan.
+        res.status(200).json({
+          message: this.i18n.t('messages.invalid_type'),
+          error: true,
+          data: [],
+        });
+        return;
+      }
+      const docx = await this.replace.buildDeleteTypeDocx(dto);
+      const pdf = await this.convert.docxToPdf(docx);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'inline; filename="command-preview.pdf"',
+      );
+      res.setHeader('Content-Length', String(pdf.length));
+      res.end(pdf);
+      return;
+    }
+
+    res.status(200).json(
+      buildSuccess(
+        this.i18n.t('messages.successfully_stored'),
+        await this.service.create(dto),
+      ),
     );
   }
 

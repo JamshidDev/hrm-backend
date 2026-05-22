@@ -15,9 +15,12 @@ import {
   Module,
   Param,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { ResumeService } from '@/modules/hr/worker-exports/resume.service';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
@@ -171,19 +174,33 @@ class WorkerExportController {
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/hr/worker-positions')
 class ResumeDownloadController {
-  constructor(private readonly service: WorkerExportService) {}
+  constructor(private readonly resume: ResumeService) {}
 
+  // Laravel: ResumeController::downloadResume — BinaryFileResponse (.docx).
   @Get(':uuid/resume-download')
   @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Generate + download resume (stub)' })
-  async downloadResume(@Param('uuid') uuid: string) {
-    return buildSuccess(true, await this.service.downloadResume(uuid));
+  @ApiOperation({ summary: 'Generate + download resume DOCX' })
+  async downloadResume(
+    @Param('uuid') uuid: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { buffer, filename } = await this.resume.generate(uuid);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`,
+    );
+    res.setHeader('Content-Length', String(buffer.length));
+    res.end(buffer);
   }
 }
 
 @Module({
   imports: [AuthModule],
   controllers: [WorkerExportController, ResumeDownloadController],
-  providers: [WorkerExportService],
+  providers: [WorkerExportService, ResumeService],
 })
 export class WorkerExportModule {}

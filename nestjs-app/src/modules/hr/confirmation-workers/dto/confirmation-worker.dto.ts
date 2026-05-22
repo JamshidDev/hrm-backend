@@ -1,12 +1,28 @@
 // ConfirmationWorker DTO'lari. Laravel: HR/ConfirmationWorkerController.
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 
-export class QueryConfirmationWorkerDto extends SearchPaginationQueryDto {}
+export class QueryConfirmationWorkerDto extends SearchPaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'Vergul bilan ajratilgan organization id lar',
+    example: '140,151,154',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({
+    description: 'Yaratilgan sana bo\'yicha filter (YYYY-MM-DD)',
+    example: '2026-04-28',
+  })
+  @IsOptional()
+  @IsString()
+  created?: string;
+}
 
 export class CreateConfirmationWorkerDto {
   @ApiProperty({ example: 1 })

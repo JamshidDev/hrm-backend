@@ -2,13 +2,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  ArrayMinSize,
-  IsArray,
-  IsInt,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { ArrayMinSize, IsArray, IsInt, IsOptional } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 

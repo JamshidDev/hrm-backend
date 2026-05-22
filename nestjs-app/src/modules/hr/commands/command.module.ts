@@ -6,10 +6,11 @@ import {
   WorkerAdditionalController,
 } from '@/modules/hr/commands/command.controller';
 import { CommandService } from '@/modules/hr/commands/command.service';
+import { CommandReplaceService } from '@/modules/hr/commands/command-replace.service';
 
 @Module({
   imports: [AuthModule, MinioModule],
   controllers: [CommandController, WorkerAdditionalController],
-  providers: [CommandService],
+  providers: [CommandService, CommandReplaceService],
 })
 export class CommandModule {}

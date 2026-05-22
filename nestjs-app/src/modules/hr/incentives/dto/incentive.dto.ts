@@ -6,11 +6,22 @@ import { IsInt, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryIncentiveDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
+
+  // download=true — Excel eksport vazifasini boshlaydi.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  download?: string;
 }
 
 // ---------- Response ----------

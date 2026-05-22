@@ -27,6 +27,8 @@ import {
   regions,
 } from '@/db/schema';
 import { RequestContext } from '@/common/context/request.context';
+import { resolveOrgScopeIds } from '@/common/database/org-scope.helper';
+import { PermissionService } from '@/shared/permission/permission.service';
 import { VacancyMapper } from '@/modules/hr/vacancies/vacancy.mapper';
 import {
   QueryVacancyDto,
@@ -39,6 +41,7 @@ export class VacancyService {
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
+    private readonly permissions: PermissionService,
   ) {}
 
   async findAll(filters: QueryVacancyDto): Promise<VacancyListResponseDto> {
@@ -53,10 +56,22 @@ export class VacancyService {
           .filter((n) => !Number.isNaN(n))
       : [];
 
+    // Laravel: VacancyPosition::filter() → QueryHelper::filterByOrganizations —
+    // foydalanuvchi ko'ra oladigan tashkilotlar bo'yicha scope (childIds).
+    const scopeOrgIds = await resolveOrgScopeIds(
+      this.db,
+      this.permissions,
+      this.ctx.user_or_fail.id,
+      this.ctx.user_or_fail.organization_id,
+    );
+
     const where = and(
       isNull(vacancy_positions.deleted_at),
       isNotNull(department_positions.id),
       isNotNull(departments.id),
+      scopeOrgIds.length
+        ? inArray(vacancy_positions.organization_id, scopeOrgIds)
+        : sql`false`,
       filters.organization_id
         ? eq(vacancy_positions.organization_id, filters.organization_id)
         : undefined,
@@ -107,11 +122,20 @@ export class VacancyService {
         .from(vacancy_positions)
         .leftJoin(
           department_positions,
-          eq(department_positions.id, vacancy_positions.department_position_id),
+          and(
+            eq(
+              department_positions.id,
+              vacancy_positions.department_position_id,
+            ),
+            isNull(department_positions.deleted_at),
+          ),
         )
         .leftJoin(
           departments,
-          eq(departments.id, department_positions.department_id),
+          and(
+            eq(departments.id, department_positions.department_id),
+            isNull(departments.deleted_at),
+          ),
         )
         .leftJoin(
           positionsTable,
@@ -132,11 +156,20 @@ export class VacancyService {
         .from(vacancy_positions)
         .leftJoin(
           department_positions,
-          eq(department_positions.id, vacancy_positions.department_position_id),
+          and(
+            eq(
+              department_positions.id,
+              vacancy_positions.department_position_id,
+            ),
+            isNull(department_positions.deleted_at),
+          ),
         )
         .leftJoin(
           departments,
-          eq(departments.id, department_positions.department_id),
+          and(
+            eq(departments.id, department_positions.department_id),
+            isNull(departments.deleted_at),
+          ),
         )
         .where(where),
     ]);

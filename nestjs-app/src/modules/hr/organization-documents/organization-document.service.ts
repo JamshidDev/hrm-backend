@@ -130,7 +130,10 @@ export class OrganizationDocumentService {
   }
 
   // POST /api/v1/hr/organization-documents
-  async create(dto: CreateOrganizationDocumentDto): Promise<void> {
+  async create(
+    dto: CreateOrganizationDocumentDto,
+    file?: Express.Multer.File,
+  ): Promise<void> {
     const userId = this.ctx.user_or_fail.id;
     const orgId = this.ctx.user_or_fail.organization_id;
     if (!orgId) {
@@ -140,17 +143,7 @@ export class OrganizationDocumentService {
       );
     }
 
-    let filePath: string | null = null;
-    if (dto.file && dto.file.startsWith('data:')) {
-      filePath = await this.minio.uploadBase64File(
-        dto.file,
-        'organization-documents',
-        ['pdf', 'jpg', 'jpeg', 'png', 'docx'],
-        10240,
-      );
-    } else if (dto.file) {
-      filePath = dto.file;
-    }
+    const filePath = await this.resolveDocFile(file, dto.file);
 
     await this.db.insert(organization_documents).values({
       organization_id: orgId,
@@ -165,7 +158,11 @@ export class OrganizationDocumentService {
   }
 
   // PUT /api/v1/hr/organization-documents/{id}
-  async update(id: number, dto: UpdateOrganizationDocumentDto): Promise<void> {
+  async update(
+    id: number,
+    dto: UpdateOrganizationDocumentDto,
+    file?: Express.Multer.File,
+  ): Promise<void> {
     const [row] = await this.db
       .select({ id: organization_documents.id, file: organization_documents.file })
       .from(organization_documents)
@@ -180,17 +177,8 @@ export class OrganizationDocumentService {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
 
-    let filePath = row.file;
-    if (dto.file && dto.file.startsWith('data:')) {
-      filePath = await this.minio.uploadBase64File(
-        dto.file,
-        'organization-documents',
-        ['pdf', 'jpg', 'jpeg', 'png', 'docx'],
-        10240,
-      );
-    } else if (dto.file) {
-      filePath = dto.file;
-    }
+    // Yangi fayl berilsa — yangilanadi, aks holda eski fayl saqlanadi.
+    const filePath = (await this.resolveDocFile(file, dto.file)) ?? row.file;
 
     await this.db
       .update(organization_documents)
@@ -225,5 +213,37 @@ export class OrganizationDocumentService {
       .update(organization_documents)
       .set({ deleted_at: sql`NOW()` })
       .where(eq(organization_documents.id, id));
+  }
+
+  // Faylni MinIO yo'liga aylantirish: multipart fayl → uploadFormFile,
+  // base64 → uploadBase64File, aks holda dto'dagi string yo'l (yoki null).
+  // Laravel: uploadFormFile($file, 'organization-documents', getFileTypes('document')).
+  private async resolveDocFile(
+    file: Express.Multer.File | undefined,
+    dtoFile: string | undefined,
+  ): Promise<string | null> {
+    if (file) {
+      return this.minio.uploadFormFile(
+        {
+          originalname: file.originalname,
+          buffer: file.buffer,
+          mimetype: file.mimetype,
+          size: file.size,
+        },
+        'organization-documents',
+        ['pdf', 'doc', 'docx', 'xlsx', 'xls'],
+        null,
+        10,
+      );
+    }
+    if (dtoFile && dtoFile.startsWith('data:')) {
+      return this.minio.uploadBase64File(
+        dtoFile,
+        'organization-documents',
+        ['pdf', 'jpg', 'jpeg', 'png', 'docx'],
+        10240,
+      );
+    }
+    return dtoFile ?? null;
   }
 }

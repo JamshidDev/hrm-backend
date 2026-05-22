@@ -8,7 +8,7 @@ import type { DataSource } from '@/db/types';
 import { worker_passports } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
-import { MinioService } from '@/shared/minio/minio.service';
+import { MinioService, type UploadedFile } from '@/shared/minio/minio.service';
 import { WorkerUuidLookup } from '@/modules/hr/_shared/worker-uuid.helper';
 import {
   CreateWorkerPassportDto,
@@ -58,20 +58,45 @@ export class WorkerPassportService {
     );
   }
 
-  async create(dto: CreateWorkerPassportDto): Promise<void> {
+  async create(
+    dto: CreateWorkerPassportDto,
+    file?: UploadedFile,
+  ): Promise<void> {
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-passports', [
+          'pdf',
+          'jpg',
+          'jpeg',
+          'png',
+        ])
+      : (dto.file ?? null);
+
     await this.db.insert(worker_passports).values({
       worker_id: dto.worker_id,
       serial_number: dto.serial_number,
       from_date: dto.from_date ?? null,
       to_date: dto.to_date ?? null,
       address: dto.address ?? null,
-      file: dto.file ?? null,
+      file: filePath,
       current: dto.current ?? true,
     });
   }
 
-  async update(id: number, dto: UpdateWorkerPassportDto): Promise<void> {
+  async update(
+    id: number,
+    dto: UpdateWorkerPassportDto,
+    file?: UploadedFile,
+  ): Promise<void> {
     await this.assertExists(id);
+    const filePath = file
+      ? await this.minio.uploadFormFile(file, 'worker-passports', [
+          'pdf',
+          'jpg',
+          'jpeg',
+          'png',
+        ])
+      : (dto.file ?? null);
+
     await this.db
       .update(worker_passports)
       .set({
@@ -80,7 +105,7 @@ export class WorkerPassportService {
         from_date: dto.from_date ?? null,
         to_date: dto.to_date ?? null,
         address: dto.address ?? null,
-        file: dto.file ?? null,
+        file: filePath,
         current: dto.current ?? true,
       })
       .where(eq(worker_passports.id, id));

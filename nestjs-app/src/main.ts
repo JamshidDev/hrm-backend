@@ -2,10 +2,30 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { useContainer } from 'class-validator';
+import methodOverride from 'method-override';
+import type { Request } from 'express';
 import { AppModule } from '@/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
+  // Laravel'da ETag avtomatik yaratilmaydi — Express default'ini o'chiramiz.
+  // Frontend `If-None-Match` yuborganda 304 Not Modified qaytmasligi uchun
+  // (304 + bo'sh body Laravel parity'ni buzadi).
+  app.getHttpAdapter().getInstance().set('etag', false);
+
+  // Laravel parity — `?_method=PUT/PATCH/DELETE` orqali POST so'rovni
+  // mos HTTP method'ga aylantirish (Laravel'da `_method` field standart).
+  // Frontend multipart/form-data bilan PUT yuborishda shu pattern ishlatadi.
+  app.use(
+    methodOverride((req: Request): string => {
+      const fromQuery = req.query?._method;
+      if (typeof fromQuery === 'string') return fromQuery;
+      const body = req.body as Record<string, unknown> | undefined;
+      const fromBody = body?._method;
+      return typeof fromBody === 'string' ? fromBody : '';
+    }),
+  );
 
   // CORS — Laravel config/cors.php bilan parity:
   //   paths: api/*, v1/*, *

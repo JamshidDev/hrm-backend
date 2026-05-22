@@ -27,7 +27,13 @@ export class CreateCommandDto {
   worker_position_id?: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() status?: string;
-  @ApiProperty({ example: '2025-01-15' }) command_date!: string;
+
+  // MUHIM: validator dekoratori bo'lishi shart — aks holda `whitelist: true`
+  // bu maydonni request'dan olib tashlaydi (command_date null bo'lib qolardi).
+  @ApiProperty({ example: '2025-01-15' })
+  @IsString()
+  @IsNotEmpty()
+  command_date!: string;
 
   @ApiPropertyOptional() @IsOptional() @IsString() command_number?: string;
   @ApiPropertyOptional() @IsOptional() confirmations?: unknown[];
@@ -36,6 +42,9 @@ export class CreateCommandDto {
   @ApiPropertyOptional() @IsOptional() @IsString() base?: string;
   @ApiPropertyOptional() @IsOptional() reason?: unknown;
   @ApiPropertyOptional() @IsOptional() additional?: unknown;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() finance_id?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() contract_to_date?: string;
+  @ApiPropertyOptional() @IsOptional() command_additional?: unknown;
 }
 
 // GET /api/v1/hr/worker-additional/{id}?type=...

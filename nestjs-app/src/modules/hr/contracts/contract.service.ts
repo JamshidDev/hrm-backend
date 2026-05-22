@@ -27,6 +27,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ContractMapper } from '@/modules/hr/contracts/contract.mapper';
@@ -35,6 +36,7 @@ import {
   CreateContractDto,
   QueryContractDto,
 } from '@/modules/hr/contracts/dto/contract.dto';
+import { randomUUID } from 'crypto';
 
 const CONFIRMATION_STATUS_SUCCESS = 3;
 const POSITION_STATUS_ACTIVE = 2;
@@ -59,12 +61,12 @@ export class ContractService {
       ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
       : [];
 
+    // Worker name search — Laravel scopeSearchByFullName parity (split by space).
+    const workerSearch = buildWorkerSearchCond(filters.search);
     const searchCond = filters.search
       ? or(
           ilike(contracts.number, `%${filters.search}%`),
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
+          ...(workerSearch ? [workerSearch] : []),
         )
       : undefined;
 
@@ -158,7 +160,7 @@ export class ContractService {
       const [contract] = await tx
         .insert(contracts)
         .values({
-          uuid: sql`uuid_generate_v4()`,
+          uuid: randomUUID(),
           organization_id: dto.organization_id,
           worker_id: dto.worker_id,
           user_id: userId,
@@ -176,7 +178,7 @@ export class ContractService {
       // Create related worker_position if department_position provided.
       if (dto.department_position_id) {
         await tx.insert(worker_positions).values({
-          uuid: sql`uuid_generate_v4()`,
+          uuid: randomUUID(),
           organization_id: dto.organization_id,
           department_id: dto.department_id ?? null,
           department_position_id: dto.department_position_id,

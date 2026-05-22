@@ -7,6 +7,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
 import { Permission } from '@/common/decorators/permission.decorator';
@@ -24,14 +25,24 @@ import {
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/hr/vacations')
 export class VacationController {
-  constructor(private readonly service: VacationService) {}
+  constructor(
+    private readonly service: VacationService,
+    private readonly i18n: I18nService,
+  ) {}
 
   @Get()
   @UseGuards(PermissionGuard)
   @Permission('hr')
-  @ApiOperation({ summary: 'Vacations list (to >= today)' })
+  @ApiOperation({
+    summary: 'Vacations list (to >= today); download=true → Excel export task',
+  })
   @ApiOkResponse({ type: VacationListResponseDto })
   async findAll(@Query() query: QueryVacationDto) {
+    // download=true — Laravel: export task yaratiladi, Excel fonda generatsiya.
+    if (query.download) {
+      await this.service.exportToTask(query);
+      return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
+    }
     return this.service.findAll(query);
   }
 

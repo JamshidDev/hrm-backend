@@ -3,10 +3,15 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
+  Post,
   Put,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -15,17 +20,26 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { ReportService } from '@/modules/structure/reports/report.service';
 import {
   QueryReportDto,
   QueryReportMonthDto,
+  QueryReportStatDto,
+  ReportExcelDto,
+  ReportGenerateDto,
+  ReportStoreDto,
   UpdateReportMonthDto,
   ReportListResponseDto,
   ReportMonthPerListResponseDto,
 } from '@/modules/structure/reports/dto/report.dto';
+
+const XLSX_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 // Laravel: Route::apiResource('reports', ...) + reports-detail/{id} (PUT/DELETE) +
 // report/* (generate, store, excel, labels, create-confirmation, delete-confirmation) +
@@ -47,6 +61,61 @@ export class ReportController {
   @ApiOkResponse({ type: ReportListResponseDto })
   async findAll(@Query() query: QueryReportDto) {
     return this.service.findAll(query);
+  }
+
+  // POST /reports — Laravel: ReportController::store().
+  // Generate qilingan hisobotni yakuniy tasdiqlash (.docx/.pdf hujjat bilan).
+  @Post('reports')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit (store) a generated report' })
+  @ApiOkResponse()
+  async store(@Body() dto: ReportStoreDto) {
+    await this.service.store(dto);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
+  }
+
+  // GET /reports-stat — Laravel: ReportController::stats().
+  @Get('reports-stat')
+  @ApiOperation({
+    summary: 'Reports stats — organization tree with period reports',
+  })
+  @ApiOkResponse()
+  async stats(@Query() query: QueryReportStatDto) {
+    return this.service.stats(query);
+  }
+
+  // GET /report/labels — Laravel: ReportController::labels(). Raw massiv qaytadi.
+  @Get('report/labels')
+  @RawResponse()
+  @ApiOperation({ summary: 'Report stat labels list' })
+  @ApiOkResponse()
+  labels() {
+    return this.service.labels();
+  }
+
+  // POST /report/generate — Laravel: ReportController::generate().
+  // O'tgan oy uchun tanlangan tashkilotlar bo'yicha hisobot yaratadi.
+  @Post('report/generate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generate report for organizations (previous month)',
+  })
+  @ApiOkResponse()
+  async generate(@Body() dto: ReportGenerateDto) {
+    return this.service.generate(dto);
+  }
+
+  // POST /report/excel — Laravel: ReportController::viewExcel.
+  // type one/two/three — saqlangan hisobotni .xlsx fayl sifatida yuklab beradi.
+  @Post('report/excel')
+  @HttpCode(HttpStatus.OK)
+  @RawResponse()
+  @Header('Content-Type', XLSX_MIME)
+  @ApiOperation({ summary: 'Download report Excel (type one/two/three)' })
+  async viewExcel(@Body() dto: ReportExcelDto, @Res() res: Response) {
+    const { buffer, filename } = await this.service.viewExcel(dto);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.end(buffer);
   }
 
   @Delete('reports/:id')

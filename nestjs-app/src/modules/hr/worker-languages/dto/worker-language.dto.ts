@@ -2,16 +2,20 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerLanguageDto {
   @ApiPropertyOptional() @IsOptional() @IsString() uuid?: string;
 }
 
+// Laravel WorkerLanguageStoreRequest: { uuid, language_id, file? }
+// `uuid` — worker UUID; resolved server-side to worker_id.
 export class CreateWorkerLanguageDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
-  worker_id!: number;
+  @ApiProperty({ example: 'bfba2d64-eb91-4699-82ef-0d3677810771' })
+  @IsUUID()
+  @Exists('workers', 'uuid')
+  uuid!: string;
 
   @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() @Exists('languages', 'id')
   language_id!: number;
@@ -19,7 +23,13 @@ export class CreateWorkerLanguageDto {
   @ApiPropertyOptional() @IsOptional() @IsString() file?: string;
 }
 
-export class UpdateWorkerLanguageDto extends CreateWorkerLanguageDto {}
+// Update — no `uuid` (worker remains).
+export class UpdateWorkerLanguageDto {
+  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() @Exists('languages', 'id')
+  language_id!: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() file?: string;
+}
 
 // ---------- Response ----------
 

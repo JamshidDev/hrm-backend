@@ -11,14 +11,23 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { DocumentFileService } from '@/modules/confirmation/document-files/document-file.service';
 import {
   CreateDocumentFileDto,
+  DocumentFileIndexQueryDto,
   QueryDocumentFileDto,
   UpdateDocumentFileDto,
 } from '@/modules/confirmation/document-files/dto/document-file.dto';
@@ -34,7 +43,8 @@ export class DocumentFileController {
   ) {}
 
   @Get()
-  async findAll(@Query() query: QueryDocumentFileDto) {
+  @ApiOperation({ summary: 'Document files list (model + document_id bo\'yicha)' })
+  async findAll(@Query() query: DocumentFileIndexQueryDto) {
     return buildSuccess(true, await this.service.findAll(query));
   }
 
@@ -44,8 +54,14 @@ export class DocumentFileController {
   }
 
   @Post()
-  async create(@Body() dto: CreateDocumentFileDto) {
-    await this.service.create(dto);
+  @UseInterceptors(FilesInterceptor('files'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Document file(lar) yuklash (multipart)' })
+  async create(
+    @Body() dto: CreateDocumentFileDto,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
+  ) {
+    await this.service.create(dto, files);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 

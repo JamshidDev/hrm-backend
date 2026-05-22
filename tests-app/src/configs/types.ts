@@ -3,8 +3,8 @@
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-// Auth turi — Sanctum admin token, Sanctum user, yoki guest (token yo'q).
-export type AuthType = 'admin' | 'user' | 'guest';
+// Auth turi — Sanctum admin token, Sanctum user, integration user, yoki guest.
+export type AuthType = 'admin' | 'user' | 'integration' | 'guest';
 
 // Scenario tag'lari — CLI flag'lari bilan filtrlash uchun.
 // (--tag pagination → faqat pagination scenariolari).

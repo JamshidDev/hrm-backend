@@ -1,16 +1,7 @@
 // Incentive service. Laravel: OrganizationIncentiveController::list().
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-} from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -21,8 +12,11 @@ import {
   departments,
   positions as positionsTable,
 } from '@/db/schema';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { ExcelService } from '@/shared/excel/excel.service';
+import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import {
   getFullPosition,
   getShortPosition,
@@ -38,6 +32,8 @@ export class IncentiveService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly excel: ExcelService,
+    private readonly exportRunner: ExportTaskRunner,
   ) {}
 
   async findAll(filters: QueryIncentiveDto): Promise<IncentiveListResponseDto> {
@@ -46,16 +42,14 @@ export class IncentiveService {
     const lang = this.ctx.lang;
 
     const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
 
     const where = and(
       isNull(organization_incentives.deleted_at),
@@ -106,7 +100,10 @@ export class IncentiveService {
           eq(worker_positions.id, organization_incentives.worker_position_id),
         )
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -177,5 +174,108 @@ export class IncentiveService {
         }),
       ),
     };
+  }
+
+  // GET /api/v1/hr/incentives?download=true — Laravel: UserExportTask +
+  // IncentiveExportToExcelJob. Umumiy ExportTaskRunner orqali.
+  async exportToTask(filters: QueryIncentiveDto): Promise<void> {
+    await this.exportRunner.run({
+      type: 28, // ExportTaskEnum.INCENTIVE
+      folder: 'incentive',
+      build: () => this.buildIncentiveExcel(filters),
+    });
+  }
+
+  // Incentive ma'lumotlarini Excel buffer'iga aylantiradi (ExportTaskRunner uchun).
+  private async buildIncentiveExcel(
+    filters: QueryIncentiveDto,
+  ): Promise<Buffer> {
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
+      : [];
+    const searchCond = buildWorkerSearchCond(filters.search);
+
+    const where = and(
+      isNull(organization_incentives.deleted_at),
+      filters.organization_id
+        ? eq(organization_incentives.organization_id, filters.organization_id)
+        : undefined,
+      orgIds.length > 0
+        ? inArray(organization_incentives.organization_id, orgIds)
+        : undefined,
+      searchCond,
+    );
+
+    const rows = await this.db
+      .select({
+        number: organization_incentives.number,
+        reason: organization_incentives.reason,
+        by_whom: organization_incentives.by_whom,
+        gift: organization_incentives.gift,
+        gift_type: organization_incentives.gift_type,
+        date: organization_incentives.date,
+        org_name: organizations.name,
+        org_full_name: organizations.full_name,
+        dept_name: departments.name,
+        dept_level: departments.level,
+        pos_name: positionsTable.name,
+      })
+      .from(organization_incentives)
+      .leftJoin(
+        organizations,
+        eq(organizations.id, organization_incentives.organization_id),
+      )
+      .leftJoin(
+        worker_positions,
+        eq(worker_positions.id, organization_incentives.worker_position_id),
+      )
+      // searchCond (buildWorkerSearchCond) `workers` ustunlariga tayanadi.
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(
+        positionsTable,
+        eq(positionsTable.id, worker_positions.position_id),
+      )
+      .where(where)
+      .orderBy(desc(organization_incentives.id));
+
+    const excelRows = rows.map((r) => ({
+      organization_name: r.org_name ?? '',
+      position: getShortPosition({
+        position_name: r.pos_name,
+        department_name: r.dept_name,
+        department_level: r.dept_level,
+        organization_full_name: r.org_full_name,
+      }),
+      date: r.date ?? '',
+      by_whom: r.by_whom ?? '',
+      gift: r.gift ?? '',
+      gift_type: String(r.gift_type ?? ''),
+      reason: r.reason ?? '',
+      number: r.number ?? '',
+    }));
+
+    return this.excel.build({
+      creator: 'HRM',
+      sheets: [
+        {
+          name: 'Incentives',
+          columns: [
+            { header: 'Tashkilot nomi', key: 'organization_name', width: 34 },
+            { header: 'Lavozim', key: 'position', width: 34 },
+            { header: 'Sana', key: 'date', width: 14 },
+            { header: 'Kim tomonidan', key: 'by_whom', width: 24 },
+            { header: 'Mukofot', key: 'gift', width: 22 },
+            { header: 'Mukofot turi', key: 'gift_type', width: 14 },
+            { header: 'Sababi', key: 'reason', width: 34 },
+            { header: 'Raqami', key: 'number', width: 16 },
+          ],
+          rows: excelRows,
+        },
+      ],
+    });
   }
 }

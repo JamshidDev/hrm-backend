@@ -36,27 +36,31 @@ export class WorkerSickLeaveController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker sick leaves (filtered by worker uuid)' })
   async findAll(@Query() query: QueryWorkerSickLeaveDto) {
     return buildSuccess(true, await this.service.findAll(query.uuid));
   }
 
   @Get(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.findOne(id));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateWorkerSickLeaveDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWorkerSickLeaveDto,
@@ -66,7 +70,8 @@ export class WorkerSickLeaveController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

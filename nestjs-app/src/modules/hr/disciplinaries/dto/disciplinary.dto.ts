@@ -6,11 +6,22 @@ import { IsInt, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryDisciplinaryDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
+
+  // Laravel Contract pattern: when(created) → whereDate('created_at', created).
+  @ApiPropertyOptional({ example: '2026-05-03' })
+  @IsOptional()
+  @IsString()
+  created?: string;
 }
 
 // ---------- Response ----------

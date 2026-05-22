@@ -1,4 +1,53 @@
 {
+  "report": {
+    "error": {
+      "month_created_band": "Bandlik organlarining yo'llanmasi asosida ishga qabul qilingan soni tashqaridan qabul qilinganlar sonidan oshmasligi kerak"
+    },
+    "labels": {
+      "all_rate": "Tasdiqlangan shtat birliklar soni",
+      "workers_count": "Amaldagi ishchi-xodimlar soni",
+      "men": "Erkak ishchi-xodimlar soni",
+      "women": "Ayol ishchi-xodimlar soni",
+      "vacancies": "Korxonada mavjud bo'sh ish o'rinlari soni",
+      "part_time_contract": "Fuqaroviy-huquqiy shartnoma asosida faoliyat yuritayotganlar soni",
+      "month_created": "Ushbu oyda ishga qabul qilingan xodimlar soni",
+      "month_updated": "Jamiyat korxonalaridan ichki siljish asosida qabul qilinganlar soni",
+      "month_other_created": "Tashqaridan qabul qilinganlar soni",
+      "month_created_30": "Ushbu oyda 30 yoshgacha qabul qilingan xodimlar soni",
+      "month_created_univer": "Ushbu oyda qabul qilingan TDTrU bitiruvchilari",
+      "month_created_tex": "Ushbu oyda qabul qilingan temir yo'l transport texnikumlari bitiruvchilari",
+      "month_created_other_univer": "Ushbu oyda qabul qilingan boshqa oliy ta'lim tashkilotlari bitiruvchilari",
+      "month_created_coll": "Ushbu oyda qabul qilingan boshqa o'rta-maxsus kasb-hunar kollejlari bitiruvchilari",
+      "month_created_school": "Ushbu oyda qabul qilingan o'rta ma'lumotlilar",
+      "month_created_band": "Ushbu oyda bandlik organlarining yo'llanmasi asosida ishga olinganlar soni",
+      "month_deleted": "Ushbu oyda mehnat shartnomasi bekor qilinganlar soni",
+      "higher_count": "Oliy ma'lumotli xodimlar soni",
+      "special_count": "O'rta-maxsus ma'lumotli xodimlar soni",
+      "middle_count": "O'rta ma'lumotli xodimlar soni",
+      "age_under_30": "30 yoshgacha xodimlar soni",
+      "age_31_45": "31-45 oraliqdagi xodimlar soni",
+      "age_46_plus": "46 yosh va undan katta xodimlar soni",
+      "pension_age_count": "Pensiya yoshidagilar",
+      "vacation_count": "Bola parvarishlash tatilidagi xodimlar",
+      "disability_count": "Nogironligi mavjud xodimlar"
+    }
+  },
+  "document": {
+    "created": "Hujjat yaratildi",
+    "updated": "Hujjat yangilandi",
+    "deleted": "Hujjat o'chirildi",
+    "rejected": "Hujjat bekor qilindi",
+    "not_found": "Hujjat topilmadi",
+    "signed_successfully": "Hujjat muvaffaqqiyatli imzolandi",
+    "already_signed": "Ushbu hujjat allaqachon imzolangan",
+    "rejected_successful": "Hujjat muvaffaqqiyatli bekor qilindi"
+  },
+  "worker": {
+    "med": {
+      "one": "Sog'lom",
+      "two": "Nosog'lom"
+    }
+  },
   "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
   "invalid_credentials_password": "Foydalanuvchi nomi yoki parol to'g'riligini tekshiring",
   "user_block": "Sizning profilingiz tizim ma'muriyati tomonidan vaqtincha cheklab qo'yildi.",
@@ -11,10 +60,20 @@
   "role_related": "Rol foydalanuvchilarga yoki ruxsatlarga biriktirilgan; o'chirib bo'lmaydi",
   "permission_related": "Ruhsat rolega muvaffaqiyatli biriktirildi",
   "user_not_found": "Foydalanuvchi tizimda topilmadi yoki mavjud emas",
+  "worker_position_not_found": "Xodimning lavozimi topilmadi yoki mavjud emas",
+  "worker_pin_exists": "Bunday JSHSHIR lik xodim allaqachon mavjud",
+  "worker_phone_exists": "Bunday telefon raqamlik xodim allaqachon mavjud",
+  "worker_has_contract": "Ushbu xodimda faol mehnat shartnomasi mavjud!",
+  "worker_position_has_other_carers": "Xodimning asosiy lavozimini o'chirish mumkin emas!",
+  "worker_has_schedule_in_this_period": "Xodimning ushbu davrda ish jadvali bor",
+  "mew_worker_already_sended": "Bunday xodim allaqachon yuborilgan",
+  "organization_not_found": "Yuqori tashkilot topilmadi",
+  "you_cannot_delete_a_document_that_has_been_approved": "Tasdiqlangan hujjatni o'chirib bo'lmaydi",
   "permission_detach_forbidden_from_role": "Role orqali biriktirilgan permissionni userdan alohida olib tashlab bo'lmaydi.",
   "role_successfully_assigned": "messages.role_successfully_assigned",
   "errors": {
-    "organization_not_allowed_permission": "Sizda, ushbu ma'lumotnini o'zgartirishi huquqi mavjud emas!"
+    "organization_not_allowed_permission": "Sizda, ushbu ma'lumotnini o'zgartirishi huquqi mavjud emas!",
+    "has_application_not_checked": "Ushbu bosqichda xali tugatilmagan Ariza mavjud, iltimos barja arizalar ma'lumotlarini kiriting"
   },
   "permission_denied": "Sizda bu amalni bajarish uchun ruxsat yo'q",
   "education": {
@@ -350,6 +409,18 @@
     },
     "work_types": {
       "one": "To'liq"
+    },
+    "user": {
+      "statues": {
+        "one": "Jarayonda",
+        "two": "Qabul qilindi",
+        "three": "Rad qilindi"
+      }
+    },
+    "file_types": {
+      "one": "Bilim yurti diplom nusxasi",
+      "two": "Ma'lumotnoma yoki Rezyume (imzolangan holda yuklansin)",
+      "three": "Qo'shimcha sertifikatlar (agar mavjud bo'lsa)"
     }
   },
   "confirmation_worker": {
@@ -431,5 +502,26 @@
   "signature": {
     "success": "Imzo muvaffaqqiyatli qo'yildi"
   },
-  "you_cannot_delete_a_document_that_has_been_approved": "Tasdiqlangan hujjatni o'chirib bo'lmaydi"
+  "create_success": "Muvaffaqqiyatli yaratildi",
+  "department_position_has_workers": "Ushbu lavozimga tegishli xodimlar mavjud!",
+  "deploy_published_success": "Versiya muvaffaqqiyatli e'lon qilindi!",
+  "deploy_success": "Deployment muvaffaqqiyatli amalga oshirildi!",
+  "invalid_type": "Turi noto'g'ri",
+  "otp_code_not_verified": "Tasdiqlash kodi mos kelmadi",
+  "successfully_attached": "Muvaffaqqiyatli biriktirildi",
+  "successfully_detached": "Muvaffaqqiyatli ajratildi",
+  "successfully_liked": "Muvaffaqqiyatli baholandi",
+  "successfully_optimizated": "Muvaffaqqiyatli optimallashtirildi",
+  "successfully_sorted": "Muvaffaqqiyatli tartibga keltirildi",
+  "time_sheet_status_confirmed": "Tabel holati tasdiqlandi",
+  "user_all_ready": "Bunday foydalanuvchi tizimda allaqachon mavjud",
+  "exam": {
+    "finished": "Yakunlangan",
+    "result_updated_successfully": "Javob muvaffaqqiyatli yangilandi"
+  },
+  "chat": {
+    "notifications": {
+      "send_success": "Sizning xabaringiz muvaffaqqiyatli yuborildi!"
+    }
+  }
 }

@@ -15,15 +15,45 @@ export class QueryDocumentFileDto extends SearchPaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() model_id?: number;
 }
 
-export class CreateDocumentFileDto {
-  @ApiProperty() @IsString() @IsNotEmpty() model_type!: string;
-  @ApiProperty() @Type(() => Number) @IsInt() model_id!: number;
-  @ApiProperty({ description: 'Base64 file' })
+// GET /api/v1/document/files?model=&document_id=  — Laravel: index().
+export class DocumentFileIndexQueryDto {
+  @ApiProperty({ example: 'worker-application' })
   @IsString()
   @IsNotEmpty()
-  file!: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() original_name?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() worker_application_id?: number;
+  model!: string;
+
+  @ApiProperty({ example: 569 })
+  @Type(() => Number)
+  @IsInt()
+  document_id!: number;
+}
+
+// POST /api/v1/document/files — multipart/form-data.
+// Laravel: DocumentFileController::store ($request->document_id, model, status, files[]).
+export class CreateDocumentFileDto {
+  @ApiProperty({ example: 569 })
+  @Type(() => Number)
+  @IsInt()
+  document_id!: number;
+
+  @ApiProperty({ example: 'worker-application' })
+  @IsString()
+  @IsNotEmpty()
+  model!: string;
+
+  @ApiPropertyOptional({
+    description: "'application' — fayl o'rniga worker_application bog'lash",
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({
+    description: "status=application bo'lganda — vergul bilan ajratilgan id lar",
+  })
+  @IsOptional()
+  @IsString()
+  worker_applications?: string;
 }
 
 export class UpdateDocumentFileDto {

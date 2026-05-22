@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { Public } from '@/common/decorators/public.decorator';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { DocumentService } from '@/modules/confirmation/documents/document.service';
 import {
@@ -20,7 +21,9 @@ import {
   DocumentConfirmDto,
   DocumentQueryDto,
   DocumentSignatureDto,
+  DocumentSignTokenDto,
   DocumentUpdateDto,
+  DocumentUpdateQueryDto,
   ForwardConfirmationDto,
   GenerateConfirmationUrlDto,
 } from '@/modules/confirmation/documents/dto/document.dto';
@@ -99,10 +102,14 @@ export class DocumentPublicController {
   constructor(private readonly service: DocumentService) {}
 
   @Public()
+  @RawResponse()
   @Post('update')
   @ApiOperation({ summary: 'OnlyOffice callback (only_office_ip middleware)' })
-  async updateOfficeCallback(@Body() dto: DocumentUpdateDto) {
-    return this.service.updateDocument(dto);
+  async updateOfficeCallback(
+    @Query() query: DocumentUpdateQueryDto,
+    @Body() dto: DocumentUpdateDto,
+  ) {
+    return this.service.updateDocument(query, dto);
   }
 
   @Public()
@@ -110,5 +117,23 @@ export class DocumentPublicController {
   @ApiOperation({ summary: 'Generate document view URL' })
   async view(@Param('model') model: string, @Param('uuid') uuid: string) {
     return buildSuccess(true, await this.service.viewDocument(model, uuid));
+  }
+
+  // Laravel: POST v1/document/signature — generate-url'dan kelgan token bilan
+  // hujjatni tekshirish (status=check) yoki imzolash.
+  @Public()
+  @Post('signature')
+  @ApiOperation({
+    summary: 'Token orqali hujjatni imzolash / tekshirish (signed URL)',
+  })
+  async signByToken(
+    @Query('token') token: string,
+    @Body() dto: DocumentSignTokenDto,
+  ) {
+    const result = await this.service.signWithToken(token, dto);
+    if (result.data !== undefined) {
+      return buildSuccess(true, result.data);
+    }
+    return buildSuccess(result.message ?? true, []);
   }
 }

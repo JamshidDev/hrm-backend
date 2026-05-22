@@ -1,4 +1,53 @@
 {
+  "report": {
+    "error": {
+      "month_created_band": "The number of people hired on the basis of referrals from employment agencies should not exceed the number of people hired from outside."
+    },
+    "labels": {
+      "all_rate": "Number of approved staff units",
+      "workers_count": "Number of active employees",
+      "men": "Number of male employees",
+      "women": "Number of female employees",
+      "vacancies": "Number of vacant positions in the organization",
+      "part_time_contract": "Number of employees working under a civil-law contract",
+      "month_created": "Number of employees hired this month",
+      "month_updated": "Number of employees hired through internal transfer from company enterprises",
+      "month_other_created": "Number of employees hired from outside",
+      "month_created_30": "Number of employees under 30 hired this month",
+      "month_created_univer": "Graduates of TSTU hired this month",
+      "month_created_tex": "Graduates of railway transport technical schools hired this month",
+      "month_created_other_univer": "Graduates of other higher education institutions hired this month",
+      "month_created_coll": "Graduates of other secondary specialized vocational colleges hired this month",
+      "month_created_school": "Employees with secondary education hired this month",
+      "month_created_band": "Number of employees hired this month through employment agency referrals",
+      "month_deleted": "Number of employees whose employment contracts were terminated this month",
+      "higher_count": "Number of employees with higher education",
+      "special_count": "Number of employees with secondary specialized education",
+      "middle_count": "Number of employees with secondary education",
+      "age_under_30": "Number of employees under 30",
+      "age_31_45": "Number of employees aged 31-45",
+      "age_46_plus": "Number of employees aged 46 and above",
+      "pension_age_count": "Employees of retirement age",
+      "vacation_count": "Employees on childcare leave",
+      "disability_count": "Employees with disabilities"
+    }
+  },
+  "document": {
+    "created": "Document created",
+    "updated": "Document updated",
+    "deleted": "Document deleted",
+    "rejected": "Document rejected",
+    "not_found": "The document was not found or created",
+    "signed_successfully": "The document was successfully signed",
+    "already_signed": "This document has already been signed",
+    "rejected_successful": "The document has been successfully cancelled"
+  },
+  "worker": {
+    "med": {
+      "one": "Healthy",
+      "two": "Unhealthy"
+    }
+  },
   "invalid_credentials": "Such user was not found in the system. Please verify the entered information...",
   "invalid_credentials_password": "Check if the username or password is correct.",
   "user_block": "Your profile has been temporarily restricted by the system administration.",
@@ -11,10 +60,20 @@
   "role_related": "The role has assigned permissions or users; cannot be deleted",
   "permission_related": "Permission successfully assigned to the role",
   "user_not_found": "User not found or does not exist",
+  "worker_position_not_found": "Worker position not found or does not exist",
+  "worker_pin_exists": "Worker PIN already exists",
+  "worker_phone_exists": "Worker PHONE already exists",
+  "worker_has_contract": "This worker has an active employment contract!",
+  "worker_position_has_other_carers": "Cannot delete the worker's primary position!",
+  "worker_has_schedule_in_this_period": "The worker already has a schedule in this period",
+  "mew_worker_already_sended": "Such an employee has already been sent",
+  "organization_not_found": "Parent organization not found",
+  "you_cannot_delete_a_document_that_has_been_approved": "Cannot delete an approved document",
   "permission_detach_forbidden_from_role": "A permission granted through a role cannot be detached directly from the user.",
   "role_successfully_assigned": "messages.role_successfully_assigned",
   "errors": {
-    "organization_not_allowed_permission": "You do not have permission the right to change this information.!"
+    "organization_not_allowed_permission": "You do not have permission the right to change this information.!",
+    "has_application_not_checked": "There is an application that is not yet resolved at this stage, please enter the application details."
   },
   "permission_denied": "You don't have permission to perform this action",
   "education": {
@@ -352,6 +411,18 @@
     },
     "work_types": {
       "one": "Full"
+    },
+    "user": {
+      "statues": {
+        "one": "In Progress",
+        "two": "Accepted",
+        "three": "Canceled"
+      }
+    },
+    "file_types": {
+      "one": "Copy of diploma",
+      "two": "Reference letter or resume (must be uploaded signed)",
+      "three": "Additional certificates (if available)"
     }
   },
   "confirmation_worker": {
@@ -431,5 +502,26 @@
   "signature": {
     "success": "Signature successfully recorded"
   },
-  "you_cannot_delete_a_document_that_has_been_approved": "Cannot delete an approved document"
+  "create_success": "Successfully created",
+  "department_position_has_workers": "This position has assigned workers!",
+  "deploy_published_success": "Version published successfully!",
+  "deploy_success": "Deployment completed successfully!",
+  "invalid_type": "Invalid type",
+  "otp_code_not_verified": "Verification code does not match",
+  "successfully_attached": "Successfully attached",
+  "successfully_detached": "Successfully detached",
+  "successfully_liked": "Successfully rated",
+  "successfully_optimizated": "Successfully optimized",
+  "successfully_sorted": "Successfully sorted",
+  "time_sheet_status_confirmed": "Timesheet status confirmed",
+  "user_all_ready": "Such user already exists in the system",
+  "exam": {
+    "finished": "Finished",
+    "result_updated_successfully": "Answer updated successfully"
+  },
+  "chat": {
+    "notifications": {
+      "send_success": "Your message was sent successfully!"
+    }
+  }
 }

@@ -42,29 +42,38 @@ export class PensionerController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Pensioners list' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({ summary: 'Pensioners list; export=true → Excel export task' })
   @ApiOkResponse({ type: PensionerListResponseDto })
   async findAll(@Query() query: QueryPensionerDto) {
+    // export=true — Laravel: UserExportTask + PensionersExportToExcelJob.
+    if (query.export) {
+      await this.service.exportToTask(query);
+      return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
+    }
     return this.service.findAll(query);
   }
 
   @Get('list-med')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Pensioners with latest medical check' })
   async listMed() {
     return buildSuccess(true, await this.service.listMed());
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreatePensionerDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePensionerDto,
@@ -74,7 +83,8 @@ export class PensionerController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

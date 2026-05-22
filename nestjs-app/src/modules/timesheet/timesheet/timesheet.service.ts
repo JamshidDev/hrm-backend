@@ -82,9 +82,9 @@ export class TimeSheetService {
       this.db.select({ total: count() }).from(time_sheets).where(where),
     ]);
 
+    // Laravel paginate() javobida `per_page` yo'q — parity uchun qaytarmaymiz.
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map((r) => this.toItem(r, lang)),

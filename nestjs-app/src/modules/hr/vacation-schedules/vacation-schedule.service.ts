@@ -26,6 +26,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -215,12 +216,8 @@ export class VacationScheduleService {
     const offset = (page - 1) * perPage;
     const lang = this.ctx.lang;
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
 
     // worker_positions where worker NOT IN (workers in vacation_schedules).
     const where = and(

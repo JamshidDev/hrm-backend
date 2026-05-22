@@ -7,12 +7,14 @@ import {
   asc,
   count,
   eq,
+  exists,
   ilike,
   inArray,
   isNull,
   or,
   sql,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -27,8 +29,11 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { resolveOrgScopeIds } from '@/common/database/org-scope.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { PermissionService } from '@/shared/permission/permission.service';
 import { getShortPosition } from '@/modules/hr/_shared/position-helper';
 import { MED_STATUS_LABELS } from '@/modules/hr/meds/med.types';
 import {
@@ -44,6 +49,7 @@ export class MedService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly permissions: PermissionService,
   ) {}
 
   // GET /api/v1/hr/worker-meds
@@ -56,21 +62,67 @@ export class MedService {
     const orgIds = filters.organizations
       ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
       : [];
+    const deptIds = filters.departments
+      ? filters.departments.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      : [];
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
+
+    // Laravel: whereHas('worker.positions', fn => $q->filter($user, $filters)) —
+    // hodimda ACTIVE (status=2) worker_position bo'lishi va u ruxsat etilgan
+    // org'da bo'lishi shart (organizations / organization_id ham shu yerda).
+    const scopeOrgIds = await resolveOrgScopeIds(
+      this.db,
+      this.permissions,
+      this.ctx.user_or_fail.id,
+      this.ctx.user_or_fail.organization_id,
+    );
+    const wp = alias(worker_positions, 'wp_scope');
+    const workerHasPosition = exists(
+      this.db
+        .select({ x: sql`1` })
+        .from(wp)
+        .where(
+          and(
+            eq(wp.worker_id, meds.worker_id),
+            isNull(wp.deleted_at),
+            eq(wp.status, 2),
+            scopeOrgIds.length
+              ? inArray(wp.organization_id, scopeOrgIds)
+              : sql`false`,
+            orgIds.length ? inArray(wp.organization_id, orgIds) : undefined,
+          ),
+        ),
+    );
+
+    // `departments` — med'ning worker_position department_id bo'yicha.
+    const wpDept = alias(worker_positions, 'wp_dept');
+    const deptCond =
+      deptIds.length > 0
+        ? exists(
+            this.db
+              .select({ x: sql`1` })
+              .from(wpDept)
+              .where(
+                and(
+                  eq(wpDept.id, meds.worker_position_id),
+                  inArray(wpDept.department_id, deptIds),
+                ),
+              ),
+          )
+        : undefined;
+
+    // Laravel: where('status', (int)$filters['status']) — PHP (int) leading raqam.
+    const statusNum = filters.status ? parseInt(filters.status, 10) : NaN;
 
     const where = and(
       notDeleted(meds),
-      filters.organization_id
-        ? eq(meds.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0 ? inArray(meds.organization_id, orgIds) : undefined,
+      // Laravel: ->whereCurrent(true) — faqat joriy tibbiy ko'riklar.
+      eq(meds.current, true),
+      Number.isFinite(statusNum) ? eq(meds.status, statusNum) : undefined,
+      workerHasPosition,
+      deptCond,
       searchCond,
     );
 
@@ -113,7 +165,7 @@ export class MedService {
           eq(positionsTable.id, worker_positions.position_id),
         )
         .where(where)
-        .orderBy(asc(meds.id))
+        .orderBy(asc(meds.to))
         .limit(perPage)
         .offset(offset),
       this.db
@@ -373,7 +425,10 @@ export class MedService {
   }
 
   // POST /api/v1/hr/worker-meds — store.
-  async create(dto: CreateMedDto): Promise<void> {
+  async create(
+    dto: CreateMedDto,
+    file?: Express.Multer.File,
+  ): Promise<void> {
     const [wp] = await this.db
       .select({ id: worker_positions.id, worker_id: worker_positions.worker_id })
       .from(worker_positions)
@@ -396,23 +451,49 @@ export class MedService {
 
     const userId = this.ctx.user_or_fail.id;
     const organizationId = this.ctx.user_or_fail.organization_id;
+    const filePath = await this.resolveMedFile(file, dto.file);
+    const statusVal = status ? 1 : 2;
 
-    await this.db.insert(meds).values({
-      user_id: userId,
-      worker_id: wp.worker_id,
-      worker_position_id: wp.id,
-      organization_id: organizationId,
-      status: status ? 1 : 2,
-      from: dto.from,
-      to: dto.to ?? null,
-      file: dto.file ?? null,
-      comment: dto.comment ?? null,
-      current: true,
-    });
+    // Laravel: Med::withTrashed()->updateOrCreate(['worker_id','from'], $data).
+    // unique_worker_med_date (worker_id, from) bo'yicha — mavjud bo'lsa yangilanadi
+    // (soft-delete ham qaytariladi: deleted_at = null).
+    await this.db
+      .insert(meds)
+      .values({
+        user_id: userId,
+        worker_id: wp.worker_id,
+        worker_position_id: wp.id,
+        organization_id: organizationId,
+        status: statusVal,
+        from: dto.from,
+        to: dto.to ?? null,
+        file: filePath,
+        comment: dto.comment ?? null,
+        current: true,
+      })
+      .onConflictDoUpdate({
+        target: [meds.worker_id, meds.from],
+        set: {
+          user_id: userId,
+          worker_position_id: wp.id,
+          organization_id: organizationId,
+          status: statusVal,
+          to: dto.to ?? null,
+          file: filePath,
+          comment: dto.comment ?? null,
+          current: true,
+          deleted_at: null,
+          updated_at: sql`NOW()`,
+        },
+      });
   }
 
   // PUT /api/v1/hr/worker-meds/{id} — update.
-  async update(id: number, dto: UpdateMedDto): Promise<void> {
+  async update(
+    id: number,
+    dto: UpdateMedDto,
+    file?: Express.Multer.File,
+  ): Promise<void> {
     const [med] = await this.db
       .select({ id: meds.id, worker_id: meds.worker_id })
       .from(meds)
@@ -423,6 +504,7 @@ export class MedService {
     }
 
     const status = this.parseStatus(dto.status);
+    const newFile = await this.resolveMedFile(file, dto.file);
 
     await this.db
       .update(meds)
@@ -431,9 +513,33 @@ export class MedService {
         to: dto.to ?? null,
         status: status ? 1 : 2,
         comment: dto.comment ?? null,
-        ...(dto.file !== undefined ? { file: dto.file } : {}),
+        // Yangi fayl berilgan bo'lsagina `file` yangilanadi.
+        ...(newFile !== null ? { file: newFile } : {}),
       })
       .where(eq(meds.id, id));
+  }
+
+  // Multipart fayl bo'lsa — MinIO'ga yuklaydi; aks holda DTO'dagi string yo'lni
+  // qaytaradi (Laravel: uploadFormFile($dto->file, 'worker-meds')).
+  private async resolveMedFile(
+    file: Express.Multer.File | undefined,
+    dtoFile: string | undefined,
+  ): Promise<string | null> {
+    if (file) {
+      return this.minio.uploadFormFile(
+        {
+          originalname: file.originalname,
+          buffer: file.buffer,
+          mimetype: file.mimetype,
+          size: file.size,
+        },
+        'worker-meds',
+        ['pdf', 'png', 'jpg', 'jpeg'],
+        null,
+        10,
+      );
+    }
+    return dtoFile ?? null;
   }
 
   // DELETE /api/v1/hr/worker-meds/{id} — soft delete.

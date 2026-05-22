@@ -11,14 +11,15 @@ export const VACATION_TYPE_LABELS: Record<number, string> = {
   8: 'messages.vacations.types.eight',
 };
 
-// ContractTypeEnum (1..6) → minimized label key (Laravel: ContractTypeEnum::getMinimized).
+// ContractTypeEnum (1..6) → minimized label key (Laravel: ContractTypeEnum::labelMinimized).
+// Keys match Laravel `messages.contract.minimeze_*` translation paths.
 export const CONTRACT_TYPE_MINIMIZED_LABELS: Record<number, string> = {
-  1: 'messages.contract.minimized.indefinite',
-  2: 'messages.contract.minimized.civil',
-  3: 'messages.contract.minimized.part_time',
-  4: 'messages.contract.minimized.remote',
-  5: 'messages.contract.minimized.seasonal',
-  6: 'messages.contract.minimized.fixed_term',
+  1: 'messages.contract.minimeze_employment_contract_indefinite',
+  2: 'messages.contract.minimeze_civil_labor_contract',
+  3: 'messages.contract.minimeze_employment_contract_part_time',
+  4: 'messages.contract.minimeze_employment_contract_remote',
+  5: 'messages.contract.minimeze_employment_contract_seasonal',
+  6: 'messages.contract.minimeze_employment_contract_fixed',
 };
 
 // PositionStatusEnum.
@@ -32,8 +33,13 @@ export const CONFIRMATION_STATUS_SUCCESS = 3;
 
 // Command → vacation type mapping (from CommandTypeEnum → VacationTypeEnum).
 export const COMMAND_TO_VACATION_TYPE: Record<number, number> = {
-  41: 1, 42: 1, 43: 1, 44: 1, 46: 1,
-  45: 3, 49: 3,
+  41: 1,
+  42: 1,
+  43: 1,
+  44: 1,
+  46: 1,
+  45: 3,
+  49: 3,
   48: 2,
   51: 5,
   52: 4,

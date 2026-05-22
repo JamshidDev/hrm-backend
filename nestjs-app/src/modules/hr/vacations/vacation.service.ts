@@ -2,17 +2,7 @@
 // Filter: to >= today.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  isNull,
-  or,
-} from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNull } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -24,10 +14,14 @@ import {
   departments,
   positions as positionsTable,
   contracts,
+  commands,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { ExcelService } from '@/shared/excel/excel.service';
+import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import { VacationMapper } from '@/modules/hr/vacations/vacation.mapper';
 import {
   QueryVacationDto,
@@ -75,6 +69,8 @@ export class VacationService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly excel: ExcelService,
+    private readonly exportRunner: ExportTaskRunner,
   ) {}
 
   async findAll(filters: QueryVacationDto): Promise<VacationListResponseDto> {
@@ -89,13 +85,8 @@ export class VacationService {
           .filter((n) => !Number.isNaN(n))
       : [];
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -180,6 +171,119 @@ export class VacationService {
         ),
       ),
     };
+  }
+
+  // GET /api/v1/hr/vacations?download=true — Laravel: UserExportTask +
+  // VacationWorkersExportJob. Umumiy ExportTaskRunner orqali.
+  async exportToTask(filters: QueryVacationDto): Promise<void> {
+    // lang so'rov kontekstida olinadi (build fonda ishlaydi).
+    const lang = this.ctx.lang;
+    await this.exportRunner.run({
+      type: 26, // ExportTaskEnum.VACATION_WORKERS
+      folder: 'vacations',
+      build: () => this.buildVacationExcel(filters, lang),
+    });
+  }
+
+  // Vacation ma'lumotlarini Excel buffer'iga aylantiradi (ExportTaskRunner uchun).
+  private async buildVacationExcel(
+    filters: QueryVacationDto,
+    lang: string,
+  ): Promise<Buffer> {
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
+      : [];
+    const searchCond = buildWorkerSearchCond(filters.search);
+    const today = new Date().toISOString().split('T')[0];
+
+    const where = and(
+      isNull(vacations.deleted_at),
+      gte(vacations.to, today),
+      filters.organization_id
+        ? eq(vacations.organization_id, filters.organization_id)
+        : undefined,
+      orgIds.length > 0
+        ? inArray(vacations.organization_id, orgIds)
+        : undefined,
+      searchCond,
+    );
+
+    const rows = await this.db
+      .select({
+        type: vacations.type,
+        period_from: vacations.period_from,
+        period_to: vacations.period_to,
+        from: vacations.from,
+        to: vacations.to,
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        dept_name: departments.name,
+        pos_name: positionsTable.name,
+        command_number: commands.command_number,
+        command_date: commands.command_date,
+      })
+      .from(vacations)
+      .leftJoin(
+        worker_positions,
+        eq(worker_positions.id, vacations.worker_position_id),
+      )
+      .leftJoin(workers, eq(workers.id, vacations.worker_id))
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(
+        positionsTable,
+        eq(positionsTable.id, worker_positions.position_id),
+      )
+      .leftJoin(commands, eq(commands.id, vacations.command_id))
+      .where(where)
+      .orderBy(desc(vacations.id));
+
+    const excelRows = rows.map((r) => ({
+      last_name: r.worker_last ?? '',
+      first_name: r.worker_first ?? '',
+      middle_name: r.worker_middle ?? '',
+      position: [r.dept_name, r.pos_name].filter(Boolean).join(' '),
+      command_number: r.command_number ?? '',
+      command_date: r.command_date ?? '',
+      type: this.vacationTypeLabel(r.type, lang),
+      period_from: r.period_from ?? '',
+      period_to: r.period_to ?? '',
+      from: r.from ?? '',
+      to: r.to ?? '',
+    }));
+
+    return this.excel.build({
+      creator: 'HRM',
+      sheets: [
+        {
+          name: 'Vacations',
+          columns: [
+            { header: 'Familiya', key: 'last_name', width: 18 },
+            { header: 'Ism', key: 'first_name', width: 18 },
+            { header: 'Otasining ismi', key: 'middle_name', width: 20 },
+            { header: 'Lavozim', key: 'position', width: 34 },
+            { header: 'Buyruq raqami', key: 'command_number', width: 16 },
+            { header: 'Buyruq sanasi', key: 'command_date', width: 16 },
+            { header: 'Turi', key: 'type', width: 24 },
+            { header: 'Davr boshi', key: 'period_from', width: 14 },
+            { header: 'Davr oxiri', key: 'period_to', width: 14 },
+            { header: 'Boshlanishi', key: 'from', width: 14 },
+            { header: 'Tugashi', key: 'to', width: 14 },
+          ],
+          rows: excelRows,
+        },
+      ],
+    });
+  }
+
+  private vacationTypeLabel(type: number, lang: string): string {
+    const key = VACATION_TYPE_LABELS[type];
+    if (!key) return '';
+    const val = this.i18n.t(key, { lang });
+    return typeof val === 'string' ? val : '';
   }
 
   // POST /vacations/create — getLastVacations: latest vacation per worker_position_id

@@ -10,9 +10,17 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
@@ -21,7 +29,6 @@ import { buildSuccess } from '@/common/utils/response.util';
 import { VacancyPositionService } from '@/modules/hr/vacancy-positions/vacancy-position.service';
 import {
   AttachExamDto,
-  ChangeStatusDto,
   CreateVacancyPositionDto,
   QueryVacancyPositionDto,
   UpdateApplicationStatusDto,
@@ -42,33 +49,38 @@ export class VacancyPositionController {
   // GET /api/v1/hr/vacancy — old VacancyController handles list.
 
   @Get('positions')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Department positions for vacancy creation' })
   async positions(@Query() query: QueryVacancyPositionDto) {
     return buildSuccess(true, await this.service.positionsForVacancy(query));
   }
 
   @Post('positions')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async store(@Body() dto: CreateVacancyPositionDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Get(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async show(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.findOne(id));
   }
 
   @Get(':id/edit')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async edit(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.edit(id));
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateVacancyPositionDto,
@@ -77,44 +89,51 @@ export class VacancyPositionController {
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
+  // Laravel: changeStatus body olmaydi — `vacancy_status` bosqichini oshiradi.
   @Put(':id/change-status')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  async changeStatus(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: ChangeStatusDto,
-  ) {
-    await this.service.changeStatus(id, dto);
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  async changeStatus(@Param('id', ParseIntPipe) id: number) {
+    await this.service.changeStatus(id);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Put(':id/finish')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async finish(@Param('id', ParseIntPipe) id: number) {
     await this.service.finish(id);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get(':id/applications')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async applications(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: QueryVacancyPositionDto,
   ) {
     return buildSuccess(
       true,
-      await this.service.applications(id, query.per_page ?? 10, query.page ?? 1),
+      await this.service.applications(
+        id,
+        query.per_page ?? 10,
+        query.page ?? 1,
+      ),
     );
   }
 
   @Put(':id/applications/:applicationId')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async updateApplicationStatus(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -125,7 +144,8 @@ export class VacancyPositionController {
   }
 
   @Delete(':id/applications/:applicationId')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async removeApplication(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -135,7 +155,8 @@ export class VacancyPositionController {
   }
 
   @Get(':id/applications/:applicationId/show-user')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async showVacancyUser(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -147,21 +168,24 @@ export class VacancyPositionController {
   }
 
   @Post(':id/applications/:applicationId/upload')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Upload file for application' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload file for application status' })
   async uploadFile(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
     @Body() dto: UploadFileDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ) {
-    return buildSuccess(
-      this.i18n.t('messages.successfully_stored'),
-      await this.service.uploadApplicationFile(id, applicationId, dto.file_name),
-    );
+    await this.service.uploadApplicationFile(id, applicationId, dto.type, file);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Post(':id/applications/:applicationId/create-meet')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Create Zoom meeting for application (stub)' })
   async createMeet(
     @Param('id', ParseIntPipe) id: number,
@@ -171,7 +195,8 @@ export class VacancyPositionController {
   }
 
   @Put(':id/applications/:applicationId/attach-exam')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async attachExam(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -182,7 +207,8 @@ export class VacancyPositionController {
   }
 
   @Put(':id/applications/:applicationId/detach-exam')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async detachExam(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -192,7 +218,8 @@ export class VacancyPositionController {
   }
 
   @Put(':id/applications/:applicationId/update-exam')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async updateExam(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -202,7 +229,8 @@ export class VacancyPositionController {
   }
 
   @Put(':id/applications/:applicationId/update')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async updateApplication(
     @Param('id', ParseIntPipe) id: number,
     @Param('applicationId', ParseIntPipe) applicationId: number,
@@ -222,12 +250,13 @@ export class HrZoomController {
   constructor(private readonly service: VacancyPositionService) {}
 
   @Post('check-meet')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Check Zoom meeting (stub)' })
-  async checkMeeting(@Body() body: { meeting_id?: string }) {
+  checkMeeting(@Body() body: { meeting_id?: string }) {
     return buildSuccess(
       true,
-      await this.service.zoomCheckMeeting(body.meeting_id ?? ''),
+      this.service.zoomCheckMeeting(body.meeting_id ?? ''),
     );
   }
 }

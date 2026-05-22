@@ -62,8 +62,13 @@ export class WorkerPartyService {
   }
 
   async create(dto: CreateWorkerPartyDto): Promise<void> {
+    // Laravel: Helper::idUuid($uuid) — worker uuid → id.
+    const workerId = await this.lookup.toId(dto.uuid);
+    if (workerId == null) {
+      throw new BusinessException(400, this.i18n.t('messages.not_found'));
+    }
     await this.db.insert(worker_parties).values({
-      worker_id: dto.worker_id,
+      worker_id: workerId,
       party: dto.party,
       from_date: dto.from_date,
       to_date: dto.to_date ?? null,
@@ -75,7 +80,6 @@ export class WorkerPartyService {
     await this.db
       .update(worker_parties)
       .set({
-        worker_id: dto.worker_id,
         party: dto.party,
         from_date: dto.from_date,
         to_date: dto.to_date ?? null,

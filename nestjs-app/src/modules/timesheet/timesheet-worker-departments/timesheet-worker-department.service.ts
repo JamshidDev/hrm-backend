@@ -56,12 +56,23 @@ export class TimeSheetWorkerDepartmentService {
     const lang = this.ctx.lang;
     const offset = (page - 1) * perPage;
 
+    // `organizations` — vergul bilan ajratilgan organization id lar.
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isFinite(n) && n > 0)
+      : [];
+
     // EXISTS time_sheet_worker_departments — faqat shu worker_position'ga
     // TimeSheet department biriktirilganlar.
-    // Laravel: scopeFilter status=ACTIVE(=2) qo'shadi.
+    // Laravel: scopeFilter status=ACTIVE(=2) + organizations filter qo'shadi.
     const where = and(
       eq(worker_positions.status, 2),
       isNull(worker_positions.deleted_at),
+      orgIds.length > 0
+        ? inArray(worker_positions.organization_id, orgIds)
+        : undefined,
       exists(
         this.db
           .select({ x: sql`1` })

@@ -134,11 +134,14 @@ export class DepartmentController {
   @Get('departments-tree')
   @UseGuards(PermissionGuard)
   @Permission('hr')
-  @ApiOperation({ summary: 'Department tree (recursive)' })
+  @ApiOperation({ summary: 'Department tree (recursive, by organization)' })
   @ApiOkResponse({ type: [DepartmentTreeNodeDto] })
-  async tree() {
+  async tree(@Query() query: QueryDepartmentDto) {
     // Laravel: Helper::response(true, DepartmentTreeResource::collection($tree)).
-    const data = await this.service.tree();
+    const data = await this.service.tree(
+      query.organization_id,
+      query.organizations,
+    );
     return buildSuccess(true, data);
   }
 }

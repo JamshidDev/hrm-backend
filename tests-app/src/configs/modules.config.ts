@@ -31,8 +31,18 @@ import {
   adminUsersModule,
   adminRolesModule,
   adminPermissionsModule,
+  adminIntegrationLogModule,
+  adminInstructionsModule,
+  adminTelegramModule,
+  adminMobileUsersModule,
+  adminDeployModule,
 } from '@/modules/admin.modules';
-import { authModule, userModule } from '@/modules/auth.modules';
+import {
+  authModule,
+  userModule,
+  userMobileModule,
+  mobileAuthModule,
+} from '@/modules/auth.modules';
 import {
   nationalitiesModule,
   departmentsModule,
@@ -161,12 +171,56 @@ import {
   economistStaffingModule,
   economistTelegramModule,
 } from '@/modules/economist.modules';
+import {
+  chatMainModule,
+  chatNewsCategoriesModule,
+  chatNewsModule,
+  chatNewsPublicModule,
+  chatNewsTranslationsModule,
+  chatNewsMediaModule,
+  chatNotificationsModule,
+  chatTelegramModule,
+} from '@/modules/chat.modules';
+import {
+  lmsMainModule,
+  lmsDirectionsModule,
+  lmsSubjectsModule,
+  lmsSpecializationsModule,
+  lmsEduPlansModule,
+  lmsEduPlanExamsModule,
+  lmsTeachersModule,
+  lmsLessonsModule,
+  lmsGroupsModule,
+  lmsListenersModule,
+  lmsCertificatesModule,
+  lmsZoomWebhookModule,
+} from '@/modules/lms.modules';
+import {
+  integrationMainModule,
+  integrationWorkersModule,
+  integrationStationsModule,
+  integrationMedsModule,
+  integrationContractsModule,
+  integrationWorkerSalaryModule,
+  integrationWorkerCheckModule,
+  integrationMobileFaceModule,
+} from '@/modules/integration.modules';
+import { servicesTranslateModule } from '@/modules/services.modules';
+import { aiModule } from '@/modules/ai.modules';
+import { usefulModule } from '@/modules/useful.modules';
+import { telegramBotModule } from '@/modules/telegram-bot.modules';
+import { livenessModule } from '@/modules/liveness.modules';
+import { userFaceModule } from '@/modules/user-face.modules';
+import { onlyOfficeModule } from '@/modules/only-office.modules';
+import { userExtrasModule } from '@/modules/user-extras.modules';
 import type { ModuleDefinition } from '@/configs/types';
 
 export const ALL_MODULES: ModuleDefinition[] = [
   // Auth + User
   authModule,
   userModule,
+  userMobileModule,
+  mobileAuthModule,
   // Structure
   countriesModule,
   regionsModule,
@@ -196,6 +250,11 @@ export const ALL_MODULES: ModuleDefinition[] = [
   adminUsersModule,
   adminRolesModule,
   adminPermissionsModule,
+  adminIntegrationLogModule,
+  adminInstructionsModule,
+  adminTelegramModule,
+  adminMobileUsersModule,
+  adminDeployModule,
   // HR — Bosqich 1 (Foundation)
   nationalitiesModule,
   departmentsModule,
@@ -329,4 +388,51 @@ export const ALL_MODULES: ModuleDefinition[] = [
   economistWorkerCategoriesModule,
   economistStaffingModule,
   economistTelegramModule,
+  // Chat — 8 sub-modul
+  chatMainModule,
+  chatNewsCategoriesModule,
+  chatNewsModule,
+  chatNewsPublicModule,
+  chatNewsTranslationsModule,
+  chatNewsMediaModule,
+  chatNotificationsModule,
+  chatTelegramModule,
+  // LMS — 12 sub-modul
+  lmsMainModule,
+  lmsDirectionsModule,
+  lmsSubjectsModule,
+  lmsSpecializationsModule,
+  lmsEduPlansModule,
+  lmsEduPlanExamsModule,
+  lmsTeachersModule,
+  lmsLessonsModule,
+  lmsGroupsModule,
+  lmsListenersModule,
+  lmsCertificatesModule,
+  lmsZoomWebhookModule,
+  // Integration — 8 sub-modul
+  integrationMainModule,
+  integrationWorkersModule,
+  integrationStationsModule,
+  integrationMedsModule,
+  integrationContractsModule,
+  integrationWorkerSalaryModule,
+  integrationWorkerCheckModule,
+  integrationMobileFaceModule,
+  // Services (Laravel ProjectService) — 1 sub-modul
+  servicesTranslateModule,
+  // AI
+  aiModule,
+  // Useful
+  usefulModule,
+  // Telegram bot
+  telegramBotModule,
+  // Auth Liveness
+  livenessModule,
+  // User Face
+  userFaceModule,
+  // OnlyOffice
+  onlyOfficeModule,
+  // User extras
+  userExtrasModule,
 ];

@@ -18,15 +18,17 @@ interface LoginResponse {
 }
 
 let adminTokens: TokenPair | null = null;
+let integrationTokens: TokenPair | null = null;
 
-async function login(target: 'laravel' | 'nestjs'): Promise<string> {
+async function login(
+  target: 'laravel' | 'nestjs',
+  phone: string,
+  password: string,
+): Promise<string> {
   const result = await request(target, {
     method: 'POST',
     path: '/api/auth/login',
-    body: {
-      phone: env.adminPhone,
-      password: env.adminPassword,
-    },
+    body: { phone, password },
   });
 
   if (result.status !== 200) {
@@ -50,20 +52,34 @@ async function login(target: 'laravel' | 'nestjs'): Promise<string> {
 
 export async function getAdminTokens(): Promise<TokenPair> {
   if (adminTokens) return adminTokens;
-  const [laravel, nestjs] = await Promise.all([login('laravel'), login('nestjs')]);
+  const [laravel, nestjs] = await Promise.all([
+    login('laravel', env.adminPhone, env.adminPassword),
+    login('nestjs', env.adminPhone, env.adminPassword),
+  ]);
   adminTokens = { laravel, nestjs };
   return adminTokens;
+}
+
+export async function getIntegrationTokens(): Promise<TokenPair> {
+  if (integrationTokens) return integrationTokens;
+  const [laravel, nestjs] = await Promise.all([
+    login('laravel', env.integrationPhone, env.integrationPassword),
+    login('nestjs', env.integrationPhone, env.integrationPassword),
+  ]);
+  integrationTokens = { laravel, nestjs };
+  return integrationTokens;
 }
 
 // Cache'ni tozalash (test paytida foydali emas, lekin re-run uchun).
 export function resetTokenCache(): void {
   adminTokens = null;
+  integrationTokens = null;
 }
 
-// AuthType → token mapping. Hozir faqat 'admin' qo'llab-quvvatlanadi.
-// Kelajakda 'user' (oddiy user), 'guest' (token yo'q) qo'shiladi.
+// AuthType → token mapping.
 export async function tokensFor(auth: AuthType): Promise<TokenPair | null> {
   if (auth === 'guest') return null;
+  if (auth === 'integration') return getIntegrationTokens();
   if (auth === 'admin' || auth === 'user') {
     // TODO: 'user' uchun alohida user credentials.
     return getAdminTokens();

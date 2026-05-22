@@ -38,6 +38,7 @@ import {
   WorkerWithPositionDto,
 } from '@/modules/hr/workers/dto/worker.dto';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 // WorkerMinimalResource — Laravel shape: {id, photo, last_name, first_name, middle_name}.
 interface WorkerMinShape {
@@ -126,7 +127,7 @@ export class WorkerService {
     const [worker] = await this.db
       .insert(workers)
       .values({
-        uuid: sql`uuid_generate_v4()`,
+        uuid: randomUUID(),
         country_id: dto.country_id,
         region_id: dto.region_id,
         city_id: dto.city_id,
@@ -437,7 +438,7 @@ export class WorkerService {
     const password = pin ? await bcrypt.hash(String(pin), 10) : '';
 
     await this.db.insert(usersTable).values({
-      uuid: sql`uuid_generate_v4()`,
+      uuid: randomUUID(),
       organization_id: orgId,
       phone: phoneNum,
       password,

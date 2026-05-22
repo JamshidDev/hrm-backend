@@ -15,7 +15,11 @@ export interface DashboardIndexResponse {
   higher_edu_count: number;
   middle_edu_count: number;
   special_edu_count: number;
-  contracts: Array<{ month: string; new_contracts: number; ended_contracts: number }>;
+  contracts: Array<{
+    month: string;
+    new_contracts: number;
+    ended_contracts: number;
+  }>;
   contract_types: Array<{ id: number; type: string; active_contracts: number }>;
   vacation_types: Array<{ id: number; name: string; active_vacations: number }>;
   positions_rate: number;

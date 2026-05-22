@@ -20,10 +20,15 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
+  IsUUID,
+  Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 
@@ -48,6 +53,106 @@ export class QueryReportDto extends PaginationQueryDto {
 }
 
 export class QueryReportMonthDto extends PaginationQueryDto {}
+
+// GET /reports-stat — year/month bo'yicha tashkilot daraxti statistikasi.
+export class QueryReportStatDto {
+  @ApiPropertyOptional({ example: 2026 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional({ example: 4 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  month?: number;
+}
+
+// POST /report/excel — Laravel ReportExcelRequest.
+// type majburiy; report (uuid) bo'lsa o'sha hisobot, aks holda year/month.
+export class ReportExcelDto {
+  @ApiProperty({ example: 'one', enum: ['one', 'two', 'three'] })
+  @IsIn(['one', 'two', 'three'])
+  type!: 'one' | 'two' | 'three';
+
+  @ApiPropertyOptional({ example: '0b5b3658-...' })
+  @IsOptional()
+  @IsUUID()
+  report?: string;
+
+  @ApiPropertyOptional({ example: 2026 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional({ example: 5, minimum: 1, maximum: 12 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month?: number;
+}
+
+// POST /report/generate — Laravel: organizations required|array.
+export class ReportGenerateDto {
+  @ApiProperty({ example: [19], type: [Number] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  organizations!: number[];
+}
+
+// POST /reports (store) — bitta report detail elementi.
+// Frontend `reportId` (camelCase) yuboradi — Laravel ham shunday kutadi.
+export class ReportStoreDetailDto {
+  @ApiProperty({ example: 1276 })
+  @Type(() => Number)
+  @IsInt()
+  reportId!: number;
+
+  @ApiProperty({
+    description: 'Report detail data — stats + contracts (jsonb)',
+  })
+  @IsObject()
+  data!: {
+    organization_id?: number;
+    organization_name?: string | null;
+    stats?: Array<{ key: string; value: unknown }>;
+    contracts?: Array<Record<string, unknown>>;
+    [k: string]: unknown;
+  };
+}
+
+// POST /reports — Laravel: ReportStoreRequest.
+export class ReportStoreDto {
+  @ApiProperty({ example: [449, 45], type: [Number] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  confirmations!: number[];
+
+  @ApiProperty({ example: 44 })
+  @Type(() => Number)
+  @IsInt()
+  director_id!: number;
+
+  @ApiProperty({ example: 'aacdeeae-95ca-43c8-91c0-2c0525932619' })
+  @IsUUID()
+  report!: string;
+
+  @ApiProperty({ type: [ReportStoreDetailDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ReportStoreDetailDto)
+  data!: ReportStoreDetailDto[];
+}
 
 export class UpdateReportMonthDto {
   @ApiProperty({ example: 2026 })

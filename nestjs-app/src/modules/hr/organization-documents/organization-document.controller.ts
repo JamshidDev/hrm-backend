@@ -11,9 +11,13 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -51,18 +55,43 @@ export class OrganizationDocumentController {
 
   @Post()
   @UseGuards(PermissionGuard) @Permission('hr')
-  async create(@Body() dto: CreateOrganizationDocumentDto) {
-    await this.service.create(dto);
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
+  async create(
+    @Body() dto: CreateOrganizationDocumentDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    await this.service.create(dto, file);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
   @UseGuards(PermissionGuard) @Permission('hr')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrganizationDocumentDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ) {
-    await this.service.update(id, dto);
+    await this.service.update(id, dto, file);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
+  }
+
+  // Laravel method spoofing — multipart/form-data bilan PUT yuborolmaganda
+  // frontend `POST` + `_method=PUT` ishlatadi. method-override multipart body'ni
+  // ko'ra olmaydi (kech parse bo'ladi), shu sabab alohida route.
+  @Post(':id')
+  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiOperation({ summary: 'Update (Laravel _method=PUT spoofing)' })
+  async updateSpoofed(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOrganizationDocumentDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    await this.service.update(id, dto, file);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

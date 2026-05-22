@@ -15,11 +15,13 @@ import {
 } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
-import { pensioners, organizations, meds } from '@/db/schema';
+import { pensioners, organizations } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { I18nService } from 'nestjs-i18n';
 import { RequestContext } from '@/common/context/request.context';
+import { ExcelService } from '@/shared/excel/excel.service';
+import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import {
   CreatePensionerDto,
   PensionerListResponseDto,
@@ -27,12 +29,21 @@ import {
   UpdatePensionerDto,
 } from '@/modules/hr/pensioners/dto/pensioner.dto';
 
+// Export uchun jins yorlig'i (Laravel: worker.man / worker.woman) — [ayol, erkak].
+const SEX_LABEL: Record<string, [string, string]> = {
+  uz: ['Ayol', 'Erkak'],
+  ru: ['Женщина', 'Мужчина'],
+  en: ['Woman', 'Man'],
+};
+
 @Injectable()
 export class PensionerService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
+    private readonly excel: ExcelService,
+    private readonly exportRunner: ExportTaskRunner,
   ) {}
 
   async findAll(filters: QueryPensionerDto): Promise<PensionerListResponseDto> {
@@ -41,7 +52,10 @@ export class PensionerService {
     const lang = this.ctx.lang;
 
     const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
     const terms = filters.search ? filters.search.trim().split(/\s+/) : [];
@@ -59,7 +73,9 @@ export class PensionerService {
       filters.organization_id
         ? eq(pensioners.organization_id, filters.organization_id)
         : undefined,
-      orgIds.length > 0 ? inArray(pensioners.organization_id, orgIds) : undefined,
+      orgIds.length > 0
+        ? inArray(pensioners.organization_id, orgIds)
+        : undefined,
       ...termConds,
     );
 
@@ -91,7 +107,10 @@ export class PensionerService {
           org_group: organizations.group,
         })
         .from(pensioners)
-        .leftJoin(organizations, eq(organizations.id, pensioners.organization_id))
+        .leftJoin(
+          organizations,
+          eq(organizations.id, pensioners.organization_id),
+        )
         .where(where)
         .orderBy(asc(pensioners.id))
         .limit(perPage)
@@ -220,5 +239,125 @@ export class PensionerService {
       .update(pensioners)
       .set({ deleted_at: sql`NOW()` })
       .where(eq(pensioners.id, id));
+  }
+
+  // GET /api/v1/hr/pensioners?export=true — Laravel: UserExportTask +
+  // PensionersExportToExcelJob. Umumiy ExportTaskRunner orqali.
+  async exportToTask(filters: QueryPensionerDto): Promise<void> {
+    const lang = this.ctx.lang;
+    await this.exportRunner.run({
+      type: 10, // ExportTaskEnum.PENSIONERS
+      folder: 'pensioners',
+      build: () => this.buildPensionerExcel(filters, lang),
+    });
+  }
+
+  // Pensioner ma'lumotlarini Excel buffer'iga aylantiradi (ExportTaskRunner uchun).
+  private async buildPensionerExcel(
+    filters: QueryPensionerDto,
+    lang: string,
+  ): Promise<Buffer> {
+    const orgIds = filters.organizations
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
+      : [];
+
+    // findAll bilan bir xil qidiruv: ism + pin bo'yicha.
+    const terms = filters.search ? filters.search.trim().split(/\s+/) : [];
+    const termConds = terms.map((t) =>
+      or(
+        ilike(pensioners.last_name, `%${t}%`),
+        ilike(pensioners.first_name, `%${t}%`),
+        ilike(pensioners.middle_name, `%${t}%`),
+        sql`CAST(${pensioners.pin} AS TEXT) ILIKE ${`%${t}%`}`,
+      ),
+    );
+
+    const where = and(
+      isNull(pensioners.deleted_at),
+      filters.organization_id
+        ? eq(pensioners.organization_id, filters.organization_id)
+        : undefined,
+      orgIds.length > 0
+        ? inArray(pensioners.organization_id, orgIds)
+        : undefined,
+      ...termConds,
+    );
+
+    const rows = await this.db
+      .select({
+        last_name: pensioners.last_name,
+        first_name: pensioners.first_name,
+        middle_name: pensioners.middle_name,
+        sex: pensioners.sex,
+        position: pensioners.position,
+        pin: pensioners.pin,
+        address: pensioners.address,
+        passport: pensioners.passport,
+        experience: pensioners.experience,
+        year: pensioners.year,
+        phone: pensioners.phone,
+        afghan: pensioners.afghan,
+        invalid: pensioners.invalid,
+        chernobyl: pensioners.chernobyl,
+        railway_title: pensioners.railway_title,
+        org_name: organizations.name,
+      })
+      .from(pensioners)
+      .leftJoin(organizations, eq(organizations.id, pensioners.organization_id))
+      .where(where)
+      .orderBy(asc(pensioners.id));
+
+    const sexPair = SEX_LABEL[lang] ?? SEX_LABEL.uz;
+    const yesNo = (v: boolean | null): string => (v ? 'Ha' : "Yo'q");
+
+    const excelRows = rows.map((r) => ({
+      last_name: r.last_name ?? '',
+      first_name: r.first_name ?? '',
+      middle_name: r.middle_name ?? '',
+      sex: r.sex ? sexPair[1] : sexPair[0],
+      organization: r.org_name ?? '',
+      position: r.position ?? '',
+      pin: r.pin != null ? String(r.pin) : '',
+      address: r.address ?? '',
+      passport: r.passport ?? '',
+      work_experience: r.experience != null ? String(r.experience) : '',
+      year: r.year != null ? String(r.year) : '',
+      phone: r.phone ?? '',
+      afghan: yesNo(r.afghan),
+      invalid: yesNo(r.invalid),
+      chernobyl: yesNo(r.chernobyl),
+      railway_title: yesNo(r.railway_title),
+    }));
+
+    return this.excel.build({
+      creator: 'HRM',
+      sheets: [
+        {
+          name: 'Pensioners',
+          columns: [
+            { header: 'Familiya', key: 'last_name', width: 18 },
+            { header: 'Ism', key: 'first_name', width: 18 },
+            { header: 'Otasining ismi', key: 'middle_name', width: 20 },
+            { header: 'Jinsi', key: 'sex', width: 10 },
+            { header: 'Tashkilot', key: 'organization', width: 34 },
+            { header: 'Lavozim', key: 'position', width: 28 },
+            { header: 'JSHSHIR', key: 'pin', width: 18 },
+            { header: 'Manzil', key: 'address', width: 30 },
+            { header: 'Pasport', key: 'passport', width: 14 },
+            { header: 'Ish staji', key: 'work_experience', width: 12 },
+            { header: 'Yil', key: 'year', width: 10 },
+            { header: 'Telefon', key: 'phone', width: 16 },
+            { header: "Afg'on", key: 'afghan', width: 10 },
+            { header: 'Nogiron', key: 'invalid', width: 10 },
+            { header: 'Chernobil', key: 'chernobyl', width: 12 },
+            { header: "Temiryo'l unvoni", key: 'railway_title', width: 18 },
+          ],
+          rows: excelRows,
+        },
+      ],
+    });
   }
 }

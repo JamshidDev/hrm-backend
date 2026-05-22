@@ -13,7 +13,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -37,30 +36,31 @@ export class QueryDepartmentDto extends SearchPaginationQueryDto {
   organization_id?: number;
 }
 
+// Laravel DepartmentStoreRequest: { name, name_ru?, name_en?, comment?, level,
+//   parent_id?, organization_id? } — organization_id nullable, fallback user.org.
 export class CreateDepartmentDto {
-  @ApiProperty({ example: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Exists('organizations', 'id')
-  organization_id!: number;
-
   @ApiProperty({ example: 'Boshqarma' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   name!: string;
 
-  @ApiPropertyOptional({ example: 'Управление' })
+  @ApiPropertyOptional({ example: 'Управление', nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  name_ru?: string;
+  name_ru?: string | null;
 
-  @ApiPropertyOptional({ example: 'Management' })
+  @ApiPropertyOptional({ example: 'Management', nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  name_en?: string;
+  name_en?: string | null;
+
+  @ApiPropertyOptional({ example: 'Izoh', nullable: true })
+  @IsOptional()
+  @IsString()
+  comment?: string | null;
 
   @ApiProperty({ example: 1, description: '1..14 — DepartmentLevelEnum' })
   @Type(() => Number)
@@ -68,19 +68,60 @@ export class CreateDepartmentDto {
   @Min(1)
   level!: number;
 
-  @ApiPropertyOptional({ example: 1 })
+  @ApiPropertyOptional({ example: 1, nullable: true })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  parent_id?: number;
+  @Exists('departments', 'id')
+  parent_id?: number | null;
 
-  @ApiPropertyOptional({ example: true })
+  @ApiPropertyOptional({ example: 1, nullable: true })
   @IsOptional()
-  @IsBoolean()
-  active?: boolean;
+  @Type(() => Number)
+  @IsInt()
+  @Exists('organizations', 'id')
+  organization_id?: number | null;
 }
 
-export class UpdateDepartmentDto extends CreateDepartmentDto {}
+// Laravel DepartmentUpdateRequest: { name, name_ru?, name_en?, comment?, level,
+//   parent_id? } — `organization_id` qabul qilinmaydi (mavjudi saqlanadi).
+export class UpdateDepartmentDto {
+  @ApiProperty({ example: 'Boshqarma' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name!: string;
+
+  @ApiPropertyOptional({ example: 'Управление', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name_ru?: string | null;
+
+  @ApiPropertyOptional({ example: 'Management', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name_en?: string | null;
+
+  @ApiPropertyOptional({ example: 'Izoh', nullable: true })
+  @IsOptional()
+  @IsString()
+  comment?: string | null;
+
+  @ApiProperty({ example: 1, description: '1..14 — DepartmentLevelEnum' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  level!: number;
+
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('departments', 'id')
+  parent_id?: number | null;
+}
 
 // ========== RESPONSE ==========
 
@@ -222,7 +263,15 @@ export class DepartmentShowResponseDto {
   children!: DepartmentItemDto[];
 }
 
-// Tree node.
+// Tree node — Laravel DepartmentTreeResource.
+export class DepartmentTreeParentDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Boshqaruv apparati', nullable: true })
+  name!: string | null;
+}
+
 export class DepartmentTreeNodeDto {
   @ApiProperty({ example: 1 })
   id!: number;
@@ -233,9 +282,12 @@ export class DepartmentTreeNodeDto {
   @ApiProperty({ type: DepartmentLevelDto })
   level!: DepartmentLevelDto;
 
-  @ApiProperty({ example: null, nullable: true })
-  parent_id!: number | null;
+  @ApiProperty({ type: DepartmentTreeParentDto, nullable: true })
+  parent!: DepartmentTreeParentDto | null;
 
   @ApiProperty({ type: () => [DepartmentTreeNodeDto] })
   children!: DepartmentTreeNodeDto[];
+
+  @ApiProperty({ example: 1 })
+  organization_id!: number;
 }

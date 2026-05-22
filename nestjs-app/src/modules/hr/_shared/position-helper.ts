@@ -1,8 +1,9 @@
 // PositionHelper — Laravel app/Helpers/PositionHelper.php parity.
 // Worker position uchun to'liq va qisqa lavozim nomini hisoblaydi.
 
-// DepartmentLevelEnum::CENTER = 14 (boshqaruv apparati ostidagi top-level).
-const CENTER_LEVEL = 14;
+// Laravel HR/DepartmentLevelEnum::CENTER = 1 (boshqaruv apparati — eng yuqori daraja).
+// CENTER darajadagi bo'limda lavozim nomiga bo'lim qo'shilmaydi.
+const CENTER_LEVEL = 1;
 
 const REPLACE_FROM = [
   "bo'limi bo‘lim",

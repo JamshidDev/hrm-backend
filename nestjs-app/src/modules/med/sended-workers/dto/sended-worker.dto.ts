@@ -42,4 +42,16 @@ export class SendToMedDto {
   @ApiProperty({ description: 'Medical check start date', example: '2025-01-15' })
   @IsDateString()
   start_date!: string;
+
+  @ApiPropertyOptional({ description: 'Worker position id (ishlab turgan xodim)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  worker_position_id?: number;
+
+  @ApiPropertyOptional({ description: 'Department position id' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  department_position_id?: number;
 }

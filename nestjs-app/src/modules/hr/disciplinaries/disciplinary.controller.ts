@@ -24,7 +24,8 @@ export class DisciplinaryController {
   constructor(private readonly service: DisciplinaryService) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Organization disciplinary actions list' })
   @ApiOkResponse({ type: DisciplinaryListResponseDto })
   async findAll(@Query() query: QueryDisciplinaryDto) {

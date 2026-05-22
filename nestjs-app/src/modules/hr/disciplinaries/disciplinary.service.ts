@@ -1,16 +1,7 @@
 // Disciplinary service. Laravel: OrganizationDisciplinaryController.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-} from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -21,6 +12,7 @@ import {
   departments,
   positions as positionsTable,
 } from '@/db/schema';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -48,24 +40,29 @@ export class DisciplinaryService {
     const lang = this.ctx.lang;
 
     const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
-    const searchCond = filters.search
-      ? or(
-          ilike(workers.last_name, `%${filters.search}%`),
-          ilike(workers.first_name, `%${filters.search}%`),
-          ilike(workers.middle_name, `%${filters.search}%`),
-        )
-      : undefined;
+    // Laravel scopeSearchByFullName parity.
+    const searchCond = buildWorkerSearchCond(filters.search);
 
     const where = and(
       isNull(organization_disciplinaries.deleted_at),
       filters.organization_id
-        ? eq(organization_disciplinaries.organization_id, filters.organization_id)
+        ? eq(
+            organization_disciplinaries.organization_id,
+            filters.organization_id,
+          )
         : undefined,
       orgIds.length > 0
         ? inArray(organization_disciplinaries.organization_id, orgIds)
+        : undefined,
+      // Laravel: when(created) → whereDate('created_at', created).
+      filters.created
+        ? sql`DATE(${organization_disciplinaries.created_at}) = ${filters.created}`
         : undefined,
       searchCond,
     );
@@ -104,10 +101,16 @@ export class DisciplinaryService {
         )
         .leftJoin(
           worker_positions,
-          eq(worker_positions.id, organization_disciplinaries.worker_position_id),
+          eq(
+            worker_positions.id,
+            organization_disciplinaries.worker_position_id,
+          ),
         )
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -119,7 +122,10 @@ export class DisciplinaryService {
       this.db
         .select({ total: count() })
         .from(organization_disciplinaries)
-        .leftJoin(workers, eq(workers.id, organization_disciplinaries.worker_id))
+        .leftJoin(
+          workers,
+          eq(workers.id, organization_disciplinaries.worker_id),
+        )
         .where(where),
     ]);
 
