@@ -1,0 +1,91 @@
+<?php
+
+namespace Modules\HR\DTO;
+
+final readonly class CommandData
+{
+    public function __construct(
+        public readonly int $commandType,
+        public readonly int $directorId,
+        public readonly ?int $workerPositionId,
+        public readonly ?string         $status,
+        public readonly ?array          $stats,
+        public readonly ?string         $commandDate,
+        public readonly ?array          $commandAdditional,
+        public readonly ?string         $commandNumber,
+        public readonly ?array          $confirmations,
+        public readonly ?string         $contractToDate,
+        public readonly ?int            $financeId,
+        public readonly ?int            $organizationId,
+        public readonly ?array          $workers,
+        public readonly ?string         $base,
+        public readonly string|int|null $reason,
+        public readonly ?string         $newDate,
+        public readonly ?string         $workDay,
+        public readonly string|int|null $allDay,
+        public readonly string|null     $periodFrom,
+        public readonly string|null     $periodTo,
+        public readonly string|int|null $halfOneDay,
+        public readonly string|null     $halfOneBase,
+        public readonly string|int|null $halfTwoDay,
+        public readonly string|null     $halfTwoBase,
+        public readonly array|null     $workerPositions,
+        public readonly string|null $from,
+        public readonly string|null $to,
+        public readonly array|null $additional,
+        public readonly int|null    $vacationReasonDay,
+        public readonly string|null $vacationReasonType,
+        public readonly string|int|null $vacationFinishStatus,
+        public readonly string|int|null $vacationId,
+        public readonly string|int|null $vacationStatus,
+        public readonly string|int|null $childAge,
+        public readonly string|null $contractDate,
+        public readonly string|null $halfTwoDate,
+        public readonly string|null|int $restDay,
+        public readonly array           $payload
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            $data['command_type'],
+            $data['director_id'],
+            $data['worker_position_id'] ?? null,
+            $data['status'] ?? null,
+            $data['stats'] ?? null,
+            $data['command_date'],
+            $data['command_additional'] ?? null,
+            $data['command_number'],
+            $data['confirmations'] ?? null,
+            $data['contract_to_date'] ?? null,
+            $data['finance_id'] ?? null,
+            $data['organization_id'] ?? null,
+            $data['workers'] ?? null,
+            $data['base'] ?? null,
+            $data['reason'] ?? null,
+            $data['new_date'] ?? null,
+            $data['work_day'] ?? null,
+            $data['all_day'] ?? null,
+            $data['period_from'] ?? null,
+            $data['period_to'] ?? null,
+            $data['half_one_day'] ?? null,
+            $data['half_one_base'] ?? null,
+            $data['half_two_day'] ?? null,
+            $data['half_two_base'] ?? null,
+            $data['worker_positions'] ?? null,
+            $data['from'] ?? null,
+            $data['to'] ?? null,
+            $data['additional'] ?? null,
+            $data['vacation_reason_day'] ?? null,
+            $data['vacation_reason_type'] ?? null,
+            $data['vacation_finish_status'] ?? null,
+            $data['vacation_id'] ?? null,
+            $data['vacation_status'] ?? null,
+            $data['child_age'] ?? null,
+            $data['contract_date'] ?? null,
+            $data['half_two_date'] ?? null,
+            $data['rest_day'] ?? null,
+            $data
+        );
+    }
+}

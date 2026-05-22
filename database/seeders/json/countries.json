@@ -1,0 +1,86 @@
+[
+    {
+        "id": 1,
+        "name": "Oʻzbekiston Respublikasi",
+        "name_ru": "Республика Узбекистан",
+        "name_en": "Republic of Uzbekistan"
+    },
+    {
+        "id": 2,
+        "name": "Qozogʻiston Respublikasi",
+        "name_ru": "Республика Казахстан",
+        "name_en": "Republic of Kazakhstan"
+    },
+    {
+        "id": 3,
+        "name": "Rossiya Federatsiyasi",
+        "name_ru": "Российская Федерация",
+        "name_en": "Russian Federation"
+    },
+    {
+        "id": 4,
+        "name": "Qirgʻiziston Respublikasi",
+        "name_ru": "Кыргызская Республика",
+        "name_en": "Kyrgyz Republic"
+    },
+    {
+        "id": 5,
+        "name": "Tojikiston Respublikasi",
+        "name_ru": "Республика Таджикистан",
+        "name_en": "Republic of Tajikistan"
+    },
+    {
+        "id": 6,
+        "name": "Turkmaniston Respublikasi",
+        "name_ru": "Республика Туркменистан",
+        "name_en": "Republic of Turkmenistan"
+    },
+    {
+        "id": 7,
+        "name": "Ukraina Davlati",
+        "name_ru": "Государство Украина",
+        "name_en": "State of Ukraine"
+    },
+    {
+        "id": 8,
+        "name": "Armaniston Respublikasi",
+        "name_ru": "Республика Армения",
+        "name_en": "Republic of Armenia"
+    },
+    {
+        "id": 9,
+        "name": "Chexiya Respublikasi",
+        "name_ru": "Чешская Республика",
+        "name_en": "Czech Republic"
+    },
+    {
+        "id": 10,
+        "name": "Germaniya",
+        "name_ru": "Германия",
+        "name_en": "Germany"
+    },
+    {
+        "id": 11,
+        "name": "Xitoy Xalq Respublikasi",
+        "name_ru": "Китайская Народная Республика",
+        "name_en": "People's Republic of China"
+    },
+    {
+        "id": 12,
+        "name": "Gruziya",
+        "name_ru": "Грузия",
+        "name_en": "Georgia"
+    },
+    {
+        "id": 13,
+        "name": "Misr Arab Respublikasi",
+        "name_ru": "Арабская Республика Египет",
+        "name_en": "Arab Republic of Egypt"
+    },
+    {
+        "id": 14,
+        "name": "Ozarbayjon Respublikasi",
+        "name_ru": "Республика Азербайджан",
+        "name_en": "Republic of Azerbaijan"
+    }
+]

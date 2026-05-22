@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(php -l app/Http/Controllers/Admin/PermissionController.php app/Http/Controllers/Admin/RoleController.php app/Services/PermissionService.php app/Services/RoleService.php app/Http/Requests/Permission/PermissionIndexRequest.php app/Http/Requests/Permission/PermissionStoreRequest.php app/Http/Requests/Permission/PermissionUpdateRequest.php app/Http/Requests/Role/RoleIndexRequest.php app/Http/Requests/Role/RoleStoreRequest.php app/Http/Requests/Role/RoleUpdateRequest.php)",
+      "Bash(php -l app/Http/Controllers/Auth/OAuthController.php app/Services/OAuthService.php app/Http/Requests/OAuth/OAuthGenerateCodeRequest.php app/Http/Requests/OAuth/OAuthCheckCodeRequest.php)",
+      "Bash(php -l app/Http/Controllers/Auth/MobileAuthController.php app/Services/Mobile/MobileAuthService.php app/Services/JwtService.php app/Http/Requests/Mobile/Auth/MobileLoginRequest.php app/Http/Requests/Mobile/Auth/MobileRefreshRequest.php app/Http/Requests/Mobile/Auth/MobileLogoutRequest.php app/Http/Requests/Mobile/Auth/MobileUpdateFcmRequest.php)",
+      "Bash(php -l app/Http/Controllers/Telegram/TelegramPushController.php app/Services/Telegram/TelegramPushService.php app/Http/Requests/Telegram/TelegramUsersIndexRequest.php)",
+      "Bash(php -l app/Http/Controllers/User/UserController.php app/Services/UserService.php app/Http/Requests/User/UserNotificationsIndexRequest.php app/Http/Requests/User/UserMarkNotificationsRequest.php app/Http/Requests/User/OrganizationHrsRequest.php app/Http/Requests/User/ChangeCurrentOrganizationRequest.php app/Http/Requests/User/UpdateUserRequest.php app/Http/Requests/User/UpdateOrganizationInfoRequest.php)",
+      "Bash(php -l app/Http/Controllers/ZoomController.php app/Services/ZoomService.php app/Http/Requests/Zoom/ZoomCheckMeetingRequest.php)",
+      "Bash(php artisan *)",
+      "Bash(php -l app/Http/Controllers/DeployController.php app/Services/Deploy/DeployService.php app/Services/Deploy/VersionService.php app/Http/Requests/Deploy/DeployIndexRequest.php app/Http/Requests/Deploy/DeployStoreRequest.php app/Http/Requests/Deploy/DeployUploadRequest.php app/Http/Requests/Deploy/DeployPublishRequest.php)",
+      "Bash(php -l app/Http/Controllers/AI/OpenAIController.php app/Services/AI/OpenAIService.php app/Services/AI/AITokenPricingService.php app/Http/Requests/AI/AIQuestionsByDateRequest.php app/Http/Requests/AI/AILikeRequest.php)",
+      "Bash(php -l app/Http/Controllers/User/UserFaceController.php app/Services/Face/FaceRecognitionService.php app/Http/Requests/Face/FaceRecognitionRequest.php app/Http/Requests/Face/StartLivenessRequest.php app/Http/Requests/Face/ValidateLivenessRequest.php app/Http/Requests/Face/CompleteLivenessRequest.php)"
+    ]
+  }
+}

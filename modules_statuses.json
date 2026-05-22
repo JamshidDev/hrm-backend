@@ -1,0 +1,16 @@
+{
+    "Structure": true,
+    "Application": true,
+    "HR": true,
+    "Confirmation": true,
+    "Turnstile": true,
+    "Exam": true,
+    "ProjectService": true,
+    "TimeSheet": true,
+    "Integration": true,
+    "LMS": true,
+    "Economist": true,
+    "Med": true,
+    "Vacancy": true,
+    "Chat": true
+}

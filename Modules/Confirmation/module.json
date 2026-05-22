@@ -1,0 +1,11 @@
+{
+    "name": "Confirmation",
+    "alias": "confirmation",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Confirmation\\Providers\\ConfirmationServiceProvider"
+    ],
+    "files": []
+}

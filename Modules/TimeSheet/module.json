@@ -1,0 +1,11 @@
+{
+    "name": "TimeSheet",
+    "alias": "timesheet",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\TimeSheet\\Providers\\TimeSheetServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,191 @@
+[
+    {
+        "id": 1,
+        "name": "Qoraqalpog‘iston Respublikasi",
+        "name_ru": "Республика Каракалпакстан",
+        "name_en": "Republic of Karakalpakstan",
+        "country_id": 1
+    },
+    {
+        "id": 2,
+        "name": "Andijon viloyati",
+        "name_ru": "Андижанская область",
+        "name_en": "Andijan region",
+        "country_id": 1
+    },
+    {
+        "id": 3,
+        "name": "Namangan viloyati",
+        "name_ru": "Наманганская область",
+        "name_en": "Namangan region",
+        "country_id": 1
+    },
+    {
+        "id": 4,
+        "name": "Farg‘ona viloyati",
+        "name_ru": "Ферганская область",
+        "name_en": "Fergana region",
+        "country_id": 1
+    },
+    {
+        "id": 5,
+        "name": "Buxoro viloyati",
+        "name_ru": "Бухарская область",
+        "name_en": "Bukhara region",
+        "country_id": 1
+    },
+    {
+        "id": 6,
+        "name": "Xorazm viloyati",
+        "name_ru": "Хорезмская область",
+        "name_en": "Khorezm region",
+        "country_id": 1
+    },
+    {
+        "id": 7,
+        "name": "Surxondaryo viloyati",
+        "name_ru": "Сурхандарьинская область",
+        "name_en": "Surkhandarya region",
+        "country_id": 1
+    },
+    {
+        "id": 8,
+        "name": "Qashqadaryo viloyati",
+        "name_ru": "Кашкадарьинская область",
+        "name_en": "Kashkadarya region",
+        "country_id": 1
+    },
+    {
+        "id": 9,
+        "name": "Jizzax viloyati",
+        "name_ru": "Джизакская область",
+        "name_en": "Jizzakh region",
+        "country_id": 1
+    },
+    {
+        "id": 10,
+        "name": "Navoiy viloyati",
+        "name_ru": "Навоийская область",
+        "name_en": "Navoi region",
+        "country_id": 1
+    },
+    {
+        "id": 11,
+        "name": "Samarqand viloyati",
+        "name_ru": "Самаркандская область",
+        "name_en": "Samarkand region",
+        "country_id": 1
+    },
+    {
+        "id": 12,
+        "name": "Sirdaryo viloyati",
+        "name_ru": "Сырдарьинская область",
+        "name_en": "Syrdarya region",
+        "country_id": 1
+    },
+    {
+        "id": 13,
+        "name": "Toshkent viloyati",
+        "name_ru": "Ташкентская область",
+        "name_en": "Tashkent region",
+        "country_id": 1
+    },
+    {
+        "id": 14,
+        "name": "Toshkent shahri",
+        "name_ru": "Город Ташкент",
+        "name_en": "Tashkent city",
+        "country_id": 1
+    },
+    {
+        "id": 101,
+        "name": "Ostona",
+        "name_ru": "Астана",
+        "name_en": "Astana",
+        "country_id": 2
+    },
+    {
+        "id": 102,
+        "name": "Moskva",
+        "name_ru": "Москва",
+        "name_en": "Moscow",
+        "country_id": 3
+    },
+    {
+        "id": 103,
+        "name": "Bishkek",
+        "name_ru": "Бишкек",
+        "name_en": "Bishkek",
+        "country_id": 4
+    },
+    {
+        "id": 104,
+        "name": "Dushanbe",
+        "name_ru": "Душанбе",
+        "name_en": "Dushanbe",
+        "country_id": 5
+    },
+    {
+        "id": 105,
+        "name": "Ashxobod",
+        "name_ru": "Ашхабад",
+        "name_en": "Ashgabat",
+        "country_id": 6
+    },
+    {
+        "id": 106,
+        "name": "Kyiv",
+        "name_ru": "Киев",
+        "name_en": "Kyiv",
+        "country_id": 7
+    },
+    {
+        "id": 107,
+        "name": "Yerevan",
+        "name_ru": "Ереван",
+        "name_en": "Yerevan",
+        "country_id": 8
+    },
+    {
+        "id": 108,
+        "name": "Praga",
+        "name_ru": "Прага",
+        "name_en": "Prague",
+        "country_id": 9
+    },
+    {
+        "id": 109,
+        "name": "Berlin",
+        "name_ru": "Берлин",
+        "name_en": "Berlin",
+        "country_id": 10
+    },
+    {
+        "id": 110,
+        "name": "Pekin",
+        "name_ru": "Пекин",
+        "name_en": "Beijing",
+        "country_id": 11
+    },
+    {
+        "id": 111,
+        "name": "Tbilisi",
+        "name_ru": "Тбилиси",
+        "name_en": "Tbilisi",
+        "country_id": 12
+    },
+    {
+        "id": 112,
+        "name": "Qohira",
+        "name_ru": "Каир",
+        "name_en": "Cairo",
+        "country_id": 13
+    },
+    {
+        "id": 113,
+        "name": "Boku",
+        "name_ru": "Баку",
+        "name_en": "Baku",
+        "country_id": 14
+    }
+]
