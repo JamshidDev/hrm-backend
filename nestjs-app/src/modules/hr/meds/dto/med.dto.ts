@@ -18,12 +18,14 @@ import { Exists } from '@/common/validators/exists.validator';
 export class QueryMedDto extends SearchPaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() organizations?: string;
 
-  @ApiPropertyOptional({ description: 'MedStatusEnum (1/2) bo\'yicha filter' })
+  @ApiPropertyOptional({ description: "MedStatusEnum (1/2) bo'yicha filter" })
   @IsOptional()
   @IsString()
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Vergul bilan ajratilgan department id lar' })
+  @ApiPropertyOptional({
+    description: 'Vergul bilan ajratilgan department id lar',
+  })
   @IsOptional()
   @IsString()
   departments?: string;

@@ -36,7 +36,7 @@ export class AccessLevelController {
   @ApiOperation({ summary: 'Sync access-levels from HikCentral (external)' })
   async sync() {
     await this.service.syncAccessLevels();
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('access-levels')
@@ -46,7 +46,9 @@ export class AccessLevelController {
   }
 
   @Get('departments')
-  @ApiOperation({ summary: 'HCP departments + devices ({departments, devices})' })
+  @ApiOperation({
+    summary: 'HCP departments + devices ({departments, devices})',
+  })
   async departments() {
     return buildSuccess(true, await this.service.departments());
   }
@@ -58,13 +60,18 @@ export class AccessLevelController {
     @Body() dto: UpdateAccessLevelDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('organization-access-levels')
   @ApiOperation({ summary: 'Access-levels attached to an organization' })
   async orgAccessLevels(@Query() q: QueryAccessLevelDto) {
-    return buildSuccess(true, await this.service.organizationAccessLevels(Number(q.organization_id ?? 0)));
+    return buildSuccess(
+      true,
+      await this.service.organizationAccessLevels(
+        Number(q.organization_id ?? 0),
+      ),
+    );
   }
 
   @Get('all-access-levels')
@@ -77,6 +84,6 @@ export class AccessLevelController {
   @ApiOperation({ summary: 'Replace org↔access-level associations' })
   async attach(@Body() dto: AttachAccessLevelToOrgDto) {
     await this.service.attachToOrganization(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 }

@@ -36,15 +36,19 @@ export class WorkerApplicationController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker applications list (worker_id IS NOT NULL)' })
   async findAll(@Query() query: QueryWorkerApplicationDto) {
     return buildSuccess(true, await this.service.findAll(query));
   }
 
   @Put(':id/accept')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Accept/reject application (status + optional comment)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Accept/reject application (status + optional comment)',
+  })
   async accept(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AcceptWorkerApplicationDto,
@@ -54,7 +58,8 @@ export class WorkerApplicationController {
   }
 
   @Post('generate-url')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Generate signed URL for worker application' })
   async generateUrl(@Body() dto: GenerateApplicationUrlDto) {
     return buildSuccess(true, await this.service.generateUrl(dto));

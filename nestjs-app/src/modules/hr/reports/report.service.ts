@@ -5,16 +5,7 @@
 //   skip qilingan — barcha organizations qaytariladi.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -28,6 +19,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { DEPARTMENT_LEVEL_KEYS } from '@/modules/hr/departments/department.mapper';
@@ -72,6 +64,7 @@ export class ReportService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // GET /api/v1/hr/report/structure
@@ -84,7 +77,12 @@ export class ReportService {
       );
     }
 
-    // Get all orgs (permission scope skipped — allow all).
+    // Laravel: organization-admin → barcha, organization-leader → subtree,
+    // default → faqat user.organization_id. OrgScopeService.ids() shu bilan
+    // bir xil ishlaydi.
+    const scopeIds = await this.scope.ids();
+    if (scopeIds.length === 0) return [];
+
     const orgRows = await this.db
       .select({
         id: organizations.id,
@@ -96,6 +94,7 @@ export class ReportService {
       .where(
         and(
           notDeleted(organizations),
+          inArray(organizations.id, scopeIds),
           filters.search
             ? ilike(organizations.name, `%${filters.search}%`)
             : undefined,
@@ -206,7 +205,9 @@ export class ReportService {
               ),
             )
             .groupBy(department_positions.department_id)
-        : Promise.resolve([] as Array<{ dept_id: number | null; rate: number }>),
+        : Promise.resolve(
+            [] as Array<{ dept_id: number | null; rate: number }>,
+          ),
       deptIds.length
         ? this.db
             .select({
@@ -222,7 +223,9 @@ export class ReportService {
               ),
             )
             .groupBy(worker_positions.department_id)
-        : Promise.resolve([] as Array<{ dept_id: number | null; rate: number }>),
+        : Promise.resolve(
+            [] as Array<{ dept_id: number | null; rate: number }>,
+          ),
     ]);
     const dpMap = new Map<number, number>(
       dpRates
@@ -343,7 +346,12 @@ export class ReportService {
         position: r.pos_id
           ? {
               id: r.pos_id,
-              name: this.pickLang(r.pos_name, r.pos_name_ru, r.pos_name_en, lang),
+              name: this.pickLang(
+                r.pos_name,
+                r.pos_name_ru,
+                r.pos_name_en,
+                lang,
+              ),
             }
           : null,
         rate: r.rate,
@@ -361,11 +369,15 @@ export class ReportService {
   async workerPositions(filters: ReportWorkerPositionsQueryDto) {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-    const lang = this.ctx.lang;
+    const _lang = this.ctx.lang;
+    void _lang;
     const offset = (page - 1) * perPage;
 
     const deptIds = filters.departments
-      ? filters.departments.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.departments
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
     const where = and(
@@ -379,7 +391,10 @@ export class ReportService {
         ? inArray(worker_positions.department_id, deptIds)
         : undefined,
       filters.department_position_id
-        ? eq(worker_positions.department_position_id, filters.department_position_id)
+        ? eq(
+            worker_positions.department_position_id,
+            filters.department_position_id,
+          )
         : undefined,
     );
 
@@ -405,23 +420,26 @@ export class ReportService {
         })
         .from(worker_positions)
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(asc(worker_positions.id))
         .limit(perPage)
         .offset(offset),
-      this.db
-        .select({ total: count() })
-        .from(worker_positions)
-        .where(where),
+      this.db.select({ total: count() }).from(worker_positions).where(where),
     ]);
 
     return {
@@ -569,10 +587,7 @@ export class ReportService {
       .select({ id: department_positions.id })
       .from(department_positions)
       .where(
-        and(
-          eq(department_positions.id, id),
-          notDeleted(department_positions),
-        ),
+        and(eq(department_positions.id, id), notDeleted(department_positions)),
       )
       .limit(1);
     if (!row) {

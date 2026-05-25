@@ -54,6 +54,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -76,6 +77,7 @@ export class WorkerPositionService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -85,10 +87,17 @@ export class WorkerPositionService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = this.parseIds(filters.organizations);
     const deptIds = this.parseIds(filters.departments);
     const posIds = this.parseIds(filters.positions);
     const dpIds = this.parseIds(filters.department_positions);
+    // Laravel WorkerPosition::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     // Worker search — Laravel `searchByFullName` parity:
     //   `search` bo'sh joy bilan ajratiladi va har bir term last/first/middle_name
@@ -142,12 +151,7 @@ export class WorkerPositionService {
     const where = and(
       isNull(worker_positions.deleted_at),
       eq(worker_positions.status, POSITION_STATUS_ACTIVE),
-      filters.organization_id
-        ? eq(worker_positions.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(worker_positions.organization_id, orgIds)
-        : undefined,
+      inScope,
       filters.department_id
         ? eq(worker_positions.department_id, filters.department_id)
         : undefined,
@@ -167,9 +171,7 @@ export class WorkerPositionService {
       filters.position_type
         ? eq(positionsTable.category, filters.position_type)
         : undefined,
-      workerSearchConds.length > 0
-        ? or(...workerSearchConds)
-        : undefined,
+      workerSearchConds.length > 0 ? or(...workerSearchConds) : undefined,
     );
 
     const offset = (page - 1) * perPage;
@@ -198,13 +200,20 @@ export class WorkerPositionService {
       countQuery,
     ]);
 
+    // Photo signed URL ni har bir worker uchun parallel hisoblaymiz.
+    const data = await Promise.all(
+      rows.map(async (r) => {
+        const photoUrl = r.worker_photo
+          ? await this.minio.fileUrl(r.worker_photo)
+          : null;
+        return WorkerPositionMapper.toListItem(r, this.i18n, lang, photoUrl);
+      }),
+    );
+
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: rows.map((r) =>
-        WorkerPositionMapper.toListItem(r, this.i18n, lang),
-      ),
+      data,
     };
   }
 
@@ -223,65 +232,70 @@ export class WorkerPositionService {
     limit: number,
     offset: number,
   ): Promise<WorkerPositionListRow[]> {
-    return this.db
-      .select({
-        id: worker_positions.id,
-        uuid: worker_positions.uuid,
-        type: worker_positions.type,
-        position_date: worker_positions.position_date,
-        group: worker_positions.group,
-        rank: worker_positions.rank,
-        rate: worker_positions.rate,
-        salary: worker_positions.salary,
-        // worker
-        worker_id: workers.id,
-        worker_uuid: workers.uuid,
-        worker_photo: workers.photo,
-        worker_last: workers.last_name,
-        worker_first: workers.first_name,
-        worker_middle: workers.middle_name,
-        worker_birthday: workers.birthday,
-        worker_pin: workers.pin,
-        // org
-        org_id: organizations.id,
-        org_name: organizations.name,
-        org_name_ru: organizations.name_ru,
-        org_name_en: organizations.name_en,
-        org_group: organizations.group,
-        // dept
-        dept_id: departments.id,
-        dept_name: departments.name,
-        dept_level: departments.level,
-        // position
-        pos_id: positionsTable.id,
-        pos_name: positionsTable.name,
-        pos_name_ru: positionsTable.name_ru,
-        pos_name_en: positionsTable.name_en,
-      })
-      .from(worker_positions)
-      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-      .leftJoin(
-        organizations,
-        eq(organizations.id, worker_positions.organization_id),
-      )
-      .leftJoin(
-        departments,
-        eq(departments.id, worker_positions.department_id),
-      )
-      .leftJoin(
-        positionsTable,
-        eq(positionsTable.id, worker_positions.position_id),
-      )
-      .where(where)
-      // Laravel: organization_id → department_id → department_position_id → id.
-      .orderBy(
-        asc(worker_positions.organization_id),
-        asc(worker_positions.department_id),
-        asc(worker_positions.department_position_id),
-        asc(worker_positions.id),
-      )
-      .limit(limit)
-      .offset(offset);
+    return (
+      this.db
+        .select({
+          id: worker_positions.id,
+          uuid: worker_positions.uuid,
+          type: worker_positions.type,
+          position_date: worker_positions.position_date,
+          group: worker_positions.group,
+          rank: worker_positions.rank,
+          rate: worker_positions.rate,
+          salary: worker_positions.salary,
+          // worker
+          worker_id: workers.id,
+          worker_uuid: workers.uuid,
+          worker_photo: workers.photo,
+          worker_last: workers.last_name,
+          worker_first: workers.first_name,
+          worker_middle: workers.middle_name,
+          worker_birthday: workers.birthday,
+          worker_pin: workers.pin,
+          // org
+          org_id: organizations.id,
+          org_name: organizations.name,
+          org_name_ru: organizations.name_ru,
+          org_name_en: organizations.name_en,
+          org_group: organizations.group,
+          // dept
+          dept_id: departments.id,
+          dept_name: departments.name,
+          dept_level: departments.level,
+          // position
+          pos_id: positionsTable.id,
+          pos_name: positionsTable.name,
+          pos_name_ru: positionsTable.name_ru,
+          pos_name_en: positionsTable.name_en,
+        })
+        .from(worker_positions)
+        .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
+        .leftJoin(
+          positionsTable,
+          eq(positionsTable.id, worker_positions.position_id),
+        )
+        .where(where)
+        // Laravel: organization_id → department_id → department_position_id → id.
+        .orderBy(
+          asc(worker_positions.organization_id),
+          asc(worker_positions.department_id),
+          asc(worker_positions.department_position_id),
+          asc(worker_positions.id),
+        )
+        .limit(limit)
+        .offset(offset)
+    );
   }
 
   // GET /api/v1/hr/worker-position-info/{workerPositionId} — positionInfos.
@@ -330,7 +344,10 @@ export class WorkerPositionService {
       .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(
@@ -366,7 +383,12 @@ export class WorkerPositionService {
       organization: row.org_id
         ? {
             id: row.org_id,
-            name: this.pickLang(row.org_name, row.org_name_ru, row.org_name_en, lang),
+            name: this.pickLang(
+              row.org_name,
+              row.org_name_ru,
+              row.org_name_en,
+              lang,
+            ),
             group: row.org_group ?? false,
           }
         : null,
@@ -386,7 +408,12 @@ export class WorkerPositionService {
       position: row.pos_id
         ? {
             id: row.pos_id,
-            name: this.pickLang(row.pos_name, row.pos_name_ru, row.pos_name_en, lang),
+            name: this.pickLang(
+              row.pos_name,
+              row.pos_name_ru,
+              row.pos_name_en,
+              lang,
+            ),
           }
         : null,
       type: {
@@ -454,7 +481,10 @@ export class WorkerPositionService {
       .from(worker_positions)
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
@@ -515,7 +545,12 @@ export class WorkerPositionService {
       organization: wp.org_id
         ? {
             id: wp.org_id,
-            name: this.pickLang(wp.org_name, wp.org_name_ru, wp.org_name_en, lang),
+            name: this.pickLang(
+              wp.org_name,
+              wp.org_name_ru,
+              wp.org_name_en,
+              lang,
+            ),
             group: wp.org_group ?? false,
           }
         : null,
@@ -802,9 +837,15 @@ export class WorkerPositionService {
         .from(worker_positions)
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -835,7 +876,10 @@ export class WorkerPositionService {
         .from(organization_incentives)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_incentives.organization_id),
+          and(
+            eq(organizations.id, organization_incentives.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(
           and(
@@ -860,7 +904,10 @@ export class WorkerPositionService {
         .from(organization_disciplinaries)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_disciplinaries.organization_id),
+          and(
+            eq(organizations.id, organization_disciplinaries.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(
           and(
@@ -1002,7 +1049,12 @@ export class WorkerPositionService {
         organization: i.org_id
           ? {
               id: i.org_id,
-              name: this.pickLang(i.org_name, i.org_name_ru, i.org_name_en, lang),
+              name: this.pickLang(
+                i.org_name,
+                i.org_name_ru,
+                i.org_name_en,
+                lang,
+              ),
               group: i.org_group ?? false,
             }
           : null,
@@ -1018,7 +1070,12 @@ export class WorkerPositionService {
         organization: d.org_id
           ? {
               id: d.org_id,
-              name: this.pickLang(d.org_name, d.org_name_ru, d.org_name_en, lang),
+              name: this.pickLang(
+                d.org_name,
+                d.org_name_ru,
+                d.org_name_en,
+                lang,
+              ),
               group: d.org_group ?? false,
             }
           : null,
@@ -1042,7 +1099,6 @@ export class WorkerPositionService {
     };
     return result;
   }
-
 
   // Laravel newCareersArr — to=position.to OR next position date (same contract) OR contract_to_date.
   private buildNewCareers(
@@ -1086,7 +1142,12 @@ export class WorkerPositionService {
         organization: p.org_id
           ? {
               id: p.org_id,
-              name: this.pickLang(p.org_name, p.org_name_ru, p.org_name_en, lang),
+              name: this.pickLang(
+                p.org_name,
+                p.org_name_ru,
+                p.org_name_en,
+                lang,
+              ),
               group: p.org_group ?? false,
             }
           : null,
@@ -1289,7 +1350,9 @@ export class WorkerPositionService {
       this.db
         .select({ id: worker_phones.id, phone: worker_phones.phone })
         .from(worker_phones)
-        .where(and(eq(worker_phones.worker_id, wid), notDeleted(worker_phones))),
+        .where(
+          and(eq(worker_phones.worker_id, wid), notDeleted(worker_phones)),
+        ),
       this.db
         .select({
           language_id: worker_languages.language_id,
@@ -1301,7 +1364,10 @@ export class WorkerPositionService {
           eq(languagesTable.id, worker_languages.language_id),
         )
         .where(
-          and(eq(worker_languages.worker_id, wid), notDeleted(worker_languages)),
+          and(
+            eq(worker_languages.worker_id, wid),
+            notDeleted(worker_languages),
+          ),
         ),
       this.db
         .select({
@@ -1314,7 +1380,10 @@ export class WorkerPositionService {
         })
         .from(worker_passports)
         .where(
-          and(eq(worker_passports.worker_id, wid), notDeleted(worker_passports)),
+          and(
+            eq(worker_passports.worker_id, wid),
+            notDeleted(worker_passports),
+          ),
         ),
       worker.country_id
         ? this.db
@@ -1391,9 +1460,15 @@ export class WorkerPositionService {
         .from(worker_positions)
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -1436,7 +1511,8 @@ export class WorkerPositionService {
           )
       : [];
     const scheduleMap = new Map<number, number>();
-    for (const s of schedules) scheduleMap.set(s.worker_position_id, s.schedule_id);
+    for (const s of schedules)
+      scheduleMap.set(s.worker_position_id, s.schedule_id);
 
     // Load user roles with organizations (Spatie model_has_roles).
     let profileRoles: Array<{
@@ -1471,7 +1547,10 @@ export class WorkerPositionService {
         .innerJoin(roles, eq(roles.id, model_has_roles.role_id))
         .leftJoin(
           organizations,
-          eq(organizations.id, model_has_roles.organization_id),
+          and(
+            eq(organizations.id, model_has_roles.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(
           and(
@@ -1571,7 +1650,12 @@ export class WorkerPositionService {
         organization: p.organization_id
           ? {
               id: p.organization_id,
-              name: this.pickLang(p.org_name, p.org_name_ru, p.org_name_en, lang),
+              name: this.pickLang(
+                p.org_name,
+                p.org_name_ru,
+                p.org_name_en,
+                lang,
+              ),
               group: p.org_group ?? false,
             }
           : null,
@@ -1591,7 +1675,9 @@ export class WorkerPositionService {
         department: p.department_id
           ? { id: p.department_id, name: p.dept_name, level: p.dept_level }
           : null,
-        position: p.position_id ? { id: p.position_id, name: p.pos_name } : null,
+        position: p.position_id
+          ? { id: p.position_id, name: p.pos_name }
+          : null,
         type: {
           id: p.type,
           name: this.contractTypeLabel(p.type),
@@ -1652,7 +1738,10 @@ export class WorkerPositionService {
       .from(worker_positions)
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(

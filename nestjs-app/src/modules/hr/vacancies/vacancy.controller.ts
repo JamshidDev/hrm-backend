@@ -24,7 +24,8 @@ export class VacancyController {
   constructor(private readonly service: VacancyService) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Vacancy positions list' })
   @ApiOkResponse({ type: VacancyListResponseDto })
   async findAll(@Query() query: QueryVacancyDto) {

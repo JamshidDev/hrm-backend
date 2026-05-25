@@ -301,5 +301,4 @@ export class StructureTreeService {
 
     return roots;
   }
-
 }

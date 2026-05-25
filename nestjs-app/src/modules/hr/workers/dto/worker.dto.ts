@@ -41,7 +41,7 @@ export class CreateWorkerDto {
   @IsNotEmpty()
   last_name!: string;
 
-  @ApiPropertyOptional({ example: 'Akram o\'g\'li' })
+  @ApiPropertyOptional({ example: "Akram o'g'li" })
   @IsOptional()
   @IsString()
   middle_name?: string;
@@ -140,6 +140,32 @@ export class CreateWorkerDto {
   @IsArray()
   @Type(() => WorkerPhotoUploadDto)
   photos?: WorkerPhotoUploadDto[];
+
+  // Passport fieldlari — Laravel'da StoreWorkerRequest qabul qilmaydi (bug).
+  // NestJS qo'shimcha qilib qabul qiladi va worker_passports ga yozadi.
+  @ApiPropertyOptional({ example: 'AD 4234234' })
+  @IsOptional()
+  @IsString()
+  serial_number?: string;
+
+  @ApiPropertyOptional({
+    description: 'Date string yoki epoch ms',
+    example: 1777575600000,
+  })
+  @IsOptional()
+  from_date?: string | number;
+
+  @ApiPropertyOptional({
+    description: 'Date string yoki epoch ms',
+    example: 1780081200000,
+  })
+  @IsOptional()
+  to_date?: string | number;
+
+  @ApiPropertyOptional({ example: 'Xorazm IIB' })
+  @IsOptional()
+  @IsString()
+  passport_address?: string;
 }
 
 export class WorkerPhotoUploadDto {

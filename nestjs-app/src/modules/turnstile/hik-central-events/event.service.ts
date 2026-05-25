@@ -73,7 +73,9 @@ export class EventService {
       `),
     ]);
     const rows = ((rowsResult as any).rows ?? rowsResult) as any[];
-    const total = Number(((totalResult as any).rows ?? totalResult)[0]?.total ?? 0);
+    const total = Number(
+      ((totalResult as any).rows ?? totalResult)[0]?.total ?? 0,
+    );
 
     const workerIds = [
       ...new Set(rows.map((r) => Number(r.worker_id)).filter(Boolean)),
@@ -91,7 +93,9 @@ export class EventService {
           .from(workers)
           .where(inArray(workers.id, workerIds))
       : [];
-    const wMap = new Map<number, (typeof wRows)[number]>(wRows.map((w) => [w.id, w] as const));
+    const wMap = new Map<number, (typeof wRows)[number]>(
+      wRows.map((w) => [w.id, w] as const),
+    );
     return {
       current_page: page,
       per_page: perPage,
@@ -121,7 +125,10 @@ export class EventService {
         .orderBy(desc(workers.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(workers).where(notDeleted(workers)),
+      this.db
+        .select({ total: count() })
+        .from(workers)
+        .where(notDeleted(workers)),
     ]);
 
     const date = q.date ? new Date(q.date) : new Date();
@@ -170,13 +177,21 @@ export class EventService {
     const { page, perPage } = pageOf(q);
     return {
       date,
-      data: { current_page: page, per_page: perPage, total: 0, data: [] as Array<unknown> },
+      data: {
+        current_page: page,
+        per_page: perPage,
+        total: 0,
+        data: [] as Array<unknown>,
+      },
     };
   }
 
   // Laravel: showWorkerDurations — array of {worker_id, event_date, daily_minutes}.
   // Group events per day; sum IN→OUT pair durations.
-  async durationsForWorker(workerId: number, q: { year?: number; month?: number }) {
+  async durationsForWorker(
+    workerId: number,
+    q: { year?: number; month?: number },
+  ) {
     const now = new Date();
     const year = Number(q.year ?? now.getFullYear());
     const month = Number(q.month ?? now.getMonth() + 1);
@@ -198,7 +213,10 @@ export class EventService {
       event_date_and_time: string;
       direction: boolean;
     }>;
-    const byDate: Record<string, Array<{ time: Date; direction: boolean }>> = {};
+    const byDate: Record<
+      string,
+      Array<{ time: Date; direction: boolean }>
+    > = {};
     for (const r of rows) {
       const dt = new Date(r.event_date_and_time);
       const dateKey = dt.toISOString().slice(0, 10);
@@ -210,7 +228,10 @@ export class EventService {
       for (const e of events) {
         if (e.direction === true) lastIn = e.time;
         else if (lastIn) {
-          minutes += Math.max(0, Math.round((e.time.getTime() - lastIn.getTime()) / 60000));
+          minutes += Math.max(
+            0,
+            Math.round((e.time.getTime() - lastIn.getTime()) / 60000),
+          );
           lastIn = null;
         }
       }

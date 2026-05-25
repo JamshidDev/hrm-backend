@@ -32,10 +32,7 @@ export class OnlyOfficeController {
       signature,
     });
     res.setHeader('Content-Type', file.contentType);
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="${file.fileName}"`,
-    );
+    res.setHeader('Content-Disposition', `inline; filename="${file.fileName}"`);
     res.setHeader('Content-Length', String(file.buffer.length));
     res.end(file.buffer);
   }

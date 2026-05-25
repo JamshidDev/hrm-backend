@@ -38,11 +38,17 @@ export class VacancyAuthService {
       .where(and(eq(vacancy_users.phone, dto.phone), notDeleted(vacancy_users)))
       .limit(1);
     if (!user) {
-      throw new BusinessException(401, this.i18n.t('messages.invalid_credentials'));
+      throw new BusinessException(
+        401,
+        this.i18n.t('messages.invalid_credentials'),
+      );
     }
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) {
-      throw new BusinessException(401, this.i18n.t('messages.invalid_credentials'));
+      throw new BusinessException(
+        401,
+        this.i18n.t('messages.invalid_credentials'),
+      );
     }
     // Laravel: Sanctum token. Hozircha oddiy token formati.
     return {
@@ -65,7 +71,10 @@ export class VacancyAuthService {
 
     if (existing) {
       if (existing.is_verified) {
-        throw new BusinessException(400, this.i18n.t('messages.user_all_ready'));
+        throw new BusinessException(
+          400,
+          this.i18n.t('messages.user_all_ready'),
+        );
       }
       await this.db
         .update(vacancy_users)
@@ -113,7 +122,10 @@ export class VacancyAuthService {
     // OTP kodi user.password ichida hash holatda saqlanadi.
     const otpValid = await bcrypt.compare(dto.otp, user.password);
     if (!otpValid) {
-      throw new BusinessException(400, this.i18n.t('messages.otp_code_not_verified'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.otp_code_not_verified'),
+      );
     }
     const hashed = await bcrypt.hash(dto.password, 10);
     await this.db
@@ -162,14 +174,21 @@ export class VacancyAuthService {
     if (dto.country_id !== undefined) data.country_id = dto.country_id;
     if (dto.city_id !== undefined) data.city_id = dto.city_id;
     if (dto.region_id !== undefined) data.region_id = dto.region_id;
-    if (dto.current_region_id !== undefined) data.current_region_id = dto.current_region_id;
-    if (dto.current_city_id !== undefined) data.current_city_id = dto.current_city_id;
-    if (dto.nationality_id !== undefined) data.nationality_id = dto.nationality_id;
-    if (dto.marital_status !== undefined) data.marital_status = dto.marital_status;
+    if (dto.current_region_id !== undefined)
+      data.current_region_id = dto.current_region_id;
+    if (dto.current_city_id !== undefined)
+      data.current_city_id = dto.current_city_id;
+    if (dto.nationality_id !== undefined)
+      data.nationality_id = dto.nationality_id;
+    if (dto.marital_status !== undefined)
+      data.marital_status = dto.marital_status;
     if (dto.pin !== undefined) data.pin = dto.pin;
     if (dto.languages !== undefined) data.languages = dto.languages;
     if (dto.address !== undefined) data.address = dto.address;
-    await this.db.update(vacancy_users).set(data).where(eq(vacancy_users.id, userId));
+    await this.db
+      .update(vacancy_users)
+      .set(data)
+      .where(eq(vacancy_users.id, userId));
   }
 
   // POST /v1/vacancies/profile/update-photo — foto yangilash.

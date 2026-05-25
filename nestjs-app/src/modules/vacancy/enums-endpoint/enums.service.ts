@@ -34,7 +34,9 @@ export class VacancyEnumsService {
   // Barcha enum va lookup ma'lumotlarini yig'ib qaytaradi.
   async enums() {
     const [countriesRows, regionsRows] = await Promise.all([
-      this.db.select({ id: countries.id, name: countries.name }).from(countries),
+      this.db
+        .select({ id: countries.id, name: countries.name })
+        .from(countries),
       this.db.select({ id: regions.id, name: regions.name }).from(regions),
     ]);
     return {

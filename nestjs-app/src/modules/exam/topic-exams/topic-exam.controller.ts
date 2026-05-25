@@ -66,7 +66,7 @@ export class TopicExamController {
     @Body() dto: CreateExamDto,
   ) {
     await this.service.create(topicId, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put('topics/:topicId/exams/:examId')
@@ -77,7 +77,7 @@ export class TopicExamController {
     @Body() dto: UpdateExamDto,
   ) {
     await this.service.update(topicId, examId, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete('topics/:topicId/exams/:examId')
@@ -87,7 +87,7 @@ export class TopicExamController {
     @Param('examId', ParseIntPipe) examId: number,
   ) {
     await this.service.remove(topicId, examId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Get('topics/:topicId/exams/:examId/solved-workers')
@@ -97,17 +97,22 @@ export class TopicExamController {
     @Param('examId', ParseIntPipe) examId: number,
     @Query() q: QueryTopicExamDto,
   ) {
-    return buildSuccess(true, await this.service.solvedWorkers(topicId, examId, q));
+    return buildSuccess(
+      true,
+      await this.service.solvedWorkers(topicId, examId, q),
+    );
   }
 
-  // POST: imtihon savoliga link biriktirish.
+  // POST: imtihon savoliga link biriktirish. Laravel: TopicExamQuestionController::attachQuestion.
   @Post('topics/:topicId/exams/:examId/attach-question')
   @ApiOperation({ summary: 'Attach a category question to this exam' })
   async attachQuestion(
     @Param('examId', ParseIntPipe) examId: number,
-    @Body() body: any,
+    @Body()
+    body: { questions?: Array<{ exam_category_id: number; count: number }> },
   ) {
-    return buildSuccess(true, await this.service.attachQuestion(examId, body));
+    await this.service.attachQuestion(examId, body?.questions ?? []);
+    return buildSuccess(this.i18n.t('messages.successfully_attached'), []);
   }
 
   // GET: imtihonga biriktirilgan savollar ro'yxati.

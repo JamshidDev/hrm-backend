@@ -28,9 +28,17 @@ export class ApproveAlService {
         .orderBy(desc(turnstile_worker_approves.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(turnstile_worker_approves).where(where),
+      this.db
+        .select({ total: count() })
+        .from(turnstile_worker_approves)
+        .where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: findOrFail → 404 if not found.
@@ -46,7 +54,9 @@ export class ApproveAlService {
 
   async create(body: Record<string, unknown>) {
     const id = await nextId(this.db, turnstile_worker_approves);
-    await this.db.insert(turnstile_worker_approves).values({ id, ...(body as any) });
+    await this.db
+      .insert(turnstile_worker_approves)
+      .values({ id, ...(body as any) });
     return { id };
   }
 
@@ -82,14 +92,18 @@ export class ApproveAlService {
     if (orgId) {
       const oal = await this.db
         .select({
-          hik_central_access_level_id: organization_access_levels.hik_central_access_level_id,
+          hik_central_access_level_id:
+            organization_access_levels.hik_central_access_level_id,
         })
         .from(organization_access_levels)
         .where(eq(organization_access_levels.organization_id, orgId));
       if (!oal.length) return [];
       const ids = oal.map((o) => o.hik_central_access_level_id);
       return this.db
-        .select({ id: hik_central_access_levels.id, name: hik_central_access_levels.name })
+        .select({
+          id: hik_central_access_levels.id,
+          name: hik_central_access_levels.name,
+        })
         .from(hik_central_access_levels)
         .where(
           and(
@@ -99,7 +113,10 @@ export class ApproveAlService {
         );
     }
     return this.db
-      .select({ id: hik_central_access_levels.id, name: hik_central_access_levels.name })
+      .select({
+        id: hik_central_access_levels.id,
+        name: hik_central_access_levels.name,
+      })
       .from(hik_central_access_levels)
       .where(notDeleted(hik_central_access_levels));
   }

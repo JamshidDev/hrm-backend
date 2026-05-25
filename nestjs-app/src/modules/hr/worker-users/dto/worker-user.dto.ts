@@ -15,7 +15,10 @@ import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerUserDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 }
 
@@ -42,7 +45,11 @@ export class DetachWorkerRoleDto {
   organization_id!: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() role?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() role_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  role_id?: number;
 }
 
 export class UpdatePasswordDto {

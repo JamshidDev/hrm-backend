@@ -25,7 +25,9 @@ export class ScheduleStatsController {
   }
 
   @Get('stats-two')
-  @ApiOperation({ summary: 'Workers without a schedule (current month preview)' })
+  @ApiOperation({
+    summary: 'Workers without a schedule (current month preview)',
+  })
   async statsTwo(@Query() q: StatsQuery) {
     return buildSuccess(true, await this.service.scheduleStatsByMonth(q));
   }
@@ -58,7 +60,10 @@ export class ScheduleStatsController {
   @Get('stats-seven')
   @ApiOperation({ summary: 'Late & early workers grouped by last 3 days' })
   async statsSeven(@Query() q: StatsQuery) {
-    return buildSuccess(true, await this.service.lateAndEarlyStatsGroupedByDays(q));
+    return buildSuccess(
+      true,
+      await this.service.lateAndEarlyStatsGroupedByDays(q),
+    );
   }
 
   @Get('stats-preview')

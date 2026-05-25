@@ -37,9 +37,14 @@ export class WorkerOldCareerSortableAliasController {
   ) {}
 
   @Put('worker-old-careers-sortable')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Sort worker old careers (Laravel hyphen-URL alias)' })
-  async sortableAlias(@Body() body: { orders?: Array<{ id: number; sort: number }> }) {
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Sort worker old careers (Laravel hyphen-URL alias)',
+  })
+  async sortableAlias(
+    @Body() body: { orders?: Array<{ id: number; sort: number }> },
+  ) {
     await this.service.sort(body.orders ?? []);
     return buildSuccess(this.i18n.t('messages.successfully_sorted'), []);
   }
@@ -56,28 +61,34 @@ export class WorkerOldCareerController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker old careers (by worker uuid)' })
   async findAll(@Query() query: QueryWorkerOldCareerDto) {
     return buildSuccess(true, await this.service.findAll(query.uuid));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateWorkerOldCareerDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put('sortable')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  async sortable(@Body() body: { orders?: Array<{ id: number; sort: number }> }) {
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  async sortable(
+    @Body() body: { orders?: Array<{ id: number; sort: number }> },
+  ) {
     await this.service.sort(body.orders ?? []);
     return buildSuccess(this.i18n.t('messages.successfully_sorted'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWorkerOldCareerDto,
@@ -87,7 +98,8 @@ export class WorkerOldCareerController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

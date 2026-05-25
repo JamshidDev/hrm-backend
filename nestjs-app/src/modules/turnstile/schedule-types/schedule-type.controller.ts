@@ -34,20 +34,24 @@ export class ScheduleTypeController {
   ) {}
 
   @Get('types')
-  @ApiOperation({ summary: 'List schedule types (with enum-translated type label)' })
+  @ApiOperation({
+    summary: 'List schedule types (with enum-translated type label)',
+  })
   async list() {
     return buildSuccess(true, await this.service.list());
   }
 
   @Get('schedule-types')
-  @ApiOperation({ summary: 'List schedule types (paginated, with worker counts)' })
+  @ApiOperation({
+    summary: 'List schedule types (paginated, with worker counts)',
+  })
   async listByWorkers(@Query() q: QueryScheduleTypeDto) {
     return buildSuccess(true, await this.service.listByWorkers(q));
   }
 
   @Post('types') async store(@Body() dto: CreateScheduleTypeDto) {
     await this.service.create(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put('types/:id') async update(
@@ -55,11 +59,11 @@ export class ScheduleTypeController {
     @Body() dto: UpdateScheduleTypeDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete('types/:id') async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

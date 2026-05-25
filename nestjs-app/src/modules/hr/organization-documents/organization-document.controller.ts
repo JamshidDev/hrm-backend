@@ -46,7 +46,8 @@ export class OrganizationDocumentController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Organization documents (visibility-filtered)' })
   @ApiOkResponse({ type: OrganizationDocumentListResponseDto })
   async findAll(@Query() query: QueryOrganizationDocumentDto) {
@@ -54,7 +55,8 @@ export class OrganizationDocumentController {
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data', 'application/json')
   async create(
@@ -66,7 +68,8 @@ export class OrganizationDocumentController {
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data', 'application/json')
   async update(
@@ -82,7 +85,8 @@ export class OrganizationDocumentController {
   // frontend `POST` + `_method=PUT` ishlatadi. method-override multipart body'ni
   // ko'ra olmaydi (kech parse bo'ladi), shu sabab alohida route.
   @Post(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data', 'application/json')
   @ApiOperation({ summary: 'Update (Laravel _method=PUT spoofing)' })
@@ -96,7 +100,8 @@ export class OrganizationDocumentController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

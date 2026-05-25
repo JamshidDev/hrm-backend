@@ -40,7 +40,7 @@ export class ScheduleGroupController {
     @Param('groupId', ParseIntPipe) groupId: number,
   ) {
     await this.service.remove(groupId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Put('schedule-groups/:groupId') async update(
@@ -48,10 +48,12 @@ export class ScheduleGroupController {
     @Body() dto: UpdateScheduleGroupDto,
   ) {
     await this.service.update(groupId, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
-  @Get('schedule-workers') async groupWorkers(@Query() q: QueryScheduleGroupWorkersDto) {
+  @Get('schedule-workers') async groupWorkers(
+    @Query() q: QueryScheduleGroupWorkersDto,
+  ) {
     return buildSuccess(true, await this.service.groupWorkers(q));
   }
 }

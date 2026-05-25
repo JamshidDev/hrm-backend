@@ -2,8 +2,8 @@
 // 3 endpoint: index(), indexTwo(), indexThree().
 //
 // QAYDLAR:
-// - Laravel `filter($user, ...)` permission scope hozircha implement qilinmagan
-//   (NestJS'da tashkilot bo'yicha hech qanday cheklash yo'q).
+// - Laravel `filter($user, ...)` permission scope qo'llaniladi:
+//   resolveOrgScopeIds → admin=barcha orglar, leader=subtree, default=o'z org.
 // - Sana arifmetikasi PostgreSQL `INTERVAL` orqali aniq Laravel'ga teng.
 
 import { Injectable } from '@nestjs/common';
@@ -35,6 +35,10 @@ import {
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import {
+  OrgScopeService,
+  type OrgScopeFilters,
+} from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -56,13 +60,19 @@ export class DashboardService {
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
     private readonly minio: MinioService,
   ) {}
 
   // GET /api/v1/hr/dashboard
-  async index(): Promise<DashboardIndexResponse> {
+  async index(filters?: OrgScopeFilters): Promise<DashboardIndexResponse> {
     const lang = this.ctx.lang;
     const today = new Date();
+    // Laravel filter($user, request()->all()) — role + organizations/organization_id.
+    const [dpCond, wpCond] = await Promise.all([
+      this.scope.whereOrg(department_positions.organization_id, filters),
+      this.scope.whereOrg(worker_positions.organization_id, filters),
+    ]);
 
     const [
       [{ dp_rate }],
@@ -78,7 +88,7 @@ export class DashboardService {
           dp_rate: sql<number>`COALESCE(SUM(${department_positions.rate}), 0)`,
         })
         .from(department_positions)
-        .where(notDeleted(department_positions)),
+        .where(and(notDeleted(department_positions), dpCond)),
       this.db
         .select({
           wp_rate: sql<number>`COALESCE(SUM(${worker_positions.rate}), 0)`,
@@ -87,16 +97,16 @@ export class DashboardService {
         .where(
           and(
             notDeleted(worker_positions),
-            // Laravel scopeFilter: status = ACTIVE (2) + organization_id IN valid orgs.
+            // Laravel WorkerPosition::scopeFilter — WHERE status = ACTIVE (2).
             eq(worker_positions.status, 2),
-            sql`EXISTS (SELECT 1 FROM organizations o WHERE o.id = ${worker_positions.organization_id} AND o.deleted_at IS NULL)`,
+            wpCond,
           ),
         ),
-      this.birthdays(today),
-      this.workersFilter(),
-      this.contractsByMonth(),
-      this.typeContracts(lang),
-      this.typeVacations(lang),
+      this.birthdays(today, filters),
+      this.workersFilter(filters),
+      this.contractsByMonth(filters),
+      this.typeContracts(lang, filters),
+      this.typeVacations(lang, filters),
     ]);
 
     return {
@@ -127,56 +137,73 @@ export class DashboardService {
   }
 
   // GET /api/v1/hr/dashboard-two
-  async indexTwo(): Promise<DashboardIndexTwoResponse> {
+  async indexTwo(
+    filters?: OrgScopeFilters,
+  ): Promise<DashboardIndexTwoResponse> {
     const today = this.formatDate(new Date());
     const next = new Date();
     next.setMonth(next.getMonth() + 1);
     const nextMonth = this.formatDate(next);
     const currentYear = new Date().getFullYear();
 
-    // Laravel: WorkerPosition::filter($user, status=ACTIVE)->select('worker_id') ichidagi xodimlar
-    // bo'yicha sub-query. Parity uchun bizda ham EXISTS active worker_positions filter qo'shamiz.
+    // Laravel: WorkerPosition::filter($user, status=ACTIVE)->select('worker_id') —
+    // scope-aware EXISTS.
+    const activeWorker = await this.scope.activeWorkerExists(
+      sql`m.worker_id`,
+      filters,
+    );
     const [medsStats] = await this.db.execute(sql`
       SELECT
         COALESCE(SUM(CASE WHEN latest_to <= ${today}::date THEN 1 ELSE 0 END), 0)::int AS meds_finished,
         COALESCE(SUM(CASE WHEN latest_to > ${today}::date AND latest_to < ${nextMonth}::date THEN 1 ELSE 0 END), 0)::int AS meds_approaching
       FROM (
+        -- Laravel raw DB::table('meds') — SoftDeletes qo'llamaydi.
         SELECT m.worker_id, MAX(m."to") AS latest_to
         FROM ${meds} m
-        WHERE m.deleted_at IS NULL
-          AND EXISTS (
-            SELECT 1 FROM worker_positions wp
-            JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL
-            WHERE wp.worker_id = m.worker_id
-              AND wp.status = 2
-              AND wp.deleted_at IS NULL
-          )
+        WHERE ${activeWorker}
         GROUP BY m.worker_id
       ) latest_meds
     `);
 
+    // Laravel OrganizationDisciplinary::filter($user) — role + filtrlar.
+    const discScope = await this.scope.whereOrg(
+      organization_disciplinaries.organization_id,
+      filters,
+    );
     const [discStats] = await this.db
       .select({
         total: count(),
-        fineType1: sql<number>`COALESCE(SUM(CASE WHEN ${organization_disciplinaries.fine_type} = 1 THEN 1 ELSE 0 END), 0)::int`,
+        // Laravel: SUM(CASE...) NULL bo'lsa fine_type'ga null qaytadi.
+        fineType1: sql<
+          number | null
+        >`SUM(CASE WHEN ${organization_disciplinaries.fine_type} = 1 THEN 1 ELSE 0 END)::int`,
       })
       .from(organization_disciplinaries)
       .where(
         and(
           notDeleted(organization_disciplinaries),
+          discScope,
           sql`EXTRACT(YEAR FROM ${organization_disciplinaries.date})::int = ${currentYear}`,
         ),
       );
 
+    // Laravel OrganizationIncentive::filter($user) — role + filtrlar.
+    const incScope = await this.scope.whereOrg(
+      organization_incentives.organization_id,
+      filters,
+    );
     const [incStats] = await this.db
       .select({
         total: count(),
-        giftType4: sql<number>`COALESCE(SUM(CASE WHEN ${organization_incentives.gift_type} = 4 THEN 1 ELSE 0 END), 0)::int`,
+        giftType4: sql<
+          number | null
+        >`SUM(CASE WHEN ${organization_incentives.gift_type} = 4 THEN 1 ELSE 0 END)::int`,
       })
       .from(organization_incentives)
       .where(
         and(
           notDeleted(organization_incentives),
+          incScope,
           sql`EXTRACT(YEAR FROM ${organization_incentives.date})::int = ${currentYear}`,
         ),
       );
@@ -186,26 +213,32 @@ export class DashboardService {
       meds_approaching: number;
     };
     const discTotal = Number(discStats?.total ?? 0);
-    const discFine = Number(discStats?.fineType1 ?? 0);
+    // Laravel: `$disciplinaryActions?->fine_type_1_count` — SUM bo'sh bo'lsa null.
+    const discFineRaw = discStats?.fineType1 ?? null;
+    const discFine = discFineRaw != null ? Number(discFineRaw) : null;
     const incTotal = Number(incStats?.total ?? 0);
-    const incGift = Number(incStats?.giftType4 ?? 0);
+    const incGiftRaw = incStats?.giftType4 ?? null;
+    const incGift = incGiftRaw != null ? Number(incGiftRaw) : null;
 
     return {
       meds_finished: Number(medsRow?.meds_finished ?? 0),
       meds_approaching: Number(medsRow?.meds_approaching ?? 0),
-      disciplinary_actions: discTotal - discFine,
+      // Laravel: ($total ?? 0) - ($fine ?? 0). Top-level null bo'lmasligi uchun.
+      disciplinary_actions: discTotal - (discFine ?? 0),
       disciplinary_actions_fine_type: discFine,
-      incentives: incTotal - incGift,
+      incentives: incTotal - (incGift ?? 0),
       incentive_actions_gift_type: incGift,
     };
   }
 
   // GET /api/v1/hr/dashboard-three
-  async indexThree(): Promise<DashboardIndexThreeResponse> {
+  async indexThree(
+    filters?: OrgScopeFilters,
+  ): Promise<DashboardIndexThreeResponse> {
     const [wdStats, wrdStats, wslStats] = await Promise.all([
-      this.workerDisabilityStats(),
-      this.workerRelativeDisabilityStats(),
-      this.workerSickLeaveStats(),
+      this.workerDisabilityStats(filters),
+      this.workerRelativeDisabilityStats(filters),
+      this.workerSickLeaveStats(filters),
     ]);
     return {
       worker_disabilities: wdStats,
@@ -218,6 +251,7 @@ export class DashboardService {
 
   private async birthdays(
     today: Date,
+    filters?: OrgScopeFilters,
   ): Promise<DashboardIndexResponse['birthdays']> {
     const lastDay = new Date(today);
     lastDay.setDate(lastDay.getDate() + 4);
@@ -238,14 +272,18 @@ export class DashboardService {
       birth_month: workers.birth_month,
     };
 
+    // Laravel whereHas('positions', filter) — role + organizations/organization_id.
+    const activeWorker = await this.scope.activeWorkerExists(
+      workers.id,
+      filters,
+    );
     const rows = await this.db
       .select(baseCols)
       .from(workers)
       .where(
         and(
           notDeleted(workers),
-          // Laravel: whereHas('positions', scopeFilter status=ACTIVE + valid org).
-          sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.worker_id = ${workers.id} AND wp.status = 2 AND wp.deleted_at IS NULL)`,
+          activeWorker,
           fromMonth === toMonth
             ? and(
                 eq(workers.birth_month, fromMonth),
@@ -274,13 +312,8 @@ export class DashboardService {
       );
     }
 
-    if (rows.length === 0) {
-      return {
-        result: [],
-        all_workers: 0,
-        between: { to: this.formatDate(today), from: this.formatDate(lastDay) },
-      };
-    }
+    // Laravel'da xodim yo'q bo'lsa `result: []` qaytaradi (bug). NestJS doim
+    // 5 ta kun qaytaradi — har biri uchun count=0 va workers=[] (UI mos).
 
     let allWorkers = 0;
     const result = await Promise.all(
@@ -315,9 +348,14 @@ export class DashboardService {
   }
 
   // Single aggregate row with all worker counts (matches Laravel selectRaw chain).
-  // Laravel: Worker::whereHas('positions', scopeFilter status=ACTIVE) — count
-  // only workers with at least one active worker_position.
-  private async workersFilter(): Promise<Record<string, number>> {
+  // Laravel: Worker::whereHas('positions', scopeFilter status=ACTIVE).
+  private async workersFilter(
+    filters?: OrgScopeFilters,
+  ): Promise<Record<string, number>> {
+    const activeWorker = await this.scope.activeWorkerExists(
+      workers.id,
+      filters,
+    );
     const rows = await this.db.execute(sql`
       SELECT
         COUNT(DISTINCT workers.id) AS workers_count,
@@ -335,25 +373,22 @@ export class DashboardService {
         COUNT(DISTINCT CASE WHEN education = 3 THEN workers.id ELSE NULL END) AS middle_edu_count
       FROM workers
       LEFT JOIN (
+        -- Laravel raw DB::table — soft-delete'ni filter qilmaydi.
         SELECT DISTINCT ON (worker_id) id, worker_id, to_date
         FROM worker_passports
-        WHERE current = true AND deleted_at IS NULL
+        WHERE current = true
         ORDER BY worker_id, id DESC
       ) p ON p.worker_id = workers.id
       WHERE workers.deleted_at IS NULL
-        AND EXISTS (
-          SELECT 1 FROM worker_positions wp
-          JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL
-          WHERE wp.worker_id = workers.id
-            AND wp.status = 2
-            AND wp.deleted_at IS NULL
-        )
+        AND ${activeWorker}
     `);
     return (rows[0] ?? {}) as Record<string, number>;
   }
 
   // Last 8 months of new/ended contracts.
-  private async contractsByMonth(): Promise<
+  private async contractsByMonth(
+    filters?: OrgScopeFilters,
+  ): Promise<
     Array<{ month: string; new_contracts: number; ended_contracts: number }>
   > {
     const now = new Date();
@@ -361,6 +396,12 @@ export class DashboardService {
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     const fromStr = this.formatDate(from);
     const toStr = this.formatDate(to);
+    const inScope = await this.scope.whereOrg(
+      contracts.organization_id,
+      filters,
+    );
+    // Laravel whereHas('contract_position') — Eloquent SoftDeletes ham qo'llanadi.
+    const contractPosExists = sql`EXISTS (SELECT 1 FROM ${worker_positions} cp WHERE cp.contract_id = ${contracts.id} AND cp.contract_position = true AND cp.deleted_at IS NULL)`;
 
     const newRows = await this.db
       .select({
@@ -373,11 +414,12 @@ export class DashboardService {
       .where(
         and(
           notDeleted(contracts),
+          inScope,
           eq(contracts.confirmation, CONFIRMATION_STATUS_SUCCESS),
           isNotNull(contracts.worker_id),
           gte(contracts.contract_date, fromStr),
           lte(contracts.contract_date, toStr),
-          sql`EXISTS (SELECT 1 FROM ${worker_positions} cp WHERE cp.contract_id = ${contracts.id} AND cp.contract_position = true)`,
+          contractPosExists,
         ),
       )
       .groupBy(sql`TO_CHAR(${contracts.contract_date}, 'YYYY-MM')`);
@@ -394,12 +436,13 @@ export class DashboardService {
       .where(
         and(
           notDeleted(contracts),
+          inScope,
           eq(contracts.confirmation, CONFIRMATION_STATUS_SUCCESS),
           eq(contracts.status, POSITION_STATUS.FINISHED),
           isNotNull(contracts.worker_id),
           gte(contracts.contract_to_date, fromStr),
           lte(contracts.contract_to_date, toStr),
-          sql`EXISTS (SELECT 1 FROM ${worker_positions} cp WHERE cp.contract_id = ${contracts.id} AND cp.contract_position = true)`,
+          contractPosExists,
         ),
       )
       .groupBy(sql`TO_CHAR(${contracts.contract_to_date}, 'YYYY-MM')`);
@@ -426,7 +469,12 @@ export class DashboardService {
     return result;
   }
 
-  private async typeContracts(lang: string) {
+  private async typeContracts(lang: string, filters?: OrgScopeFilters) {
+    // Laravel Contract::filter($user) — role + filtrlar.
+    const inScope = await this.scope.whereOrg(
+      contracts.organization_id,
+      filters,
+    );
     const rows = await this.db
       .select({
         type: contracts.type,
@@ -437,6 +485,7 @@ export class DashboardService {
         and(
           notDeleted(contracts),
           eq(contracts.status, POSITION_STATUS.ACTIVE),
+          inScope,
         ),
       )
       .groupBy(contracts.type);
@@ -452,15 +501,21 @@ export class DashboardService {
     });
   }
 
-  private async typeVacations(lang: string) {
+  private async typeVacations(lang: string, filters?: OrgScopeFilters) {
     const today = this.formatDate(new Date());
+    // Laravel: whereHas('worker.positions', filter) — vacation.organization_id
+    // emas, balki worker'ning faol lavozimi scope ichida bo'lishi shart.
+    const activeWorker = await this.scope.activeWorkerExists(
+      vacations.worker_id,
+      filters,
+    );
     const rows = await this.db
       .select({
         type: vacations.type,
         cnt: count(),
       })
       .from(vacations)
-      .where(and(notDeleted(vacations), gte(vacations.to, today)))
+      .where(and(notDeleted(vacations), gte(vacations.to, today), activeWorker))
       .groupBy(vacations.type);
 
     // Group by VacationTypeEnum::get($commandType) → key.
@@ -490,33 +545,37 @@ export class DashboardService {
     return Array.from(byVacationType.values());
   }
 
-  private async workerDisabilityStats(): Promise<{
+  private async workerDisabilityStats(filters?: OrgScopeFilters): Promise<{
     total_count: number;
     levels: Array<{ level: number; count: number }>;
   }> {
+    const activeWorker = await this.scope.activeWorkerExists(
+      worker_disabilities.worker_id,
+      filters,
+    );
     const rows = await this.db
       .select({
         level: worker_disabilities.level,
         cnt: count(),
       })
       .from(worker_disabilities)
-      .where(
-        and(
-          notDeleted(worker_disabilities),
-          // Laravel: whereIn worker_id WorkerPosition filter (status=ACTIVE).
-          sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.worker_id = ${worker_disabilities.worker_id} AND wp.status = 2 AND wp.deleted_at IS NULL)`,
-        ),
-      )
+      .where(and(notDeleted(worker_disabilities), activeWorker))
       .groupBy(worker_disabilities.level);
     const levels = rows.map((r) => ({ level: r.level, count: Number(r.cnt) }));
     const total_count = levels.reduce((sum, l) => sum + l.count, 0);
     return { total_count, levels };
   }
 
-  private async workerRelativeDisabilityStats(): Promise<{
+  private async workerRelativeDisabilityStats(
+    filters?: OrgScopeFilters,
+  ): Promise<{
     total_count: number;
     levels: Array<{ level: number; count: number }>;
   }> {
+    const activeWorker = await this.scope.activeWorkerExists(
+      worker_relatives.worker_id,
+      filters,
+    );
     const rows = await this.db
       .select({
         level: worker_relative_disabilities.level,
@@ -530,28 +589,25 @@ export class DashboardService {
           worker_relative_disabilities.worker_relative_id,
         ),
       )
-      .where(
-        and(
-          notDeleted(worker_relative_disabilities),
-          // Laravel: whereHas workerRelative.worker.positions filter (status=ACTIVE).
-          sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.worker_id = ${worker_relatives.worker_id} AND wp.status = 2 AND wp.deleted_at IS NULL)`,
-        ),
-      )
+      .where(and(notDeleted(worker_relative_disabilities), activeWorker))
       .groupBy(worker_relative_disabilities.level);
     const levels = rows.map((r) => ({ level: r.level, count: Number(r.cnt) }));
     const total_count = levels.reduce((sum, l) => sum + l.count, 0);
     return { total_count, levels };
   }
 
-  private async workerSickLeaveStats(): Promise<{
+  private async workerSickLeaveStats(filters?: OrgScopeFilters): Promise<{
     total_count: number;
     active_count: number;
     finished_count: number;
     types: Array<{ type: number; count: number }>;
   }> {
     const today = this.formatDate(new Date());
-    // Laravel: whereHas workerPosition filter (status=ACTIVE).
-    const wpFilter = sql`EXISTS (SELECT 1 FROM worker_positions wp JOIN organizations o ON o.id = wp.organization_id AND o.deleted_at IS NULL WHERE wp.id = ${worker_sick_leaves.worker_position_id} AND wp.status = 2 AND wp.deleted_at IS NULL)`;
+    // Laravel: whereHas('workerPosition', filter) — scope-aware EXISTS.
+    const wpFilter = await this.scope.activePositionByIdExists(
+      worker_sick_leaves.worker_position_id,
+      filters,
+    );
 
     const [stats] = await this.db
       .select({

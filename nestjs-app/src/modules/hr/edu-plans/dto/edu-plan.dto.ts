@@ -2,7 +2,13 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, IsOptional } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 
@@ -35,6 +41,17 @@ export class AttachedEduPlanWorkersQueryDto extends SearchPaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   edu_plan_id?: number;
+
+  @ApiPropertyOptional({ example: '151,154' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ example: 222 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
 }
 
 export class DetachEduPlanWorkersDto {

@@ -34,7 +34,7 @@ export class TelegramController {
 
   @Post('telegram/photos/update') async updatePhotos(@Body() _body: any) {
     await this.service.updatePhotos();
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('telegram') async list(@Query() q: any) {
@@ -43,7 +43,7 @@ export class TelegramController {
 
   @Post('telegram') async store(@Body() body: any) {
     await this.service.telegramStore(body);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('telegram-users') async users(@Query() q: any) {
@@ -54,12 +54,16 @@ export class TelegramController {
     return buildSuccess(true, await this.service.allDevices());
   }
 
-  @Get('telegram/:userId') async edit(@Param('userId', ParseIntPipe) userId: number) {
+  @Get('telegram/:userId') async edit(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
     return buildSuccess(true, await this.service.telegramEdit(userId));
   }
 
-  @Delete('telegram/:userId') async destroy(@Param('userId', ParseIntPipe) userId: number) {
+  @Delete('telegram/:userId') async destroy(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
     await this.service.telegramDestroy(userId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

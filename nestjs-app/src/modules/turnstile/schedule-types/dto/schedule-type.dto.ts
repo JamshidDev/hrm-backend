@@ -1,7 +1,13 @@
 // Turnstile schedule type DTOs. Laravel: TurnstileScheduleTypeController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class QueryScheduleTypeDto {
   @ApiPropertyOptional() @IsOptional() page?: number;

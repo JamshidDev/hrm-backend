@@ -29,13 +29,12 @@ import {
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { MinioService } from '@/shared/minio/minio.service';
 import { DashboardViewsMapper } from '@/modules/hr/dashboard-views/dashboard-views.mapper';
 import { DEFAULT_PER_PAGE } from '@/modules/hr/dashboard-views/dashboard-views.constants';
-import {
-  activeWorkerPositionExists,
-  wpCols,
-} from '@/modules/hr/dashboard-views/dashboard-views.query';
+import { wpCols } from '@/modules/hr/dashboard-views/dashboard-views.query';
 import {
   calcAge,
   relativeLabel,
@@ -52,6 +51,7 @@ export class DashboardHealthService {
     @InjectDb() private readonly db: DataSource,
     private readonly minio: MinioService,
     private readonly mapper: DashboardViewsMapper,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // GET /api/v1/hr/dashboard/worker-disabilities/preview
@@ -60,12 +60,20 @@ export class DashboardHealthService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
 
+    // Laravel: ->when(request('search'), whereHas('worker', searchByFullName)).
+    const searchCond = buildWorkerSearchCond(filters.search);
+    const activeWorker = await this.scope.activeWorkerExists(
+      worker_disabilities.worker_id,
+    );
     const where = and(
       notDeleted(worker_disabilities),
       filters.level != null
         ? eq(worker_disabilities.level, filters.level)
         : undefined,
-      activeWorkerPositionExists(worker_disabilities.worker_id),
+      activeWorker,
+      searchCond
+        ? sql`EXISTS (SELECT 1 FROM ${workers} WHERE ${workers.id} = ${worker_disabilities.worker_id} AND (${searchCond}))`
+        : undefined,
     );
 
     const [rows, [{ total }]] = await Promise.all([
@@ -110,17 +118,29 @@ export class DashboardHealthService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
 
+    // Laravel: ->when(request('search'), whereHas('worker', searchByFullName)).
+    const searchCond = buildWorkerSearchCond(filters.search);
+    const activeWorker = await this.scope.activeWorkerExists(sql`wr.worker_id`);
     const where = and(
       notDeleted(worker_relative_disabilities),
       filters.level != null
         ? eq(worker_relative_disabilities.level, filters.level)
         : undefined,
-      // worker_relatives → workers → faol worker_position.
+      // worker_relatives → workers → faol worker_position (scope-aware).
       sql`EXISTS (
         SELECT 1 FROM ${worker_relatives} wr
         WHERE wr.id = ${worker_relative_disabilities.worker_relative_id}
-          AND ${activeWorkerPositionExists(sql`wr.worker_id`)}
+          AND ${activeWorker}
       )`,
+      // Qidiruv — qarindoshning xodimi (worker) FIO bo'yicha.
+      searchCond
+        ? sql`EXISTS (
+            SELECT 1 FROM ${worker_relatives} wr2
+            JOIN ${workers} ON ${workers.id} = wr2.worker_id
+            WHERE wr2.id = ${worker_relative_disabilities.worker_relative_id}
+              AND (${searchCond})
+          )`
+        : undefined,
     );
 
     const [rows, [{ total }]] = await Promise.all([
@@ -217,6 +237,8 @@ export class DashboardHealthService {
     const offset = (page - 1) * perPage;
     const today = todayDate();
 
+    // Laravel: ->when(request('search'), whereHas('worker', searchByFullName)).
+    const searchCond = buildWorkerSearchCond(filters.search);
     const where = and(
       notDeleted(worker_sick_leaves),
       filters.type != null
@@ -233,7 +255,13 @@ export class DashboardHealthService {
         : filters.status === 'finished'
           ? sql`${worker_sick_leaves.to_date} < ${today}::date`
           : undefined,
-      sql`EXISTS (SELECT 1 FROM ${worker_positions} wp WHERE wp.id = ${worker_sick_leaves.worker_position_id} AND wp.deleted_at IS NULL)`,
+      // Laravel: whereHas('workerPosition', filter) — scope-aware EXISTS.
+      await this.scope.activePositionByIdExists(
+        worker_sick_leaves.worker_position_id,
+      ),
+      searchCond
+        ? sql`EXISTS (SELECT 1 FROM ${workers} WHERE ${workers.id} = ${worker_sick_leaves.worker_id} AND (${searchCond}))`
+        : undefined,
     );
 
     const [rows, [{ total }]] = await Promise.all([
@@ -356,7 +384,10 @@ export class DashboardHealthService {
       )
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .where(inArray(worker_positions.id, wpIds));
   }
@@ -429,7 +460,10 @@ export class DashboardHealthService {
         .from(worker_positions)
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(
           departments,

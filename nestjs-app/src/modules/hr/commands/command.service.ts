@@ -2,16 +2,7 @@
 // Batch-load worker confirmations (type='w') for each command.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  inArray,
-  isNull,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -25,6 +16,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ConvertService } from '@/shared/convert/convert.service';
@@ -47,23 +39,22 @@ export class CommandService {
     private readonly minio: MinioService,
     private readonly replace: CommandReplaceService,
     private readonly convert: ConvertService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(filters: QueryCommandDto): Promise<CommandListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
-
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
+    // Laravel Command::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(commands.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     const where = and(
       isNull(commands.deleted_at),
-      filters.organization_id
-        ? eq(commands.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0 ? inArray(commands.organization_id, orgIds) : undefined,
+      inScope,
       filters.confirmation
         ? eq(commands.confirmation, filters.confirmation)
         : undefined,
@@ -90,7 +81,13 @@ export class CommandService {
           org_group: organizations.group,
         })
         .from(commands)
-        .leftJoin(organizations, eq(organizations.id, commands.organization_id))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, commands.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
         .where(where)
         .orderBy(desc(commands.id))
         .limit(perPage)
@@ -135,7 +132,6 @@ export class CommandService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         cmdRows.map((c) =>
@@ -273,7 +269,9 @@ export class CommandService {
     if (cmd.confirmation === 3) {
       throw new BusinessException(
         409,
-        this.i18n.t('messages.you_cannot_delete_a_document_that_has_been_approved'),
+        this.i18n.t(
+          'messages.you_cannot_delete_a_document_that_has_been_approved',
+        ),
       );
     }
     await this.db
@@ -315,9 +313,11 @@ export class CommandService {
     }
 
     // Last vacation (latest id) for worker.
-    let lastVac:
-      | { period_to: string | null; rest_day: number; all_day: number }
-      | null = null;
+    let lastVac: {
+      period_to: string | null;
+      rest_day: number;
+      all_day: number;
+    } | null = null;
     if (wp.worker_id) {
       const [v] = await this.db
         .select({
@@ -368,7 +368,10 @@ export class CommandService {
             experience_coefficient: this.getCoefficient(expAbs),
           };
         default:
-          throw new BusinessException(422, this.i18n.t('messages.invalid_type'));
+          throw new BusinessException(
+            422,
+            this.i18n.t('messages.invalid_type'),
+          );
       }
     })();
 

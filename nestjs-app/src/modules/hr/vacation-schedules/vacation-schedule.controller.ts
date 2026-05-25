@@ -42,7 +42,8 @@ export class VacationScheduleController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Vacation schedules list' })
   @ApiOkResponse({ type: VacationScheduleListResponseDto })
   async findAll(@Query() query: QueryVacationScheduleDto) {
@@ -50,14 +51,16 @@ export class VacationScheduleController {
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateVacationScheduleDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateVacationScheduleDto,
@@ -67,7 +70,8 @@ export class VacationScheduleController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
@@ -83,9 +87,13 @@ export class VacationSchedulesExtrasController {
   constructor(private readonly service: VacationScheduleService) {}
 
   @Get('vacation-schedules-not-included')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Workers without vacation schedule yet' })
   async notIncluded(@Query() query: QueryVacationScheduleDto) {
-    return buildSuccess(true, await this.service.noVacationScheduleWorkers(query));
+    return buildSuccess(
+      true,
+      await this.service.noVacationScheduleWorkers(query),
+    );
   }
 }

@@ -36,13 +36,15 @@ export class ApproveAlController {
     return buildSuccess(true, await this.service.list(q));
   }
 
-  @Get('approve-al/list/:id') async show(@Param('id', ParseIntPipe) id: number) {
+  @Get('approve-al/list/:id') async show(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return buildSuccess(true, await this.service.show(id));
   }
 
   @Post('approve-al/list') async store(@Body() body: any) {
     await this.service.create(body);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put('approve-al/list/:id') async update(
@@ -50,13 +52,15 @@ export class ApproveAlController {
     @Body() body: any,
   ) {
     await this.service.update(id, body);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
-  @Delete('approve-al/list/:id') async destroy(@Param('id', ParseIntPipe) id: number) {
+  @Delete('approve-al/list/:id') async destroy(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     await this.service.remove(id);
     // Laravel returns 'successfully_updated' for destroy (intentional in Laravel code).
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Post('approve-al/approved/:approvalId') async approve(
@@ -64,6 +68,6 @@ export class ApproveAlController {
     @Body() body: any,
   ) {
     await this.service.approve(approvalId, body);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 }

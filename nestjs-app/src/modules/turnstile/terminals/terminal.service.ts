@@ -56,7 +56,7 @@ export class TerminalService {
             name_en: buildings.name_en,
           })
           .from(buildings)
-          .where(inArray(buildings.id, bIds as number[]))
+          .where(inArray(buildings.id, bIds))
       : [];
     const bMap = new Map<number, (typeof bRows)[number]>(
       bRows.map((b) => [b.id, b] as const),

@@ -94,6 +94,22 @@ const FILL = {
 // TYPE CONFIG'LAR
 // ============================================================
 
+// Laravel Helper::getMonth — o'zbekcha oy nomlari.
+const UZ_MONTHS: Record<number, string> = {
+  1: 'yanvar',
+  2: 'fevral',
+  3: 'mart',
+  4: 'aprel',
+  5: 'may',
+  6: 'iyun',
+  7: 'iyul',
+  8: 'avgust',
+  9: 'sentyabr',
+  10: 'oktyabr',
+  11: 'noyabr',
+  12: 'dekabr',
+};
+
 const TYPE_CONFIGS: Record<ReportExcelType, TypeConfig> = {
   // ---- TYPE ONE — ReportOneStatsExport ----
   one: {
@@ -131,7 +147,7 @@ const TYPE_CONFIGS: Record<ReportExcelType, TypeConfig> = {
       '2024 yil “04” sentyabrdagi',
       '561-N sonli buyrug‘iga 1-ilova',
       '',
-      '"O‘zbekiston temir yo‘llari" AJ korxona va muassasalarda 2025 yil noyabr oyidagi ishchi-xodimlar to‘g‘risida',
+      '"O‘zbekiston temir yo‘llari" AJ korxona va muassasalarda "{year}" yil "{month}" oyidagi ishchi-xodimlar to‘g‘risida',
       'M A ‘ L U M O T',
     ],
     statHeader7: [
@@ -316,7 +332,7 @@ const TYPE_CONFIGS: Record<ReportExcelType, TypeConfig> = {
       '2024 yil “04” sentyabrdagi',
       '561-N sonli buyrug‘iga 1-ilova',
       '',
-      '"O‘zbekiston temir yo‘llari" AJ korxona va muassasalarda 2025 yil noyabr oyida ishga qabul qilingan hamda mehnat\n                shartnomasi bekor qilingan ishchi-xodimlar to‘g‘risida',
+      '"O‘zbekiston temir yo‘llari" AJ korxona va muassasalarda "{year}" yil "{month}" oyida ishga qabul qilingan hamda mehnat\n                shartnomasi bekor qilingan ishchi-xodimlar to‘g‘risida',
       'M A ‘ L U M O T',
     ],
     statHeader7: [
@@ -400,7 +416,7 @@ export async function buildReportExcel(
   params: ReportExcelBuildParams,
 ): Promise<{ buffer: Buffer; filename: string }> {
   const config = TYPE_CONFIGS[params.type];
-  const { tree, statsByOrg } = await fetchReportData(db, params);
+  const { tree, statsByOrg, year, month } = await fetchReportData(db, params);
 
   // Flatten — depth-first, 1-asosli daraja. Total qatori YO'Q.
   const ctx: FlattenCtx = { rows: [], maxDepth: 1 };
@@ -411,7 +427,14 @@ export async function buildReportExcel(
   }
 
   const normRows = normalizeRows(ctx.rows, config, ctx.maxDepth);
-  const buffer = await renderExcel(excel, config, normRows, ctx.maxDepth);
+  const buffer = await renderExcel(
+    excel,
+    config,
+    normRows,
+    ctx.maxDepth,
+    year,
+    month,
+  );
   return { buffer, filename: config.filename };
 }
 
@@ -422,10 +445,25 @@ export async function buildReportExcel(
 async function fetchReportData(
   db: DataSource,
   params: ReportExcelBuildParams,
-): Promise<{ tree: OrgNode[]; statsByOrg: Map<number, ReportDetailData> }> {
+): Promise<{
+  tree: OrgNode[];
+  statsByOrg: Map<number, ReportDetailData>;
+  year: number | null;
+  month: number | null;
+}> {
   // report_details — report uuid yoki year/month bo'yicha.
   let details: Array<{ organization_id: number; data: unknown }>;
+  let year: number | null;
+  let month: number | null;
   if (params.reportId != null) {
+    // Sarlavha uchun — report'ning o'z year/month'i.
+    const [rep] = await db
+      .select({ year: reports.year, month: reports.month })
+      .from(reports)
+      .where(eq(reports.id, params.reportId))
+      .limit(1);
+    year = rep?.year ?? null;
+    month = rep?.month ?? null;
     details = await db
       .select({
         organization_id: report_details.organization_id,
@@ -439,6 +477,8 @@ async function fetchReportData(
         ),
       );
   } else {
+    year = params.year;
+    month = params.month;
     details = await db
       .select({
         organization_id: report_details.organization_id,
@@ -465,7 +505,7 @@ async function fetchReportData(
   }
 
   const orgIds = [...orgIdSet];
-  if (orgIds.length === 0) return { tree: [], statsByOrg };
+  if (orgIds.length === 0) return { tree: [], statsByOrg, year, month };
 
   // Organization::whereIn('id', orgIds)->getTree() — _lft tartibida.
   const orgRows = await db
@@ -481,7 +521,7 @@ async function fetchReportData(
     )
     .orderBy(asc(organizations._lft));
 
-  return { tree: buildTree(orgRows), statsByOrg };
+  return { tree: buildTree(orgRows), statsByOrg, year, month };
 }
 
 // ============================================================
@@ -625,6 +665,8 @@ async function renderExcel(
   config: TypeConfig,
   normRows: Record<string, unknown>[],
   md: number,
+  year: number | null,
+  month: number | null,
 ): Promise<Buffer> {
   const statN = config.statColumns.length;
   const totalCols = 1 + md + statN + 2;
@@ -666,7 +708,13 @@ async function renderExcel(
 
   // ----- Header qatorlari -----
   const headerRows: ExcelHeaderRow[] = [];
-  config.titleTexts.forEach((text, idx) => {
+  // type one/three sarlavhasidagi {year}/{month} — dinamik (Laravel year/month).
+  const yearStr = String(year ?? new Date().getFullYear());
+  const monthName = UZ_MONTHS[month ?? new Date().getMonth() + 1] ?? '';
+  config.titleTexts.forEach((rawText, idx) => {
+    const text = rawText
+      .replace('{year}', yearStr)
+      .replace('{month}', monthName);
     const rowNo = idx + 1;
     const align: 'right' | 'center' = rowNo <= 3 ? 'right' : 'center';
     headerRows.push({

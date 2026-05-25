@@ -38,7 +38,8 @@ export class WorkerRelativeSortableAliasController {
   ) {}
 
   @Put('worker-relatives-sortable')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Sort worker relatives (Laravel hyphen-URL alias)' })
   async sortableAlias(@Body() body: SortableWorkerRelativeDto) {
     await this.service.sort(body.orders ?? []);
@@ -57,7 +58,8 @@ export class WorkerRelativeController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker relatives (by worker uuid)' })
   async findAll(@Query() query: QueryWorkerRelativeDto) {
     return buildSuccess(
@@ -67,21 +69,24 @@ export class WorkerRelativeController {
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateWorkerRelativeDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put('sortable')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async sortable(@Body() body: SortableWorkerRelativeDto) {
     await this.service.sort(body.orders ?? []);
     return buildSuccess(this.i18n.t('messages.successfully_sorted'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWorkerRelativeDto,
@@ -91,7 +96,8 @@ export class WorkerRelativeController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

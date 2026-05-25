@@ -12,7 +12,7 @@ import { I18nService } from 'nestjs-i18n';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import PizZip from 'pizzip';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -61,7 +61,10 @@ export class ResumeService {
       .from(worker_positions)
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(
@@ -99,13 +102,25 @@ export class ResumeService {
       party,
     ] = await Promise.all([
       w.region_id
-        ? this.db.select({ name: regions.name }).from(regions).where(eq(regions.id, w.region_id)).limit(1)
+        ? this.db
+            .select({ name: regions.name })
+            .from(regions)
+            .where(eq(regions.id, w.region_id))
+            .limit(1)
         : Promise.resolve([]),
       w.city_id
-        ? this.db.select({ name: cities.name }).from(cities).where(eq(cities.id, w.city_id)).limit(1)
+        ? this.db
+            .select({ name: cities.name })
+            .from(cities)
+            .where(eq(cities.id, w.city_id))
+            .limit(1)
         : Promise.resolve([]),
       w.nationality_id
-        ? this.db.select({ name: nationalities.name }).from(nationalities).where(eq(nationalities.id, w.nationality_id)).limit(1)
+        ? this.db
+            .select({ name: nationalities.name })
+            .from(nationalities)
+            .where(eq(nationalities.id, w.nationality_id))
+            .limit(1)
         : Promise.resolve([]),
       this.db
         .select({
@@ -119,13 +134,26 @@ export class ResumeService {
           address: worker_relatives.address,
         })
         .from(worker_relatives)
-        .where(and(eq(worker_relatives.worker_id, wid), notDeleted(worker_relatives)))
+        .where(
+          and(
+            eq(worker_relatives.worker_id, wid),
+            notDeleted(worker_relatives),
+          ),
+        )
         .orderBy(asc(worker_relatives.sort), asc(worker_relatives.id)),
       this.db
         .select({ name: languagesTable.name })
         .from(worker_languages)
-        .leftJoin(languagesTable, eq(languagesTable.id, worker_languages.language_id))
-        .where(and(eq(worker_languages.worker_id, wid), notDeleted(worker_languages))),
+        .leftJoin(
+          languagesTable,
+          eq(languagesTable.id, worker_languages.language_id),
+        )
+        .where(
+          and(
+            eq(worker_languages.worker_id, wid),
+            notDeleted(worker_languages),
+          ),
+        ),
       this.db
         .select({
           to_date: worker_universities.to_date,
@@ -133,9 +161,20 @@ export class ResumeService {
           university_name: universitiesTable.name,
         })
         .from(worker_universities)
-        .leftJoin(universitiesTable, eq(universitiesTable.id, worker_universities.university_id))
-        .leftJoin(specialitiesTable, eq(specialitiesTable.id, worker_universities.speciality_id))
-        .where(and(eq(worker_universities.worker_id, wid), notDeleted(worker_universities))),
+        .leftJoin(
+          universitiesTable,
+          eq(universitiesTable.id, worker_universities.university_id),
+        )
+        .leftJoin(
+          specialitiesTable,
+          eq(specialitiesTable.id, worker_universities.speciality_id),
+        )
+        .where(
+          and(
+            eq(worker_universities.worker_id, wid),
+            notDeleted(worker_universities),
+          ),
+        ),
       this.db
         .select({
           from_date: worker_old_careers.from_date,
@@ -144,7 +183,12 @@ export class ResumeService {
           sort: worker_old_careers.sort,
         })
         .from(worker_old_careers)
-        .where(and(eq(worker_old_careers.worker_id, wid), notDeleted(worker_old_careers)))
+        .where(
+          and(
+            eq(worker_old_careers.worker_id, wid),
+            notDeleted(worker_old_careers),
+          ),
+        )
         .orderBy(asc(worker_old_careers.sort)),
       this.db
         .select({
@@ -156,25 +200,56 @@ export class ResumeService {
           pos_name: positionsTable.name,
         })
         .from(worker_positions)
-        .leftJoin(organizations, eq(organizations.id, worker_positions.organization_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
-        .leftJoin(positionsTable, eq(positionsTable.id, worker_positions.position_id))
-        .where(and(eq(worker_positions.worker_id, wid), notDeleted(worker_positions)))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
+        .leftJoin(
+          positionsTable,
+          eq(positionsTable.id, worker_positions.position_id),
+        )
+        .where(
+          and(
+            eq(worker_positions.worker_id, wid),
+            notDeleted(worker_positions),
+          ),
+        )
         .orderBy(asc(worker_positions.position_date)),
       this.db
         .select({ type: worker_academic_degrees.type })
         .from(worker_academic_degrees)
-        .where(and(eq(worker_academic_degrees.worker_id, wid), notDeleted(worker_academic_degrees)))
+        .where(
+          and(
+            eq(worker_academic_degrees.worker_id, wid),
+            notDeleted(worker_academic_degrees),
+          ),
+        )
         .limit(1),
       this.db
         .select({ type: worker_academic_titles.type })
         .from(worker_academic_titles)
-        .where(and(eq(worker_academic_titles.worker_id, wid), notDeleted(worker_academic_titles)))
+        .where(
+          and(
+            eq(worker_academic_titles.worker_id, wid),
+            notDeleted(worker_academic_titles),
+          ),
+        )
         .limit(1),
+      // Laravel Worker::party() HasOne — ->orderByDesc('id') (eng so'nggi yozuv).
       this.db
         .select({ party: worker_parties.party })
         .from(worker_parties)
-        .where(and(eq(worker_parties.worker_id, wid), notDeleted(worker_parties)))
+        .where(
+          and(eq(worker_parties.worker_id, wid), notDeleted(worker_parties)),
+        )
+        .orderBy(desc(worker_parties.id))
         .limit(1),
     ]);
 
@@ -187,11 +262,16 @@ export class ResumeService {
     const specialityParts: string[] = [];
     for (const u of universities) {
       if (u.university_name) {
-        universityParts.push(`${this.year(u.to_date)}-yil, ${u.university_name}`);
+        universityParts.push(
+          `${this.year(u.to_date)}-yil, ${u.university_name}`,
+        );
         specialityParts.push(u.speciality_name ?? '');
       }
     }
-    const languagesStr = languagesRows.map((l) => l.name).filter((n): n is string => !!n).join(',');
+    const languagesStr = languagesRows
+      .map((l) => l.name)
+      .filter((n): n is string => !!n)
+      .join(',');
 
     const careers: Array<Record<string, string>> = [];
     for (const c of oldCareers) {
@@ -202,7 +282,12 @@ export class ResumeService {
     }
     for (let i = 0; i < allPositions.length; i++) {
       const p = allPositions[i];
-      const postName = this.fullPosition(p.org_full_name, p.dept_name, p.dept_level, p.pos_name);
+      const postName = this.fullPosition(
+        p.org_full_name,
+        p.dept_name,
+        p.dept_level,
+        p.pos_name,
+      );
       const from = this.year(p.position_date);
       let to: string;
       if (p.status === POSITION_STATUS_ACTIVE) to = 'h.v';
@@ -232,14 +317,25 @@ export class ResumeService {
       birthday,
       birth_address: birthAddress,
       position_date: this.positionDateLong(wp.position_date),
-      full_position_name: this.fullPosition(wp.org_full_name, wp.dept_name, wp.dept_level, wp.pos_name),
+      full_position_name: this.fullPosition(
+        wp.org_full_name,
+        wp.dept_name,
+        wp.dept_level,
+        wp.pos_name,
+      ),
       nationality: nationalityRow[0]?.name ?? '',
       party: party[0]?.party != null ? this.partyLabel(party[0].party) : "Yo'q",
       education: this.educationLabel(w.education),
       universities: universityParts.join(', '),
       specialities: specialityParts.join(', '),
-      academic_degree: academicDegree[0] != null ? this.academicDegreeLabel(academicDegree[0].type) : '',
-      academic_title: academicTitle[0] != null ? this.academicTitleLabel(academicTitle[0].type) : '',
+      academic_degree:
+        academicDegree[0] != null
+          ? this.academicDegreeLabel(academicDegree[0].type)
+          : '',
+      academic_title:
+        academicTitle[0] != null
+          ? this.academicTitleLabel(academicTitle[0].type)
+          : '',
       languages: languagesStr,
       incentives: 'taqdirlanmagan',
       military: '',
@@ -248,7 +344,12 @@ export class ResumeService {
     };
 
     // ---- Render DOCX ----
-    const templatePath = join(process.cwd(), 'public', 'resumes', 'resume_latin.docx');
+    const templatePath = join(
+      process.cwd(),
+      'public',
+      'resumes',
+      'resume_latin.docx',
+    );
     const content = await readFile(templatePath);
     const zip = new PizZip(content);
     const xmlFile = zip.file('word/document.xml');
@@ -264,7 +365,13 @@ export class ResumeService {
     xml = this.expandLoop(xml, ['career_date', 'career_name'], careers, 'w:tr');
     xml = this.expandLoop(
       xml,
-      ['relative', 'relative_full_name', 'relative_birth_info', 'relative_post_name', 'relative_address'],
+      [
+        'relative',
+        'relative_full_name',
+        'relative_birth_info',
+        'relative_post_name',
+        'relative_address',
+      ],
       relativesData,
       'w:tr',
     );
@@ -294,7 +401,12 @@ export class ResumeService {
     // ones (without removing the surrounding run XML, which keeps formatting).
     // Match only the `<w:t>` element (not `<w:tab>`, `<w:tbl>`, etc.).
     const tagRe = /<w:t(\s+[^>]*)?>([\s\S]*?)<\/w:t>/g;
-    const matches: Array<{ start: number; end: number; text: string; attrs: string }> = [];
+    const matches: Array<{
+      start: number;
+      end: number;
+      text: string;
+      attrs: string;
+    }> = [];
     let m: RegExpExecArray | null;
     while ((m = tagRe.exec(xml)) !== null) {
       matches.push({
@@ -353,11 +465,18 @@ export class ResumeService {
       const firstWtEnd = firstWtStart + matches[firstMatch].text.length;
       const lastWtEnd = lastWtStart + matches[lastMatch].text.length;
 
-      const preFirst = matches[firstMatch].text.slice(0, startIdx - firstWtStart);
+      const preFirst = matches[firstMatch].text.slice(
+        0,
+        startIdx - firstWtStart,
+      );
       const postLast = matches[lastMatch].text.slice(endIdx + 1 - lastWtStart);
       const middleText = fullText.slice(startIdx, endIdx + 1);
       const mergedFirstText = preFirst + middleText + postLast;
-      merges.push({ first: firstMatch, last: lastMatch, merged: mergedFirstText });
+      merges.push({
+        first: firstMatch,
+        last: lastMatch,
+        merged: mergedFirstText,
+      });
       // Skip ahead past this placeholder.
       phRe.lastIndex = endIdx + 1;
       // Suppress unused-var warnings (preserved to keep mapping clear).
@@ -381,7 +500,10 @@ export class ResumeService {
         const emptied = `<w:t${mm.attrs}></w:t>`;
         result = result.slice(0, mm.start) + emptied + result.slice(mm.end);
       }
-      result = result.slice(0, firstMatch.start) + newFirst + result.slice(firstMatch.end);
+      result =
+        result.slice(0, firstMatch.start) +
+        newFirst +
+        result.slice(firstMatch.end);
     }
     return result;
   }
@@ -403,7 +525,7 @@ export class ResumeService {
     // Walk back from m.index to find enclosing parent element.
     const openTag = `<${parentTag}`;
     const closeTag = `</${parentTag}>`;
-    let start = xml.lastIndexOf(openTag, m.index);
+    const start = xml.lastIndexOf(openTag, m.index);
     if (start < 0) return xml;
     // Find the end of the parent element.
     const end = xml.indexOf(closeTag, m.index);
@@ -420,11 +542,15 @@ export class ResumeService {
     for (const item of items) {
       let clone = parentXml;
       for (const marker of markers) {
-        clone = clone.split(`\${${marker}}`).join(this.escapeXml(item[marker] ?? ''));
+        clone = clone
+          .split(`\${${marker}}`)
+          .join(this.escapeXml(item[marker] ?? ''));
       }
       clones.push(clone);
     }
-    return xml.slice(0, start) + clones.join('') + xml.slice(end + closeTag.length);
+    return (
+      xml.slice(0, start) + clones.join('') + xml.slice(end + closeTag.length)
+    );
   }
 
   private escapeXml(s: string): string {
@@ -438,7 +564,11 @@ export class ResumeService {
 
   // ---- Data formatters ----
 
-  private fullName(last: string | null, first: string | null, middle: string | null): string {
+  private fullName(
+    last: string | null,
+    first: string | null,
+    middle: string | null,
+  ): string {
     return [last, first, middle].filter(Boolean).join(' ');
   }
 
@@ -478,35 +608,82 @@ export class ResumeService {
   private positionDateLong(d: string | null): string {
     if (!d) return '';
     const dt = new Date(d);
-    const months = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentyabr','oktyabr','noyabr','dekabr'];
+    const months = [
+      'yanvar',
+      'fevral',
+      'mart',
+      'aprel',
+      'may',
+      'iyun',
+      'iyul',
+      'avgust',
+      'sentyabr',
+      'oktyabr',
+      'noyabr',
+      'dekabr',
+    ];
     return `${dt.getFullYear()}-yil ${dt.getDate()}-${months[dt.getMonth()]}dan`;
   }
 
   private relativeLabel(v: number | null): string {
     const map: Record<number, string> = {
-      1: 'Otasi', 2: 'Onasi', 3: 'Akasi', 4: 'Opasi', 5: "Turmush o'rtog'i",
-      6: 'Ukasi', 7: 'Singlisi', 8: "O'g'li", 9: 'Qizi', 10: 'Qaynotasi',
-      11: 'Qaynonasi', 12: 'Qaynakasi', 13: 'Qaynopasi', 14: 'Qaynukasi', 15: 'Qaynsingli',
+      1: 'Otasi',
+      2: 'Onasi',
+      3: 'Akasi',
+      4: 'Opasi',
+      5: "Turmush o'rtog'i",
+      6: 'Ukasi',
+      7: 'Singlisi',
+      8: "O'g'li",
+      9: 'Qizi',
+      10: 'Qaynotasi',
+      11: 'Qaynonasi',
+      12: 'Qaynakasi',
+      13: 'Qaynopasi',
+      14: 'Qaynukasi',
+      15: 'Qaynsingli',
     };
     return v != null ? (map[v] ?? '') : '';
   }
 
   private educationLabel(v: number | null): string {
-    const map: Record<number, string> = { 1: 'Oliy', 2: "O'rta maxsus", 3: "O'rta" };
+    const map: Record<number, string> = {
+      1: 'Oliy',
+      2: "O'rta maxsus",
+      3: "O'rta",
+    };
     return v != null ? (map[v] ?? '') : '';
   }
 
   private academicDegreeLabel(v: number): string {
-    const map: Record<number, string> = { 1: 'PhD', 2: 'DSc', 3: 'Nomzod', 4: 'Doktor' };
+    const map: Record<number, string> = {
+      1: 'PhD',
+      2: 'DSc',
+      3: 'Nomzod',
+      4: 'Doktor',
+    };
     return map[v] ?? '';
   }
 
   private academicTitleLabel(v: number): string {
-    const map: Record<number, string> = { 1: 'Dotsent', 2: 'Professor', 3: 'Akademik', 4: 'Mualim' };
+    const map: Record<number, string> = {
+      1: 'Dotsent',
+      2: 'Professor',
+      3: 'Akademik',
+      4: 'Mualim',
+    };
     return map[v] ?? '';
   }
 
+  // Laravel PartyEnum::get — 2/3/4/5 siyosiy partiya kalitlari, aks holda "".
   private partyLabel(v: number): string {
-    return v ? String(v) : "Yo'q";
+    const keys: Record<number, string> = {
+      2: 'two',
+      3: 'three',
+      4: 'four',
+      5: 'five',
+    };
+    const key = keys[v];
+    return key ? this.i18n.t(`messages.worker.political_party.${key}`) : '';
   }
 }

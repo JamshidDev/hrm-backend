@@ -17,27 +17,39 @@ export class WorkerScheduleService {
 
   // Laravel: paginate — distinct worker_positions with schedule rows.
   // Requires `date` (Laravel IndexRequest rule: 'date' => required|date).
-  async list(q: { page?: number; per_page?: number; date?: string; group_id?: number }) {
+  async list(q: {
+    page?: number;
+    per_page?: number;
+    date?: string;
+    group_id?: number;
+  }) {
     if (!q.date) throw new BusinessException(422, 'date is required');
     const { page, perPage, offset } = pageOf(q);
     const conds: string[] = ['deleted_at IS NULL'];
     if (q.date) conds.push(`date = '${q.date}'`);
-    if (q.group_id) conds.push(`turnstile_schedule_group_id = ${Number(q.group_id)}`);
+    if (q.group_id)
+      conds.push(`turnstile_schedule_group_id = ${Number(q.group_id)}`);
     const whereStr = conds.join(' AND ');
-    const result = await this.db.execute(sql.raw(`
+    const result = await this.db.execute(
+      sql.raw(`
       SELECT DISTINCT ON (worker_position_id) worker_id, worker_position_id, date, work_status, start_time, end_time
       FROM turnstile_worker_schedules
       WHERE ${whereStr}
       ORDER BY worker_position_id DESC, date DESC
       LIMIT ${perPage} OFFSET ${offset}
-    `));
-    const countResult = await this.db.execute(sql.raw(`
+    `),
+    );
+    const countResult = await this.db.execute(
+      sql.raw(`
       SELECT COUNT(DISTINCT worker_position_id)::int AS total
       FROM turnstile_worker_schedules
       WHERE ${whereStr}
-    `));
+    `),
+    );
     const rows = ((result as any).rows ?? result) as any[];
-    const total = Number(((countResult as any).rows ?? countResult)[0]?.total ?? 0);
+    const total = Number(
+      ((countResult as any).rows ?? countResult)[0]?.total ?? 0,
+    );
     return { current_page: page, per_page: perPage, total, data: rows };
   }
 
@@ -118,7 +130,12 @@ export class WorkerScheduleService {
         .offset(offset),
       this.db.select({ total: count() }).from(departments).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: generatePreview / generateSchedule — heavy job dispatchers. Stubs.
@@ -129,7 +146,10 @@ export class WorkerScheduleService {
   // Laravel: TurnstileWorkerScheduleGenerateController::workers.
   async generateGetWorkers(q: { page?: number; per_page?: number }) {
     const { page, perPage, offset } = pageOf(q);
-    const where = and(notDeleted(worker_positions), eq(worker_positions.status, 1));
+    const where = and(
+      notDeleted(worker_positions),
+      eq(worker_positions.status, 1),
+    );
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select()
@@ -140,7 +160,12 @@ export class WorkerScheduleService {
         .offset(offset),
       this.db.select({ total: count() }).from(worker_positions).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: dayInMonth — { month, year, days: [{day, weekDay, is_holiday}] }.

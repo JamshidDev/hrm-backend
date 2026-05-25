@@ -2,19 +2,27 @@
 // Endpoints: index, accept, generate-url.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { createHmac } from 'crypto';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
-import {
-  organizations,
-  worker_applications,
-  workers,
-} from '@/db/schema';
+import { organizations, worker_applications, workers } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -36,6 +44,7 @@ export class WorkerApplicationService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly config: ConfigService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // GET /api/v1/hr/applications
@@ -44,20 +53,21 @@ export class WorkerApplicationService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
-
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel WorkerApplication::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      worker_applications.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       notDeleted(worker_applications),
       isNotNull(worker_applications.worker_id),
-      filters.organization_id
-        ? eq(worker_applications.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0 ? inArray(worker_applications.organization_id, orgIds) : undefined,
+      inScope,
       searchCond,
     );
 
@@ -92,7 +102,10 @@ export class WorkerApplicationService {
         .leftJoin(workers, eq(workers.id, worker_applications.worker_id))
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_applications.organization_id),
+          and(
+            eq(organizations.id, worker_applications.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(desc(worker_applications.id))
@@ -107,7 +120,6 @@ export class WorkerApplicationService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({

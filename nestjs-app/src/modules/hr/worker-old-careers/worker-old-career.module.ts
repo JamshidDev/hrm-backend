@@ -9,7 +9,10 @@ import { WorkerUuidLookup } from '@/modules/hr/_shared/worker-uuid.helper';
 
 @Module({
   imports: [AuthModule],
-  controllers: [WorkerOldCareerController, WorkerOldCareerSortableAliasController],
+  controllers: [
+    WorkerOldCareerController,
+    WorkerOldCareerSortableAliasController,
+  ],
   providers: [WorkerOldCareerService, WorkerUuidLookup],
 })
 export class WorkerOldCareerModule {}

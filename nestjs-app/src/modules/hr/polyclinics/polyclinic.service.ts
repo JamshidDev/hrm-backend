@@ -23,7 +23,9 @@ export class PolyclinicService {
     private readonly i18n: I18nService,
   ) {}
 
-  async findAll(filters: QueryPolyclinicDto): Promise<PolyclinicListResponseDto> {
+  async findAll(
+    filters: QueryPolyclinicDto,
+  ): Promise<PolyclinicListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const orgId = this.ctx.user?.organization_id ?? 0;
@@ -43,13 +45,19 @@ export class PolyclinicService {
         .from(organization_polyclinics)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_polyclinics.polyclinic_id),
+          and(
+            eq(organizations.id, organization_polyclinics.polyclinic_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(asc(organization_polyclinics.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(organization_polyclinics).where(where),
+      this.db
+        .select({ total: count() })
+        .from(organization_polyclinics)
+        .where(where),
     ]);
 
     return {

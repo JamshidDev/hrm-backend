@@ -2,16 +2,7 @@
 // 3 endpoint: get-department-positions, get-departments-tree, get-departments.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -25,6 +16,7 @@ import {
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { DEPARTMENT_LEVEL_KEYS } from '@/modules/hr/departments/department.mapper';
 import {
@@ -50,6 +42,7 @@ export class FilterService {
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // get-department-positions?department_id=
@@ -110,7 +103,9 @@ export class FilterService {
           filters.organization_id
             ? eq(departments.organization_id, filters.organization_id)
             : undefined,
-          filters.search ? ilike(departments.name, `%${filters.search}%`) : undefined,
+          filters.search
+            ? ilike(departments.name, `%${filters.search}%`)
+            : undefined,
         ),
       );
 
@@ -146,18 +141,18 @@ export class FilterService {
     const perPage = filters.per_page ?? 100;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
-
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
+    // Laravel Department::filterByOrganizations — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(departments.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     const where = and(
       isNull(departments.deleted_at),
-      filters.search ? ilike(departments.name, `%${filters.search}%`) : undefined,
-      filters.organization_id
-        ? eq(departments.organization_id, filters.organization_id)
+      filters.search
+        ? ilike(departments.name, `%${filters.search}%`)
         : undefined,
-      orgIds.length > 0 ? inArray(departments.organization_id, orgIds) : undefined,
+      inScope,
     );
 
     const offset = (page - 1) * perPage;
@@ -174,9 +169,15 @@ export class FilterService {
           org_group: organizations.group,
         })
         .from(departments)
-        .leftJoin(organizations, eq(organizations.id, departments.organization_id))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, departments.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
         .where(where)
-        .orderBy(asc(departments.id))
+        // Laravel `paginate()` ORDER BY qo'ymaydi — natural Postgres tartibi.
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(departments).where(where),
@@ -184,7 +185,6 @@ export class FilterService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({
         id: r.id,
@@ -215,7 +215,9 @@ export class FilterService {
     const where = and(
       isNull(departments.deleted_at),
       isNull(departments.parent_id),
-      filters.search ? ilike(departments.name, `%${filters.search}%`) : undefined,
+      filters.search
+        ? ilike(departments.name, `%${filters.search}%`)
+        : undefined,
     );
 
     const offset = (page - 1) * perPage;
@@ -233,7 +235,13 @@ export class FilterService {
           org_group: organizations.group,
         })
         .from(departments)
-        .leftJoin(organizations, eq(organizations.id, departments.organization_id))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, departments.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
         .where(where)
         .orderBy(asc(departments.id))
         .limit(perPage)
@@ -272,10 +280,16 @@ export class FilterService {
     const lang = this.ctx.lang;
 
     const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
     const deptIds = filters.departments
-      ? filters.departments.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.departments
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
     // Sub-query: distinct position_id from worker_positions WHERE status=ACTIVE + org/dept filters.
@@ -309,7 +323,9 @@ export class FilterService {
     const posWhere = and(
       inArray(positionsTable.id, positionIds),
       notDeleted(positionsTable),
-      filters.search ? ilike(positionsTable.name, `%${filters.search}%`) : undefined,
+      filters.search
+        ? ilike(positionsTable.name, `%${filters.search}%`)
+        : undefined,
     );
 
     const offset = (page - 1) * perPage;
@@ -362,9 +378,15 @@ export class FilterService {
             `%${filters.search}%`,
           )
         : undefined,
-      filters.last_name ? ilike(workers.last_name, `%${filters.last_name}%`) : undefined,
-      filters.first_name ? ilike(workers.first_name, `%${filters.first_name}%`) : undefined,
-      filters.middle_name ? ilike(workers.middle_name, `%${filters.middle_name}%`) : undefined,
+      filters.last_name
+        ? ilike(workers.last_name, `%${filters.last_name}%`)
+        : undefined,
+      filters.first_name
+        ? ilike(workers.first_name, `%${filters.first_name}%`)
+        : undefined,
+      filters.middle_name
+        ? ilike(workers.middle_name, `%${filters.middle_name}%`)
+        : undefined,
     );
 
     const offset = (page - 1) * perPage;
@@ -385,7 +407,10 @@ export class FilterService {
         })
         .from(worker_positions)
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(positionsTable, eq(positionsTable.id, worker_positions.position_id))
+        .leftJoin(
+          positionsTable,
+          eq(positionsTable.id, worker_positions.position_id),
+        )
         .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
         .where(where)
         .orderBy(

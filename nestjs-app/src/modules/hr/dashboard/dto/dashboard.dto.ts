@@ -1,5 +1,28 @@
-// HR Dashboard DTO — read-only endpoints, no body validation.
-// Permission scope filters (Laravel: ->filter($user, request()->all())) skip qilingan.
+// HR Dashboard DTO — read-only endpoints + org-scope query filters.
+
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString } from 'class-validator';
+
+/**
+ * GET /api/v1/hr/dashboard, /dashboard-two, /dashboard-three — org-scope filtrlari.
+ * Laravel `filter($user, request()->all())` ekvivalenti.
+ */
+export class DashboardQueryDto {
+  @ApiPropertyOptional({
+    description: 'Vergulli tashkilot ID lari',
+    example: '1,2',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ description: 'Bitta tashkilot ID', example: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
+}
 
 export interface DashboardIndexResponse {
   workers_count: number;

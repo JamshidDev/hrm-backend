@@ -47,7 +47,10 @@ export class OrganizationTerminalService {
         name: terminals.name,
       })
       .from(organization_terminals)
-      .innerJoin(terminals, eq(organization_terminals.terminal_id, terminals.id))
+      .innerJoin(
+        terminals,
+        eq(organization_terminals.terminal_id, terminals.id),
+      )
       .where(
         and(
           eq(organization_terminals.organization_id, organizationId),

@@ -14,25 +14,38 @@ export class QueryTimeSheetWorkerDepartmentDto extends SearchPaginationQueryDto 
   @IsOptional()
   @IsString()
   organizations?: string;
+
+  @ApiPropertyOptional({ example: 222 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
 }
 
 export class AttachDto {
   @ApiProperty({ example: 1 })
-  @Type(() => Number) @IsInt() @Exists('worker_positions', 'id')
+  @Type(() => Number)
+  @IsInt()
+  @Exists('worker_positions', 'id')
   worker_position_id!: number;
 
   @ApiProperty({ type: [Number], example: [1, 2] })
-  @IsArray() @Type(() => Number)
+  @IsArray()
+  @Type(() => Number)
   departments!: number[];
 }
 
 export class DetachDto {
   @ApiPropertyOptional({ example: 1 })
-  @IsOptional() @Type(() => Number) @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   worker_position_id?: number;
 
   @ApiPropertyOptional({ example: 1 })
-  @IsOptional() @Type(() => Number) @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   department_id?: number;
 }
 
@@ -77,7 +90,6 @@ export class TimeSheetWorkerDepartmentItemDto {
 
 export class TimeSheetWorkerDepartmentListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [TimeSheetWorkerDepartmentItemDto] })
   data!: TimeSheetWorkerDepartmentItemDto[];

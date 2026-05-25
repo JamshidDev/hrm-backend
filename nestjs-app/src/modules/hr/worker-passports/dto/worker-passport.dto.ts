@@ -16,7 +16,10 @@ export class QueryWorkerPassportDto {
 }
 
 export class CreateWorkerPassportDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('workers', 'id')
   worker_id!: number;
 
   @ApiProperty() @IsString() serial_number!: string;

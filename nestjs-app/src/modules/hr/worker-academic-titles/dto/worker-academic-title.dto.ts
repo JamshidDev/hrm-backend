@@ -18,7 +18,9 @@ export class CreateWorkerAcademicTitleDto {
   uuid!: string;
 
   @ApiProperty({ example: 1, description: 'AcademicTitleEnum 1..4' })
-  @Type(() => Number) @IsInt() type!: number;
+  @Type(() => Number)
+  @IsInt()
+  type!: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() file?: string;
 }

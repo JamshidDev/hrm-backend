@@ -5,14 +5,7 @@
 // hozircha auth endpointlar AuthHybridGuard bilan himoyalangan va
 // foydalanuvchi id'si stub (0). Vacancy guard keyingi bosqichda qo'shiladi.
 
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { Public } from '@/common/decorators/public.decorator';
@@ -74,7 +67,7 @@ export class VacancyAuthController {
   @ApiOperation({ summary: 'Update candidate photo' })
   async updatePhoto(@Body() dto: VacancyUpdatePhotoDto) {
     await this.service.updatePhoto(0, dto.photo);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @ApiBearerAuth('access-token')
@@ -83,6 +76,6 @@ export class VacancyAuthController {
   @ApiOperation({ summary: 'Update candidate profile fields' })
   async update(@Body() dto: VacancyUpdateDto) {
     await this.service.update(0, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 }

@@ -28,11 +28,7 @@ import {
 } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { Type } from 'class-transformer';
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
@@ -54,18 +50,38 @@ import { randomUUID } from 'crypto';
 // ---- DTOs ----
 
 class WorkerAppQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() per_page?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() page?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  per_page?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() organization_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() organizations?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() director_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  director_id?: number;
 }
 
 class WorkerAppStoreDto {
   @ApiProperty() @Type(() => Number) @IsInt() type!: number;
   @ApiProperty() @Type(() => Number) @IsInt() director_id!: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() worker_position_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  worker_position_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
 }
 
@@ -120,7 +136,9 @@ class WorkerApplicationExtrasService {
   async directors(filters: WorkerAppQueryDto) {
     const orgId =
       filters.organization_id ??
-      (filters.organizations ? Number(filters.organizations.split(',')[0]) : null) ??
+      (filters.organizations
+        ? Number(filters.organizations.split(',')[0])
+        : null) ??
       this.ctx.user_or_fail.organization_id;
     if (!orgId) return [];
 
@@ -283,7 +301,9 @@ class WorkerApplicationExtrasService {
     const [row] = await this.db
       .select()
       .from(worker_applications)
-      .where(and(eq(worker_applications.id, id), notDeleted(worker_applications)))
+      .where(
+        and(eq(worker_applications.id, id), notDeleted(worker_applications)),
+      )
       .limit(1);
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
@@ -296,7 +316,9 @@ class WorkerApplicationExtrasService {
     const [row] = await this.db
       .select({ id: worker_applications.id })
       .from(worker_applications)
-      .where(and(eq(worker_applications.id, id), notDeleted(worker_applications)))
+      .where(
+        and(eq(worker_applications.id, id), notDeleted(worker_applications)),
+      )
       .limit(1);
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
@@ -317,7 +339,9 @@ class WorkerApplicationExtrasService {
     const [row] = await this.db
       .select({ id: worker_applications.id })
       .from(worker_applications)
-      .where(and(eq(worker_applications.id, id), notDeleted(worker_applications)))
+      .where(
+        and(eq(worker_applications.id, id), notDeleted(worker_applications)),
+      )
       .limit(1);
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));

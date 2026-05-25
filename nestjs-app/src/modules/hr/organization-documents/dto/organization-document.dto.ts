@@ -22,7 +22,9 @@ export class CreateOrganizationDocumentDto {
   @IsString()
   visibility_type?: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() document_date?: string;
-  @ApiPropertyOptional({ description: 'Base64 file (or already-uploaded path)' })
+  @ApiPropertyOptional({
+    description: 'Base64 file (or already-uploaded path)',
+  })
   @IsOptional()
   @IsString()
   file?: string;
@@ -52,7 +54,6 @@ export class OrganizationDocumentItemDto {
 
 export class OrganizationDocumentListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [OrganizationDocumentItemDto] })
   data!: OrganizationDocumentItemDto[];

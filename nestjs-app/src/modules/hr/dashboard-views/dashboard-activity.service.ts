@@ -11,6 +11,7 @@ import {
   gte,
   inArray,
   isNotNull,
+  isNull,
   lte,
   sql,
 } from 'drizzle-orm';
@@ -27,6 +28,7 @@ import {
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { resolveOrgScopeIds } from '@/common/database/org-scope.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -55,6 +57,7 @@ export class DashboardActivityService {
     private readonly mapper: DashboardViewsMapper,
     private readonly ctx: RequestContext,
     private readonly permissions: PermissionService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // GET /api/v1/hr/dashboard/disciplinary-actions
@@ -63,9 +66,18 @@ export class DashboardActivityService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
     const year = filters.year ?? new Date().getFullYear();
+    // Laravel OrganizationDisciplinary::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      organization_disciplinaries.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       notDeleted(organization_disciplinaries),
+      inScope,
       filters.type != null
         ? eq(organization_disciplinaries.fine_type, filters.type)
         : undefined,
@@ -86,7 +98,7 @@ export class DashboardActivityService {
         })
         .from(organization_disciplinaries)
         .where(where)
-        .orderBy(asc(organization_disciplinaries.id))
+        // Laravel `paginate()` ORDER BY qo'ymaydi — natural Postgres tartibi.
         .limit(perPage)
         .offset(offset),
       this.db
@@ -138,9 +150,18 @@ export class DashboardActivityService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
     const year = filters.year ?? new Date().getFullYear();
+    // Laravel OrganizationIncentive::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      organization_incentives.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       notDeleted(organization_incentives),
+      inScope,
       filters.type != null
         ? eq(organization_incentives.gift_type, filters.type)
         : undefined,
@@ -430,7 +451,10 @@ export class DashboardActivityService {
       .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(

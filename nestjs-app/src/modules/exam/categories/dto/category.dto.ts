@@ -7,6 +7,16 @@ export class QueryCategoryDto {
   @ApiPropertyOptional() @IsOptional() page?: number;
   @ApiPropertyOptional() @IsOptional() per_page?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
+
+  @ApiPropertyOptional({ example: '151,154' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ example: 222 })
+  @IsOptional()
+  @IsInt()
+  organization_id?: number;
 }
 
 export class CreateCategoryDto {

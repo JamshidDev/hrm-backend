@@ -30,9 +30,12 @@ export class HcpDeviceService {
     }
     if (q.status === 'on') conds.push(eq(h_c_p_devices.status, true));
     if (q.status === 'off') conds.push(eq(h_c_p_devices.status, false));
-    if (q.org_status === 'yes') conds.push(sql`${h_c_p_devices.organization_id} IS NOT NULL`);
-    if (q.org_status === 'no') conds.push(isNull(h_c_p_devices.organization_id));
-    if (q.attached === 'yes') conds.push(sql`${h_c_p_devices.device_id} IS NOT NULL`);
+    if (q.org_status === 'yes')
+      conds.push(sql`${h_c_p_devices.organization_id} IS NOT NULL`);
+    if (q.org_status === 'no')
+      conds.push(isNull(h_c_p_devices.organization_id));
+    if (q.attached === 'yes')
+      conds.push(sql`${h_c_p_devices.device_id} IS NOT NULL`);
     if (q.attached === 'no') conds.push(isNull(h_c_p_devices.device_id));
     const where = and(...conds);
     const [rows, [{ total }]] = await Promise.all([
@@ -45,21 +48,29 @@ export class HcpDeviceService {
         .offset(offset),
       this.db.select({ total: count() }).from(h_c_p_devices).where(where),
     ]);
-    const orgIds = [...new Set(rows.map((r) => r.organization_id).filter(Boolean) as number[])];
+    const orgIds = [
+      ...new Set(
+        rows.map((r) => r.organization_id).filter(Boolean) as number[],
+      ),
+    ];
     const orgs = orgIds.length
       ? await this.db
           .select({ id: organizations.id, name: organizations.name })
           .from(organizations)
           .where(inArray(organizations.id, orgIds))
       : [];
-    const orgMap = new Map<number, (typeof orgs)[number]>(orgs.map((o) => [o.id, o] as const));
+    const orgMap = new Map<number, (typeof orgs)[number]>(
+      orgs.map((o) => [o.id, o] as const),
+    );
     return {
       current_page: page,
       per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({
         ...r,
-        organization: r.organization_id ? orgMap.get(r.organization_id) ?? null : null,
+        organization: r.organization_id
+          ? (orgMap.get(r.organization_id) ?? null)
+          : null,
       })),
     };
   }

@@ -18,6 +18,7 @@ import {
   organizations,
   departments,
   positions as positionsTable,
+  worker_passports,
   worker_phones,
   worker_photos,
   users as usersTable,
@@ -175,6 +176,20 @@ export class WorkerService {
     // Create user account.
     if (dto.user_phone) {
       await this.createUserAccount(worker.id, dto.user_phone, pinNum);
+    }
+
+    // Passport — agar serial_number berilgan bo'lsa, worker_passports'ga yozamiz.
+    // Laravel StoreWorkerRequest passport fieldlarini qabul qilmaydi, ammo NestJS
+    // qabul qiladi va shu zaxotiyatda passport yozuvini ham yaratadi.
+    if (dto.serial_number) {
+      await this.db.insert(worker_passports).values({
+        worker_id: worker.id,
+        serial_number: dto.serial_number,
+        from_date: toDateOrNull(dto.from_date),
+        to_date: toDateOrNull(dto.to_date),
+        address: dto.passport_address ?? null,
+        current: true,
+      });
     }
 
     return WorkerMapper.toInfo(
@@ -338,7 +353,10 @@ export class WorkerService {
       .from(worker_positions)
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(
@@ -503,4 +521,21 @@ export class WorkerService {
       .set({ password, password_changed_at: sql`NOW()` })
       .where(eq(usersTable.worker_id, workerId));
   }
+}
+
+// Frontend ba'zan epoch ms (number), ba'zan ISO string yuboradi.
+// PostgreSQL `date` ustuni "YYYY-MM-DD" formatini kutadi.
+function toDateOrNull(v: string | number | null | undefined): string | null {
+  if (v == null) return null;
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v) || v <= 0) return null;
+    return new Date(v).toISOString().slice(0, 10);
+  }
+  const s = String(v).trim();
+  if (!s) return null;
+  // Allaqachon YYYY-MM-DD ko'rinishda kelsa, shunday qoldiramiz.
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
 }

@@ -45,7 +45,9 @@ export class ScheduleService {
         this.db.query.schedules.findMany({
           where: {
             deleted_at: { isNull: true },
-            ...(filters.search ? { name: { ilike: `%${filters.search}%` } } : {}),
+            ...(filters.search
+              ? { name: { ilike: `%${filters.search}%` } }
+              : {}),
           },
           with: {
             // Laravel hasMany('work_days') — soft-delete bilan filter.

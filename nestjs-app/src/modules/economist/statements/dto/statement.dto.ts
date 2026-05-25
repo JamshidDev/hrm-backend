@@ -56,9 +56,25 @@ export class StatementListQueryDto extends YearMonthPaginationDto {
 }
 
 /**
- * GET /api/v1/economist/statement-decoding?year=&lang=
+ * GET /api/v1/economist/statement-decoding?year=&month=&organizations=&lang=
  */
 export class StatementDecodingQueryDto extends YearOnlyQueryDto {
+  @ApiPropertyOptional({ description: 'Oy (1-12)', example: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month?: number;
+
+  @ApiPropertyOptional({
+    description: 'Vergul bilan ajratilgan tashkilot ID`lari',
+    example: '1,3,5',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
   @ApiPropertyOptional({ enum: ['uz', 'ru', 'en'], example: 'uz' })
   @IsOptional()
   @IsString()

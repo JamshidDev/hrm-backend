@@ -1,7 +1,8 @@
 // Topic file DTO'lar. Laravel: Exam/TopicFileController.
+// POST/PUT multipart — frontend `active` + `file` (binary) yuboradi.
 
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 export class QueryTopicFileDto {
   @ApiPropertyOptional() @IsOptional() page?: number;
@@ -9,31 +10,17 @@ export class QueryTopicFileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
 }
 
+// Laravel `StoreTopicFileRequest`: { active: required, file: required|file }.
+// `active` form-data string ('0' / '1' / 'true' / 'false') ko'rinishida kelishi mumkin.
 export class CreateTopicFileDto {
-  @ApiProperty({ description: 'Display file name' })
-  @IsString()
-  @IsNotEmpty()
-  file_name!: string;
-
-  @ApiPropertyOptional({ description: 'Storage path or URL' })
+  @ApiPropertyOptional({ description: 'Active flag (form-data string yoki boolean)' })
   @IsOptional()
-  @IsString()
-  file?: string;
-
-  @ApiPropertyOptional({ description: 'File extension (pdf, docx, ...)' })
-  @IsOptional()
-  @IsString()
-  file_extension?: string;
-
-  @ApiPropertyOptional({ description: 'File type code', default: 1 })
-  @IsOptional()
-  @IsInt()
-  type?: number;
-
-  @ApiPropertyOptional({ description: 'Active flag', default: true })
-  @IsOptional()
-  @IsBoolean()
-  active?: boolean;
+  active?: unknown;
 }
 
-export class UpdateTopicFileDto extends CreateTopicFileDto {}
+// Laravel `UpdateTopicFileRequest`: file optional, active required.
+export class UpdateTopicFileDto {
+  @ApiPropertyOptional({ description: 'Active flag (form-data string yoki boolean)' })
+  @IsOptional()
+  active?: unknown;
+}

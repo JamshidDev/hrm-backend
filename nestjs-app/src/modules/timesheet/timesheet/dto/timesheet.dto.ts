@@ -17,23 +17,32 @@ export class QueryTimeSheetDto extends SearchPaginationQueryDto {}
 
 export class CreateTimeSheetDto {
   @ApiProperty({ example: 2026 })
-  @Type(() => Number) @IsInt()
+  @Type(() => Number)
+  @IsInt()
   year!: number;
 
   @ApiProperty({ example: 5 })
-  @Type(() => Number) @IsInt()
+  @Type(() => Number)
+  @IsInt()
   month!: number;
 
   @ApiPropertyOptional({ example: 1 })
-  @IsOptional() @Type(() => Number) @IsInt() @Exists('departments', 'id')
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('departments', 'id')
   department_id?: number;
 
   @ApiPropertyOptional({ example: 1 })
-  @IsOptional() @Type(() => Number) @IsInt() @Exists('organizations', 'id')
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('organizations', 'id')
   work_place_id?: number;
 
   @ApiPropertyOptional()
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   status?: boolean;
 }
 
@@ -63,7 +72,7 @@ export class TimeSheetItemDto {
   @ApiProperty() status!: boolean;
   @ApiProperty({ nullable: true }) confirmation_file!: string | null;
   @ApiProperty() confirmation!: { id: number; name: string };
-  @ApiProperty() workers_count!: number;
+  @ApiProperty({ nullable: true }) workers_count!: number | null;
 }
 
 export class TimeSheetListResponseDto {

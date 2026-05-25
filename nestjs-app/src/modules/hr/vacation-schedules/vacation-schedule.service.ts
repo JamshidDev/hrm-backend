@@ -1,18 +1,7 @@
 // VacationSchedule service. Laravel: VacationScheduleController::index().
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, eq, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -26,6 +15,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -43,6 +33,7 @@ export class VacationScheduleService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly i18n: I18nService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -52,19 +43,16 @@ export class VacationScheduleService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
-
-    const where = and(
-      isNull(vacation_schedules.deleted_at),
-      filters.organization_id
-        ? eq(vacation_schedules.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(vacation_schedules.organization_id, orgIds)
-        : undefined,
+    // Laravel VacationSchedule::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      vacation_schedules.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
     );
+
+    const where = and(isNull(vacation_schedules.deleted_at), inScope);
 
     const offset = (page - 1) * perPage;
 
@@ -87,7 +75,10 @@ export class VacationScheduleService {
         .from(vacation_schedules)
         .leftJoin(
           organizations,
-          eq(organizations.id, vacation_schedules.organization_id),
+          and(
+            eq(organizations.id, vacation_schedules.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(workers, eq(workers.id, vacation_schedules.worker_id))
         .where(where)
@@ -99,7 +90,6 @@ export class VacationScheduleService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({
@@ -134,7 +124,10 @@ export class VacationScheduleService {
   // POST /api/v1/hr/vacation-schedules
   async create(dto: CreateVacationScheduleDto): Promise<void> {
     const [wp] = await this.db
-      .select({ id: worker_positions.id, worker_id: worker_positions.worker_id })
+      .select({
+        id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+      })
       .from(worker_positions)
       .where(eq(worker_positions.id, dto.worker_position_id))
       .limit(1);
@@ -218,10 +211,19 @@ export class VacationScheduleService {
 
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel WorkerPosition::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     // worker_positions where worker NOT IN (workers in vacation_schedules).
     const where = and(
       notDeleted(worker_positions),
+      inScope,
       sql`NOT EXISTS (
         SELECT 1 FROM ${vacation_schedules} vs
         WHERE vs.worker_id = ${worker_positions.worker_id}
@@ -250,17 +252,26 @@ export class VacationScheduleService {
         })
         .from(worker_positions)
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
-        .orderBy(asc(worker_positions.organization_id), asc(worker_positions.department_id))
+        .orderBy(
+          asc(worker_positions.organization_id),
+          asc(worker_positions.department_id),
+        )
         .limit(perPage)
         .offset(offset),
       this.db
@@ -272,7 +283,6 @@ export class VacationScheduleService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({

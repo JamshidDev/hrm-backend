@@ -94,7 +94,10 @@ export class WorkerRelativeService {
           .from(worker_relative_disabilities)
           .where(
             and(
-              inArray(worker_relative_disabilities.worker_relative_id, relativeIds),
+              inArray(
+                worker_relative_disabilities.worker_relative_id,
+                relativeIds,
+              ),
               notDeleted(worker_relative_disabilities),
             ),
           )
@@ -111,7 +114,9 @@ export class WorkerRelativeService {
       rows.map((r) =>
         WorkerRelativeMapper.toItem(
           r,
-          r.relative_worker_id ? workerMap.get(r.relative_worker_id) ?? null : null,
+          r.relative_worker_id
+            ? (workerMap.get(r.relative_worker_id) ?? null)
+            : null,
           disMap.get(r.id) ?? [],
           this.i18n,
           lang,
@@ -133,7 +138,10 @@ export class WorkerRelativeService {
 
   async update(id: number, dto: UpdateWorkerRelativeDto): Promise<void> {
     const [row] = await this.db
-      .select({ id: worker_relatives.id, worker_id: worker_relatives.worker_id })
+      .select({
+        id: worker_relatives.id,
+        worker_id: worker_relatives.worker_id,
+      })
       .from(worker_relatives)
       .where(and(eq(worker_relatives.id, id), notDeleted(worker_relatives)))
       .limit(1);
@@ -191,21 +199,42 @@ export class WorkerRelativeService {
         const [region, city, currentRegion, currentCity, positionsRows] =
           await Promise.all([
             w.region_id
-              ? this.db.select({ name: regions.name }).from(regions).where(eq(regions.id, w.region_id)).limit(1)
+              ? this.db
+                  .select({ name: regions.name })
+                  .from(regions)
+                  .where(eq(regions.id, w.region_id))
+                  .limit(1)
               : Promise.resolve([]),
             w.city_id
-              ? this.db.select({ name: cities.name }).from(cities).where(eq(cities.id, w.city_id)).limit(1)
+              ? this.db
+                  .select({ name: cities.name })
+                  .from(cities)
+                  .where(eq(cities.id, w.city_id))
+                  .limit(1)
               : Promise.resolve([]),
             w.current_region_id
-              ? this.db.select({ name: regions.name }).from(regions).where(eq(regions.id, w.current_region_id)).limit(1)
+              ? this.db
+                  .select({ name: regions.name })
+                  .from(regions)
+                  .where(eq(regions.id, w.current_region_id))
+                  .limit(1)
               : Promise.resolve([]),
             w.current_city_id
-              ? this.db.select({ name: cities.name }).from(cities).where(eq(cities.id, w.current_city_id)).limit(1)
+              ? this.db
+                  .select({ name: cities.name })
+                  .from(cities)
+                  .where(eq(cities.id, w.current_city_id))
+                  .limit(1)
               : Promise.resolve([]),
             this.db
               .select({ post_name: worker_positions.post_name })
               .from(worker_positions)
-              .where(and(eq(worker_positions.worker_id, w.id), notDeleted(worker_positions))),
+              .where(
+                and(
+                  eq(worker_positions.worker_id, w.id),
+                  notDeleted(worker_positions),
+                ),
+              ),
           ]);
         relativeData = {
           id: w.id,
@@ -216,8 +245,14 @@ export class WorkerRelativeService {
           birthday: w.birthday,
           marital_status: w.marital_status,
           address: w.address,
-          birth_address: [region[0]?.name, city[0]?.name].filter(Boolean).join(', '),
-          current_address: [currentRegion[0]?.name, currentCity[0]?.name, w.address]
+          birth_address: [region[0]?.name, city[0]?.name]
+            .filter(Boolean)
+            .join(', '),
+          current_address: [
+            currentRegion[0]?.name,
+            currentCity[0]?.name,
+            w.address,
+          ]
             .filter(Boolean)
             .join(', '),
           positions_text: positionsRows

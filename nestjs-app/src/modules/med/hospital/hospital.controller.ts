@@ -48,14 +48,14 @@ export class HospitalController {
   @ApiOperation({ summary: 'Attach a commission to a ticket' })
   async attachCommission(@Body() dto: AttachCommissionDto) {
     await this.service.attachCommission(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Delete('tickets-attach/:id')
   @ApiOperation({ summary: 'Detach a commission from a ticket' })
   async detachCommission(@Param('id', ParseIntPipe) id: number) {
     await this.service.detachCommission(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Post('tickets/:id/confirm')
@@ -65,6 +65,6 @@ export class HospitalController {
     @Body() dto: ConfirmDocumentDto,
   ) {
     await this.service.confirm(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 }

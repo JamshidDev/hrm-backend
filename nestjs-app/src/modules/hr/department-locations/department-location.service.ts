@@ -1,7 +1,7 @@
 // DepartmentLocation service. Laravel: HR/DepartmentLocationController.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ilike, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -49,10 +49,16 @@ export class DepartmentLocationService {
           org_name: organizations.name,
         })
         .from(department_locations)
-        .leftJoin(departments, eq(departments.id, department_locations.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, department_locations.department_id),
+        )
         .leftJoin(
           organizations,
-          eq(organizations.id, departments.organization_id),
+          and(
+            eq(organizations.id, departments.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(asc(department_locations.id))
@@ -102,7 +108,10 @@ export class DepartmentLocationService {
         radius: department_locations.radius,
       })
       .from(department_locations)
-      .leftJoin(departments, eq(departments.id, department_locations.department_id))
+      .leftJoin(
+        departments,
+        eq(departments.id, department_locations.department_id),
+      )
       .orderBy(asc(department_locations.id));
 
     return rows;
@@ -170,6 +179,8 @@ export class DepartmentLocationService {
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
-    await this.db.delete(department_locations).where(eq(department_locations.id, id));
+    await this.db
+      .delete(department_locations)
+      .where(eq(department_locations.id, id));
   }
 }

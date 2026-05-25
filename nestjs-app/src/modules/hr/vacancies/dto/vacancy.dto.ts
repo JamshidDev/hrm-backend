@@ -6,10 +6,15 @@ import { IsInt, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryVacancyDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
 }
 
@@ -50,13 +55,17 @@ export class VacancyDepartmentDto {
 
 export class VacancyItemDto {
   @ApiProperty() id!: number;
-  @ApiProperty({ type: VacancyOrgDto, nullable: true }) organization!: VacancyOrgDto | null;
-  @ApiProperty({ type: VacancyPositionDto, nullable: true }) position!: VacancyPositionDto | null;
-  @ApiProperty({ type: VacancyDepartmentDto, nullable: true }) department!: VacancyDepartmentDto | null;
+  @ApiProperty({ type: VacancyOrgDto, nullable: true })
+  organization!: VacancyOrgDto | null;
+  @ApiProperty({ type: VacancyPositionDto, nullable: true })
+  position!: VacancyPositionDto | null;
+  @ApiProperty({ type: VacancyDepartmentDto, nullable: true })
+  department!: VacancyDepartmentDto | null;
   @ApiProperty() rate!: number;
   @ApiProperty({ nullable: true }) to!: string | null;
   @ApiProperty() finish!: number;
-  @ApiProperty({ type: VacancyCityDto, nullable: true }) city!: VacancyCityDto | null;
+  @ApiProperty({ type: VacancyCityDto, nullable: true })
+  city!: VacancyCityDto | null;
   @ApiProperty() salary!: number;
   @ApiProperty() salary_status!: boolean;
   @ApiProperty() phd_status!: boolean;

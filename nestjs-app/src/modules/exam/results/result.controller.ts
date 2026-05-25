@@ -36,13 +36,21 @@ export class ResultController {
     @Param('workerExamId', ParseIntPipe) workerExamId: number,
     @Body() body: any,
   ) {
-    return buildSuccess(true, await this.service.sendToConfirmations(workerExamId, body));
+    return buildSuccess(
+      true,
+      await this.service.sendToConfirmations(workerExamId, body),
+    );
   }
 
   @Get('results/send-confirmations/:workerExamId')
   @ApiOperation({ summary: 'Show confirmation flow history' })
-  async showConfirmations(@Param('workerExamId', ParseIntPipe) workerExamId: number) {
-    return buildSuccess(true, await this.service.showConfirmations(workerExamId));
+  async showConfirmations(
+    @Param('workerExamId', ParseIntPipe) workerExamId: number,
+  ) {
+    return buildSuccess(
+      true,
+      await this.service.showConfirmations(workerExamId),
+    );
   }
 
   @Get('results/export')

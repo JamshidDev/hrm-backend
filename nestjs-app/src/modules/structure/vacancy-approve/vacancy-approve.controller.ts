@@ -47,7 +47,10 @@ export class VacancyApproveController {
   }
 
   @Post('attach')
-  @ApiOperation({ summary: 'Attach to-organizations to a from-organization (replace existing)' })
+  @ApiOperation({
+    summary:
+      'Attach to-organizations to a from-organization (replace existing)',
+  })
   @ApiOkResponse()
   async attach(@Body() dto: AttachVacancyApproveDto) {
     await this.service.attach(dto);

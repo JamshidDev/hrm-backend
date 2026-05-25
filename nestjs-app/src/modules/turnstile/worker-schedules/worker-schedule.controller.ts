@@ -43,15 +43,18 @@ export class WorkerScheduleController {
   }
   @Post('workers') async store(@Body() body: any) {
     await this.service.create(body);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
-  @Put('workers/:id') async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  @Put('workers/:id') async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
     await this.service.update(id, body);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
   @Delete('workers/:id') async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   // ---------- generation / timesheet ----------
@@ -60,7 +63,7 @@ export class WorkerScheduleController {
   }
   @Post('timesheet/export') async timesheetExport(@Body() body: any) {
     await this.service.exportTimesheet(body);
-    return buildSuccess(this.i18n.t('messages.successfully_exported') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
   @Get('workers-with-turnstile') async workersWithTurnstile(@Query() q: any) {
     return buildSuccess(true, await this.service.indexTurnstileSheet(q));
@@ -74,13 +77,25 @@ export class WorkerScheduleController {
   @Post('generate-schedule') async generateScheduleAction(@Body() body: any) {
     return buildSuccess(true, await this.service.generateScheduleAction(body));
   }
-  @Post('generate-schedule-workers') async generateScheduleByWorker(@Body() body: any) {
-    return buildSuccess(true, await this.service.generateScheduleByWorker(body));
+  @Post('generate-schedule-workers') async generateScheduleByWorker(
+    @Body() body: any,
+  ) {
+    return buildSuccess(
+      true,
+      await this.service.generateScheduleByWorker(body),
+    );
   }
-  @Post('schedule-workers-replacement') async replacementWorkers(@Body() body: any) {
+  @Post('schedule-workers-replacement') async replacementWorkers(
+    @Body() body: any,
+  ) {
     return buildSuccess(true, await this.service.replacementWorkers(body));
   }
-  @Post('generate-turnstile-schedule') async generateTurnstileSchedule(@Body() body: any) {
-    return buildSuccess(true, await this.service.generateTurnstileSchedule(body));
+  @Post('generate-turnstile-schedule') async generateTurnstileSchedule(
+    @Body() body: any,
+  ) {
+    return buildSuccess(
+      true,
+      await this.service.generateTurnstileSchedule(body),
+    );
   }
 }

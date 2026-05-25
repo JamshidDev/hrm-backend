@@ -10,7 +10,10 @@ import { WorkerUuidLookup } from '@/modules/hr/_shared/worker-uuid.helper';
 
 @Module({
   imports: [AuthModule, MinioModule],
-  controllers: [WorkerRelativeController, WorkerRelativeSortableAliasController],
+  controllers: [
+    WorkerRelativeController,
+    WorkerRelativeSortableAliasController,
+  ],
   providers: [WorkerRelativeService, WorkerUuidLookup],
 })
 export class WorkerRelativeModule {}

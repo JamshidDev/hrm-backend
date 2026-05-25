@@ -1,14 +1,7 @@
 // BusinessTrip service. Laravel: WorkerBusinessTripController::index().
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  inArray,
-  isNull,
-} from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -21,6 +14,7 @@ import {
   positions as positionsTable,
 } from '@/db/schema';
 import { RequestContext } from '@/common/context/request.context';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
   getFullPosition,
@@ -43,6 +37,7 @@ export class BusinessTripService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -52,19 +47,16 @@ export class BusinessTripService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
-
-    const where = and(
-      isNull(worker_business_trips.deleted_at),
-      filters.organization_id
-        ? eq(worker_business_trips.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(worker_business_trips.organization_id, orgIds)
-        : undefined,
+    // Laravel WorkerBusinessTrip::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      worker_business_trips.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
     );
+
+    const where = and(isNull(worker_business_trips.deleted_at), inScope);
 
     const offset = (page - 1) * perPage;
 
@@ -94,10 +86,16 @@ export class BusinessTripService {
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -106,12 +104,14 @@ export class BusinessTripService {
         .orderBy(desc(worker_business_trips.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(worker_business_trips).where(where),
+      this.db
+        .select({ total: count() })
+        .from(worker_business_trips)
+        .where(where),
     ]);
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => {
@@ -147,7 +147,10 @@ export class BusinessTripService {
                   }),
                 }
               : null,
-            type: { id: r.type, name: typeof typeLabel === 'string' ? typeLabel : '' },
+            type: {
+              id: r.type,
+              name: typeof typeLabel === 'string' ? typeLabel : '',
+            },
             from: r.from,
             to: r.to,
             to_organization: r.to_organization,

@@ -46,24 +46,24 @@ export class HcpDeviceController {
     @Body() dto: UpdateHcpDeviceDto,
   ) {
     await this.service.update(deviceId, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete('devices/:deviceId') async remove(
     @Param('deviceId', ParseIntPipe) deviceId: number,
   ) {
     await this.service.remove(deviceId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Post('devices') async store(@Body() dto: CreateHcpDeviceDto) {
     await this.service.create(dto);
     // Laravel returns successfully_updated (yes — it's a Laravel quirk).
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('devices-refresh') async refresh() {
     await this.service.refresh();
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 }

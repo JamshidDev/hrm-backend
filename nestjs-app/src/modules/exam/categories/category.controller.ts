@@ -49,7 +49,7 @@ export class CategoryController {
   @ApiOperation({ summary: 'Create a category' })
   async store(@Body() dto: CreateCategoryDto) {
     await this.service.create(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
@@ -59,14 +59,14 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Soft-delete a category' })
   async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   // Kategoriya ichidagi barcha savollarni o'chirish.
@@ -80,9 +80,7 @@ export class CategoryController {
   // Excel import uchun ustun nomlari.
   @Post(':categoryId/excel-header')
   @ApiOperation({ summary: 'Get expected Excel header columns for import' })
-  async excelHeader(
-    @Param('categoryId', ParseIntPipe) _categoryId: number,
-  ) {
+  async excelHeader(@Param('categoryId', ParseIntPipe) _categoryId: number) {
     return buildSuccess(true, this.service.excelHeader());
   }
 

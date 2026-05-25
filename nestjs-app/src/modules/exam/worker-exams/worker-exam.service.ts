@@ -18,10 +18,20 @@ export class WorkerExamService {
     const { page, perPage, offset } = pageOf(q);
     const where = notDeleted(worker_exams);
     const [rows, [{ total }]] = await Promise.all([
-      this.db.select().from(worker_exams).where(where).limit(perPage).offset(offset),
+      this.db
+        .select()
+        .from(worker_exams)
+        .where(where)
+        .limit(perPage)
+        .offset(offset),
       this.db.select({ total: count() }).from(worker_exams).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: DashboardController->workerStatistics — umumiy hisob va status'lar.

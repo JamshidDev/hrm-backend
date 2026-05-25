@@ -77,7 +77,9 @@ export class WorkerController {
   @Put('workers/:id')
   @UseGuards(PermissionGuard)
   @Permission('hr')
-  @ApiOperation({ summary: 'Update worker (selective fields + password reset)' })
+  @ApiOperation({
+    summary: 'Update worker (selective fields + password reset)',
+  })
   @ApiOkResponse()
   async update(
     @Param('id', ParseIntPipe) id: number,

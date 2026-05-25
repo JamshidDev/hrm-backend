@@ -130,10 +130,7 @@ export class DocumentService {
   async documentBase64(query: DocumentBase64QueryDto) {
     const map = MODEL_TYPE_TABLE_MAP[query.model_type];
     if (!map) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.invalid_type'),
-      );
+      throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dTable = map.doc as any;
@@ -253,8 +250,7 @@ export class DocumentService {
     const typeIdx = (t: string | null) => ['s', 'w', 'd'].indexOf(t ?? '');
     confRows.sort(
       (a, b) =>
-        typeIdx(a.type) - typeIdx(b.type) ||
-        (a.order ?? 0) - (b.order ?? 0),
+        typeIdx(a.type) - typeIdx(b.type) || (a.order ?? 0) - (b.order ?? 0),
     );
 
     // currentUserConfirmation — PROCESS bo'lsa READ ga o'tkaziladi.
@@ -461,10 +457,7 @@ export class DocumentService {
   async generateConfirmationUrl(query: GenerateConfirmationUrlDto) {
     const map = MODEL_TYPE_TABLE_MAP[query.model];
     if (!map) {
-      throw new BusinessException(
-        404,
-        this.i18n.t('error.model_not_found'),
-      );
+      throw new BusinessException(404, this.i18n.t('error.model_not_found'));
     }
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const confTable = map.conf as any;
@@ -655,9 +648,7 @@ export class DocumentService {
     const [pendingRow] = await this.db
       .select({ pending: count() })
       .from(confTable)
-      .where(
-        and(eq(confTable[map.fk], conf.doc_id), ne(confTable.status, 3)),
-      );
+      .where(and(eq(confTable[map.fk], conf.doc_id), ne(confTable.status, 3)));
     if (Number(pendingRow?.pending ?? 0) === 0) {
       await this.db
         .update(dTable)

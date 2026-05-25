@@ -1,16 +1,7 @@
 // ContractAdditional service. Laravel: ContractAdditionalController::index().
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-} from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -22,6 +13,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { sql } from 'drizzle-orm';
 import { RequestContext } from '@/common/context/request.context';
@@ -41,6 +33,7 @@ export class ContractAdditionalService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -50,21 +43,20 @@ export class ContractAdditionalService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
-
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel ContractAdditional::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      contract_additional.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       isNull(contract_additional.deleted_at),
-      filters.organization_id
-        ? eq(contract_additional.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(contract_additional.organization_id, orgIds)
-        : undefined,
+      inScope,
       searchCond,
     );
 
@@ -111,7 +103,10 @@ export class ContractAdditionalService {
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, contract_additional.organization_id),
+          and(
+            eq(organizations.id, contract_additional.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(desc(contract_additional.id))
@@ -195,7 +190,9 @@ export class ContractAdditionalService {
         confirmation: contract_additional.confirmation,
       })
       .from(contract_additional)
-      .where(and(eq(contract_additional.id, id), notDeleted(contract_additional)))
+      .where(
+        and(eq(contract_additional.id, id), notDeleted(contract_additional)),
+      )
       .limit(1);
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
@@ -203,7 +200,9 @@ export class ContractAdditionalService {
     if (row.confirmation === 3) {
       throw new BusinessException(
         409,
-        this.i18n.t('messages.you_cannot_delete_a_document_that_has_been_approved'),
+        this.i18n.t(
+          'messages.you_cannot_delete_a_document_that_has_been_approved',
+        ),
       );
     }
     await this.db
@@ -217,7 +216,9 @@ export class ContractAdditionalService {
     const [row] = await this.db
       .select({ id: contract_additional.id })
       .from(contract_additional)
-      .where(and(eq(contract_additional.id, id), notDeleted(contract_additional)))
+      .where(
+        and(eq(contract_additional.id, id), notDeleted(contract_additional)),
+      )
       .limit(1);
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));

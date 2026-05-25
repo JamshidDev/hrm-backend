@@ -46,13 +46,16 @@ export interface WorkerPositionListRow {
   pos_name_en: string | null;
 }
 
-function workerToDto(this: void, r: WorkerPositionListRow): WPWorkerMinDto | null {
+function workerToDto(
+  this: void,
+  r: WorkerPositionListRow,
+  photoUrl: string | null,
+): WPWorkerMinDto | null {
   if (r.worker_id == null) return null;
   return {
     id: r.worker_id,
     uuid: r.worker_uuid ?? '',
-    // Laravel: signed URL — NestJS hozircha raw path. Test masks photo.
-    photo: r.worker_photo,
+    photo: photoUrl,
     last_name: r.worker_last,
     first_name: r.worker_first,
     middle_name: r.worker_middle,
@@ -64,7 +67,11 @@ function workerToDto(this: void, r: WorkerPositionListRow): WPWorkerMinDto | nul
   };
 }
 
-function orgToDto(this: void, r: WorkerPositionListRow, lang: string): WPOrgMinDto | null {
+function orgToDto(
+  this: void,
+  r: WorkerPositionListRow,
+  lang: string,
+): WPOrgMinDto | null {
   if (r.org_id == null) return null;
   let name = r.org_name;
   if (lang === 'ru') name = r.org_name_ru ?? r.org_name;
@@ -114,11 +121,12 @@ export const WorkerPositionMapper = {
     r: WorkerPositionListRow,
     i18n: I18nService,
     lang: string,
+    photoUrl: string | null = null,
   ): WorkerPositionListItemDto {
     return {
       id: r.id,
       uuid: r.uuid,
-      worker: workerToDto(r),
+      worker: workerToDto(r, photoUrl),
       organization: orgToDto(r, lang),
       department: deptToDto(r),
       position: positionToDto(r, lang),

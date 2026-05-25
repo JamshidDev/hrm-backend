@@ -13,7 +13,9 @@ export class VacancyEnumsController {
 
   @Public()
   @Get('enums')
-  @ApiOperation({ summary: 'Vacancy enums (educations, countries, file types, ...)' })
+  @ApiOperation({
+    summary: 'Vacancy enums (educations, countries, file types, ...)',
+  })
   async enums() {
     return buildSuccess(true, await this.service.enums());
   }

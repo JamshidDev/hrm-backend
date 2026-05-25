@@ -43,7 +43,7 @@ export class BuildingController {
   @ApiOperation({ summary: 'Create building' })
   async store(@Body() dto: CreateBuildingDto) {
     await this.service.create(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
@@ -53,13 +53,13 @@ export class BuildingController {
     @Body() dto: UpdateBuildingDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete building (soft-delete)' })
   async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

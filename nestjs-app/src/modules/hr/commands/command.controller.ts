@@ -47,16 +47,22 @@ export class CommandController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Commands list (with workers[] via command_confirmations)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Commands list (with workers[] via command_confirmations)',
+  })
   @ApiOkResponse({ type: CommandListResponseDto })
   async findAll(@Query() query: QueryCommandDto) {
     return this.service.findAll(query);
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Create command — status=view → PDF preview, else record' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Create command — status=view → PDF preview, else record',
+  })
   async create(@Body() dto: CreateCommandDto, @Res() res: Response) {
     // Laravel: status='view' → command DB ga yozilmaydi, PDF preview qaytariladi.
     if (dto.status === 'view') {
@@ -81,17 +87,22 @@ export class CommandController {
       return;
     }
 
-    res.status(200).json(
-      buildSuccess(
-        this.i18n.t('messages.successfully_stored'),
-        await this.service.create(dto),
-      ),
-    );
+    res
+      .status(200)
+      .json(
+        buildSuccess(
+          this.i18n.t('messages.successfully_stored'),
+          await this.service.create(dto),
+        ),
+      );
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Delete command (cannot delete if confirmed=SUCCESS)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Delete command (cannot delete if confirmed=SUCCESS)',
+  })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
@@ -107,7 +118,8 @@ export class WorkerAdditionalController {
   constructor(private readonly service: CommandService) {}
 
   @Get('worker-additional/:id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({
     summary:
       'Worker position additional data (pension/coefficient/compensation/financial_assistance)',

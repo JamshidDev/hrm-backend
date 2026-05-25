@@ -40,7 +40,8 @@ export class ContractAdditionalController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Contract additional list' })
   @ApiOkResponse({ type: ContractAdditionalListResponseDto })
   async findAll(@Query() query: QueryContractAdditionalDto) {
@@ -48,22 +49,27 @@ export class ContractAdditionalController {
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateContractAdditionalDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Post(':id/confirmation')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Mark contract-additional as SUCCESS (signature upload)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Mark contract-additional as SUCCESS (signature upload)',
+  })
   async confirmation(@Param('id', ParseIntPipe) id: number) {
     await this.service.confirmation(id);
     return buildSuccess(this.i18n.t('messages.signature.success'), []);
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

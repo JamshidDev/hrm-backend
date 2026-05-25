@@ -10,22 +10,34 @@ export class QueryWorkerSickLeaveDto {
 }
 
 export class CreateWorkerSickLeaveDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('workers', 'id')
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('workers', 'id')
   worker_id!: number;
 
-  @ApiProperty() @Type(() => Number) @IsInt()
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
   worker_position_id!: number;
 
-  @ApiProperty({ example: '2024-01-01' }) @IsDateString()
+  @ApiProperty({ example: '2024-01-01' })
+  @IsDateString()
   from_date!: string;
 
-  @ApiPropertyOptional({ example: '2024-01-10' }) @IsOptional() @IsDateString()
+  @ApiPropertyOptional({ example: '2024-01-10' })
+  @IsOptional()
+  @IsDateString()
   to_date?: string;
 
-  @ApiPropertyOptional() @IsOptional()
+  @ApiPropertyOptional()
+  @IsOptional()
   sick?: unknown;
 
-  @ApiPropertyOptional({ example: 1 }) @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   type?: number;
 }
 

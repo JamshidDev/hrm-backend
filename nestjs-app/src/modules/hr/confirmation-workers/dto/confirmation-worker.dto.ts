@@ -16,7 +16,7 @@ export class QueryConfirmationWorkerDto extends SearchPaginationQueryDto {
   organizations?: string;
 
   @ApiPropertyOptional({
-    description: 'Yaratilgan sana bo\'yicha filter (YYYY-MM-DD)',
+    description: "Yaratilgan sana bo'yicha filter (YYYY-MM-DD)",
     example: '2026-04-28',
   })
   @IsOptional()

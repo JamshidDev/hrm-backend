@@ -2,22 +2,13 @@
 // Search: terms ORed across last/first/middle name + pin.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { pensioners, organizations } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { I18nService } from 'nestjs-i18n';
 import { RequestContext } from '@/common/context/request.context';
 import { ExcelService } from '@/shared/excel/excel.service';
@@ -44,6 +35,7 @@ export class PensionerService {
     private readonly i18n: I18nService,
     private readonly excel: ExcelService,
     private readonly exportRunner: ExportTaskRunner,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(filters: QueryPensionerDto): Promise<PensionerListResponseDto> {
@@ -51,12 +43,11 @@ export class PensionerService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
+    // Laravel Pensioner::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(pensioners.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     const terms = filters.search ? filters.search.trim().split(/\s+/) : [];
     const termConds = terms.map((t) =>
@@ -68,16 +59,7 @@ export class PensionerService {
       ),
     );
 
-    const where = and(
-      isNull(pensioners.deleted_at),
-      filters.organization_id
-        ? eq(pensioners.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(pensioners.organization_id, orgIds)
-        : undefined,
-      ...termConds,
-    );
+    const where = and(isNull(pensioners.deleted_at), inScope, ...termConds);
 
     const offset = (page - 1) * perPage;
 
@@ -109,7 +91,10 @@ export class PensionerService {
         .from(pensioners)
         .leftJoin(
           organizations,
-          eq(organizations.id, pensioners.organization_id),
+          and(
+            eq(organizations.id, pensioners.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(asc(pensioners.id))
@@ -120,7 +105,6 @@ export class PensionerService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({
         id: r.id,
@@ -257,12 +241,10 @@ export class PensionerService {
     filters: QueryPensionerDto,
     lang: string,
   ): Promise<Buffer> {
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
+    const inScope = await this.scope.whereOrg(pensioners.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     // findAll bilan bir xil qidiruv: ism + pin bo'yicha.
     const terms = filters.search ? filters.search.trim().split(/\s+/) : [];
@@ -275,16 +257,7 @@ export class PensionerService {
       ),
     );
 
-    const where = and(
-      isNull(pensioners.deleted_at),
-      filters.organization_id
-        ? eq(pensioners.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(pensioners.organization_id, orgIds)
-        : undefined,
-      ...termConds,
-    );
+    const where = and(isNull(pensioners.deleted_at), inScope, ...termConds);
 
     const rows = await this.db
       .select({
@@ -306,7 +279,13 @@ export class PensionerService {
         org_name: organizations.name,
       })
       .from(pensioners)
-      .leftJoin(organizations, eq(organizations.id, pensioners.organization_id))
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, pensioners.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
       .where(where)
       .orderBy(asc(pensioners.id));
 

@@ -23,15 +23,23 @@ export class EnumsExtrasController {
   constructor(private readonly service: EnumsExtrasService) {}
 
   @Get('contract-additional-types')
-  @ApiOperation({ summary: 'ContractAdditional types (subset by contract_type)' })
+  @ApiOperation({
+    summary: 'ContractAdditional types (subset by contract_type)',
+  })
   contractAdditionalTypes(@Query() query: ContractAdditionalTypesQueryDto) {
-    return buildSuccess(true, this.service.contractAdditionalTypes(query.contract_type));
+    return buildSuccess(
+      true,
+      this.service.contractAdditionalTypes(query.contract_type),
+    );
   }
 
   @Get('command-types')
   @ApiOperation({ summary: 'Command types (by status + type)' })
   commandTypes(@Query() query: CommandTypesQueryDto) {
-    return buildSuccess(true, this.service.commandTypes(query.status, query.type));
+    return buildSuccess(
+      true,
+      this.service.commandTypes(query.status, query.type),
+    );
   }
 
   @Get('reason-types')

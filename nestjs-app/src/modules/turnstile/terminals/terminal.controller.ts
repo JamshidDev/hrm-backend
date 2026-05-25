@@ -43,7 +43,7 @@ export class TerminalController {
   @ApiOperation({ summary: 'Create terminal' })
   async store(@Body() dto: CreateTerminalDto) {
     await this.service.create(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
@@ -53,13 +53,13 @@ export class TerminalController {
     @Body() dto: UpdateTerminalDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete terminal (soft-delete)' })
   async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

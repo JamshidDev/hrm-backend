@@ -29,7 +29,9 @@ export class UploadController {
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload generic file (pdf, docx, jpg, png) — returns signed URL' })
+  @ApiOperation({
+    summary: 'Upload generic file (pdf, docx, jpg, png) — returns signed URL',
+  })
   @ApiOkResponse()
   async upload(
     @UploadedFile() file: Express.Multer.File | undefined,

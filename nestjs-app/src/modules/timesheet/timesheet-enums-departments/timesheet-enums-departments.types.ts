@@ -66,7 +66,9 @@ export const TIMESHEET_TYPE_LABEL: Record<number, string> = {
 };
 
 // Laravel: in_array($case, [YA, N, RP, S, UV, LCH, NS])
-export const TIMESHEET_TYPE_HOURS: Set<number> = new Set([1, 2, 3, 5, 17, 27, 32]);
+export const TIMESHEET_TYPE_HOURS: Set<number> = new Set([
+  1, 2, 3, 5, 17, 27, 32,
+]);
 
 // Stable iteration order as in Laravel enum declaration.
 export const TIMESHEET_TYPE_IDS: number[] = [

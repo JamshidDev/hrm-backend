@@ -38,6 +38,14 @@ export class QueryReportDto extends PaginationQueryDto {
   @IsString()
   organizations?: string;
 
+  @ApiPropertyOptional({ example: 222 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
+
+  // Laravel ReportController::index — year/month query params YA'NI YO'Q
+  // (parity). Filter qilmaymiz. DTO'da accept qilamiz, ammo unutmaymiz.
   @ApiPropertyOptional({ example: 2026 })
   @IsOptional()
   @Type(() => Number)
@@ -52,7 +60,20 @@ export class QueryReportDto extends PaginationQueryDto {
   month?: number;
 }
 
-export class QueryReportMonthDto extends PaginationQueryDto {}
+export class QueryReportMonthDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ example: 2026 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional({ example: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  month?: number;
+}
 
 // GET /reports-stat — year/month bo'yicha tashkilot daraxti statistikasi.
 export class QueryReportStatDto {
@@ -234,9 +255,6 @@ export class ReportItemDto {
 export class ReportListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
-
-  @ApiProperty({ example: 10 })
-  per_page!: number;
 
   @ApiProperty({ example: 100 })
   total!: number;

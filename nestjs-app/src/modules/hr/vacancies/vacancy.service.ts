@@ -143,7 +143,10 @@ export class VacancyService {
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, vacancy_positions.organization_id),
+          and(
+            eq(organizations.id, vacancy_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(cities, eq(cities.id, vacancy_positions.city_id))
         .leftJoin(regions, eq(regions.id, cities.region_id))

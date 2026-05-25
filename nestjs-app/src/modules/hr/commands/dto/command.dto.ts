@@ -2,13 +2,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsIn,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 // POST /api/v1/hr/commands
@@ -23,7 +17,10 @@ export class CreateCommandDto {
   @IsInt()
   director_id!: number;
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   worker_position_id?: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() status?: string;
@@ -38,11 +35,19 @@ export class CreateCommandDto {
   @ApiPropertyOptional() @IsOptional() @IsString() command_number?: string;
   @ApiPropertyOptional() @IsOptional() confirmations?: unknown[];
   @ApiPropertyOptional() @IsOptional() workers?: unknown[];
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() organization_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() base?: string;
   @ApiPropertyOptional() @IsOptional() reason?: unknown;
   @ApiPropertyOptional() @IsOptional() additional?: unknown;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() finance_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  finance_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() contract_to_date?: string;
   @ApiPropertyOptional() @IsOptional() command_additional?: unknown;
 }
@@ -72,13 +77,21 @@ export class CheckWorkerPositionAdditionalQueryDto {
 }
 
 export class QueryCommandDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   confirmation?: number;
 }
 
@@ -123,7 +136,6 @@ export class CommandItemDto {
 
 export class CommandListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [CommandItemDto] }) data!: CommandItemDto[];
 }

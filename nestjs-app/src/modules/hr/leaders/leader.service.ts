@@ -1,7 +1,7 @@
 // Leader service. Laravel: OrganizationLeaderController::index().
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -15,6 +15,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -36,6 +37,7 @@ export class LeaderService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly i18n: I18nService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(filters: QueryLeaderDto): Promise<LeaderListResponseDto> {
@@ -43,25 +45,21 @@ export class LeaderService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
-
     // Laravel leaders endpointida search yo'q — bizda hodim F.I.SH bo'yicha
     // qidiruv qo'shamiz (worker_position.worker bo'yicha).
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel OrganizationLeader::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      organization_leaders.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       isNull(organization_leaders.deleted_at),
-      filters.organization_id
-        ? eq(organization_leaders.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(organization_leaders.organization_id, orgIds)
-        : undefined,
+      inScope,
       searchCond,
     );
 
@@ -90,7 +88,10 @@ export class LeaderService {
         .from(organization_leaders)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_leaders.organization_id),
+          and(
+            eq(organizations.id, organization_leaders.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(
           worker_positions,
@@ -123,7 +124,6 @@ export class LeaderService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({

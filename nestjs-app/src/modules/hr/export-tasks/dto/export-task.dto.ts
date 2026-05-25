@@ -18,7 +18,7 @@ export class ExportTaskWorkerDto {
 export class ExportTaskItemDto {
   @ApiProperty() id!: number;
   // Laravel: type STRING (translated label, not {id, name}).
-  @ApiProperty({ example: 'Xodimlar ma\'lumotlarini excelga yuklash' })
+  @ApiProperty({ example: "Xodimlar ma'lumotlarini excelga yuklash" })
   type!: string;
   @ApiProperty() status!: { id: number; name: string };
   @ApiProperty({ type: ExportTaskWorkerDto, nullable: true })

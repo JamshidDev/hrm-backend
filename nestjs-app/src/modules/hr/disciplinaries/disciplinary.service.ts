@@ -13,6 +13,7 @@ import {
   positions as positionsTable,
 } from '@/db/schema';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -29,6 +30,7 @@ export class DisciplinaryService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
     private readonly minio: MinioService,
   ) {}
 
@@ -39,27 +41,20 @@ export class DisciplinaryService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
-
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel OrganizationDisciplinary::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      organization_disciplinaries.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       isNull(organization_disciplinaries.deleted_at),
-      filters.organization_id
-        ? eq(
-            organization_disciplinaries.organization_id,
-            filters.organization_id,
-          )
-        : undefined,
-      orgIds.length > 0
-        ? inArray(organization_disciplinaries.organization_id, orgIds)
-        : undefined,
+      inScope,
       // Laravel: when(created) → whereDate('created_at', created).
       filters.created
         ? sql`DATE(${organization_disciplinaries.created_at}) = ${filters.created}`
@@ -97,7 +92,10 @@ export class DisciplinaryService {
         .from(organization_disciplinaries)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_disciplinaries.organization_id),
+          and(
+            eq(organizations.id, organization_disciplinaries.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(
           worker_positions,
@@ -131,7 +129,6 @@ export class DisciplinaryService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => {

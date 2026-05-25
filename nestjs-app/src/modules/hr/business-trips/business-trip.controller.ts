@@ -24,7 +24,8 @@ export class BusinessTripController {
   constructor(private readonly service: BusinessTripService) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker business trips list' })
   @ApiOkResponse({ type: BusinessTripListResponseDto })
   async findAll(@Query() query: QueryBusinessTripDto) {

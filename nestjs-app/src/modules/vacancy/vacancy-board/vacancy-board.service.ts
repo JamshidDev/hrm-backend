@@ -41,7 +41,9 @@ export class VacancyBoardService {
       filters.organization_id
         ? eq(vacancy_positions.organization_id, filters.organization_id)
         : undefined,
-      filters.city_id ? eq(vacancy_positions.city_id, filters.city_id) : undefined,
+      filters.city_id
+        ? eq(vacancy_positions.city_id, filters.city_id)
+        : undefined,
     );
 
     const [rows, [{ total }]] = await Promise.all([
@@ -88,7 +90,9 @@ export class VacancyBoardService {
         view_count: vacancy_positions.view_count,
       })
       .from(vacancy_positions)
-      .where(and(notDeleted(vacancy_positions), eq(vacancy_positions.status, true)))
+      .where(
+        and(notDeleted(vacancy_positions), eq(vacancy_positions.status, true)),
+      )
       .orderBy(desc(vacancy_positions.id))
       .limit(50);
   }

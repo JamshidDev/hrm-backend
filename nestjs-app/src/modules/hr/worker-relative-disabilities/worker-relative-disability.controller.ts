@@ -41,27 +41,36 @@ export class WorkerRelativeDisabilityController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Worker relative disabilities (filter by worker_relative_id)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Worker relative disabilities (filter by worker_relative_id)',
+  })
   async findAll(@Query() query: QueryWorkerRelativeDisabilityDto) {
-    return buildSuccess(true, await this.service.findAll(query.worker_relative_id));
+    return buildSuccess(
+      true,
+      await this.service.findAll(query.worker_relative_id),
+    );
   }
 
   @Get(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.findOne(id));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateWorkerRelativeDisabilityDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWorkerRelativeDisabilityDto,
@@ -71,7 +80,8 @@ export class WorkerRelativeDisabilityController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

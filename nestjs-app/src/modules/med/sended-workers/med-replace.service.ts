@@ -10,7 +10,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import PizZip from 'pizzip';
 import QRCode from 'qrcode';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -31,8 +31,18 @@ import {
 } from '@/shared/docx/docx-template.util';
 
 const UZ_MONTHS = [
-  'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
-  'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr',
+  'yanvar',
+  'fevral',
+  'mart',
+  'aprel',
+  'may',
+  'iyun',
+  'iyul',
+  'avgust',
+  'sentyabr',
+  'oktyabr',
+  'noyabr',
+  'dekabr',
 ];
 
 export interface MedDocxParams {
@@ -148,7 +158,13 @@ export class MedReplaceService {
       })
       .from(usersTable)
       .leftJoin(workers, eq(workers.id, usersTable.worker_id))
-      .leftJoin(organizations, eq(organizations.id, usersTable.organization_id))
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, usersTable.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
       .where(eq(usersTable.id, params.hrUserId))
       .limit(1);
 
@@ -163,7 +179,9 @@ export class MedReplaceService {
     const scalars: Record<string, string> = {
       number: String(params.number),
       worker_full_name: fullName,
-      birthday: worker.birthday ? this.formatDmy(new Date(worker.birthday)) : '',
+      birthday: worker.birthday
+        ? this.formatDmy(new Date(worker.birthday))
+        : '',
       post_name: postName,
       position_experience: positionExperience,
       new_position: params.departmentPositionId ? 'a' : '',
@@ -291,8 +309,23 @@ export class MedReplaceService {
     middle: string | null,
   ): string {
     const digraphs = [
-      'Yu', 'YU', 'yu', 'Sh', 'SH', 'sh', 'Ch', 'CH', 'ch',
-      "O'", "o'", "G'", "g'", 'Oʻ', 'oʻ', 'Gʻ', 'gʻ',
+      'Yu',
+      'YU',
+      'yu',
+      'Sh',
+      'SH',
+      'sh',
+      'Ch',
+      'CH',
+      'ch',
+      "O'",
+      "o'",
+      "G'",
+      "g'",
+      'Oʻ',
+      'oʻ',
+      'Gʻ',
+      'gʻ',
     ];
     const shorten = (name: string | null): string => {
       if (!name) return '';

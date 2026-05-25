@@ -36,7 +36,9 @@ export class WorkDayService {
     // Laravel `whereTime` SQL: WHERE EXTRACT(...) — bizda string compare ham ishlaydi (PG time → string).
     const where: SQL | undefined = and(
       notDeleted(work_days),
-      filters.schedule_id ? eq(work_days.schedule_id, filters.schedule_id) : undefined,
+      filters.schedule_id
+        ? eq(work_days.schedule_id, filters.schedule_id)
+        : undefined,
       filters.start_time
         ? sql`CAST(${work_days.start_time} AS TEXT) ILIKE ${`%${filters.start_time}%`}`
         : undefined,
@@ -53,7 +55,9 @@ export class WorkDayService {
         this.db.query.work_days.findMany({
           where: {
             deleted_at: { isNull: true },
-            ...(filters.schedule_id ? { schedule_id: filters.schedule_id } : {}),
+            ...(filters.schedule_id
+              ? { schedule_id: filters.schedule_id }
+              : {}),
           },
           with: {
             schedule: {

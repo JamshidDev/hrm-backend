@@ -51,10 +51,7 @@ function enumIdName(
   return { id: id ?? 0, name: tr(i18n, key, lang) };
 }
 
-function orgName(
-  r: ContractRow,
-  lang: string,
-): string | null {
+function orgName(r: ContractRow, lang: string): string | null {
   if (lang === 'ru') return r.org_name_ru ?? r.org_name;
   if (lang === 'en') return r.org_name_en ?? r.org_name;
   return r.org_name;
@@ -92,9 +89,19 @@ export const ContractMapper = {
       confirmation_file: await minio.fileUrl(r.confirmation_file),
       contract_date: r.contract_date,
       type: enumIdName(i18n, r.type, CONTRACT_TYPE_KEYS, lang),
-      command_status: enumIdName(i18n, r.command_status, CONTRACT_COMMAND_STATUS_KEYS, lang),
+      command_status: enumIdName(
+        i18n,
+        r.command_status,
+        CONTRACT_COMMAND_STATUS_KEYS,
+        lang,
+      ),
       status: enumIdName(i18n, r.status, POSITION_STATUS_KEYS, lang),
-      confirmation: enumIdName(i18n, r.confirmation, CONFIRMATION_STATUS_KEYS, lang),
+      confirmation: enumIdName(
+        i18n,
+        r.confirmation,
+        CONFIRMATION_STATUS_KEYS,
+        lang,
+      ),
       generate: r.generate,
       created_at: toLaravelTs(r.created_at),
       creator: r.user_id,

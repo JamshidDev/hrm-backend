@@ -43,7 +43,9 @@ export class DocumentFileController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Document files list (model + document_id bo\'yicha)' })
+  @ApiOperation({
+    summary: "Document files list (model + document_id bo'yicha)",
+  })
   async findAll(@Query() query: DocumentFileIndexQueryDto) {
     return buildSuccess(true, await this.service.findAll(query));
   }

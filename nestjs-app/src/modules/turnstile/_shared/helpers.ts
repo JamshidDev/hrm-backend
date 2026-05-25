@@ -43,4 +43,6 @@ export function scheduleTypeList(): Array<{ id: number; name: string }> {
 export const TURNSTILE_WHITELIST = [62309, 16655, 25394, 19278, 587] as const;
 
 // Organizations where turnstile devices aren't installed (Laravel: dontInstallDeviceOrgIds).
-export const NO_DEVICE_ORG_IDS = [1, 222, 208, 197, 194, 188, 189, 192, 152, 153, 151, 63] as const;
+export const NO_DEVICE_ORG_IDS = [
+  1, 222, 208, 197, 194, 188, 189, 192, 152, 153, 151, 63,
+] as const;

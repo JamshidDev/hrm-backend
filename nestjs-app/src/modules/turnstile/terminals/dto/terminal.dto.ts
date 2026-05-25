@@ -1,7 +1,14 @@
 // Terminal DTOs. Laravel: TerminalController validates building_id, name, ip_address.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsIP, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsIP,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class QueryTerminalDto {
   @ApiPropertyOptional() @IsOptional() page?: number;

@@ -74,7 +74,6 @@ export class LeaderItemDto {
 
 export class LeaderListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [LeaderItemDto] }) data!: LeaderItemDto[];
 }

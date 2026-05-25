@@ -126,9 +126,7 @@ export class DocumentChatService {
         ),
       );
     const messagedUserIds = [
-      ...new Set(
-        chatRows.flatMap((r) => [r.sender_id, r.recipient_id]),
-      ),
+      ...new Set(chatRows.flatMap((r) => [r.sender_id, r.recipient_id])),
     ];
 
     // 3) Document yaratuvchisi.
@@ -271,7 +269,10 @@ export class DocumentChatService {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
     if (msg.sender_id !== userId) {
-      throw new BusinessException(403, this.i18n.t('messages.permission_denied'));
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.permission_denied'),
+      );
     }
     await this.db
       .update(document_chats)

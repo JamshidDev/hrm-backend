@@ -35,7 +35,7 @@ export class SendedWorkerController {
   @ApiOperation({ summary: 'Send a worker to a polyclinic for medical check' })
   async sendToMed(@Body() dto: SendToMedDto) {
     await this.service.sendToMed(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Get('sended-workers')
@@ -48,6 +48,6 @@ export class SendedWorkerController {
   @ApiOperation({ summary: 'Soft-delete a sended worker record' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

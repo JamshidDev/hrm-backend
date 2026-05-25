@@ -3,14 +3,19 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsObject, IsString, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsObject,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryQuoteDto extends PaginationQueryDto {}
 
 // Laravel rules: text.uz, text.ru, text.en, author.uz, author.ru, author.en — required strings.
 export class QuoteTranslationDto {
-  @ApiProperty({ example: "Mustaqillik kuni" })
+  @ApiProperty({ example: 'Mustaqillik kuni' })
   @IsString()
   @IsNotEmpty()
   uz!: string;

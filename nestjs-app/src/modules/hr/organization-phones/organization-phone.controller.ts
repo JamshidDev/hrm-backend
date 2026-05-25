@@ -36,20 +36,23 @@ export class OrganizationPhoneController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async findAll(@Query() query: QueryOrganizationPhoneDto) {
     return buildSuccess(true, await this.service.findAll(query));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async create(@Body() dto: CreateOrganizationPhoneDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrganizationPhoneDto,
@@ -59,7 +62,8 @@ export class OrganizationPhoneController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(true, this.i18n.t('messages.successfully_deleted'));
@@ -75,7 +79,8 @@ export class OrganizationPhoneListController {
   constructor(private readonly service: OrganizationPhoneService) {}
 
   @Get('organization-phones-list')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'List phones for current user organization' })
   async list() {
     return buildSuccess(true, await this.service.list());

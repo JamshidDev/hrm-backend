@@ -47,7 +47,7 @@ export class VacancyExamController {
   ) {
     await this.service.sendResult(vacancyExamId, questionId, body);
     return buildSuccess(
-      this.i18n.t('messages.exam.result_updated_successfully') as string,
+      this.i18n.t('messages.exam.result_updated_successfully'),
       [],
     );
   }
@@ -68,7 +68,7 @@ export class VacancyExamController {
     @Param('vacancyExamId', ParseIntPipe) vacancyExamId: number,
   ) {
     return buildSuccess(
-      this.i18n.t('messages.exam.finished') as string,
+      this.i18n.t('messages.exam.finished'),
       await this.service.finish(id, vacancyExamId),
     );
   }

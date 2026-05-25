@@ -1,13 +1,16 @@
 // Topic service. Laravel: Exam/TopicController.
+// Laravel scopeFilter: where('user_id', $user->id) — user-specific scope.
+// Resource shape: {id, name, organization:{id,name,group}, type:{id,name}, exams_count}.
 
 import { Injectable } from '@nestjs/common';
-import { count, eq, ilike, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
-import { topics } from '@/db/schema';
+import { exams, organizations, topic_organizations, topics } from '@/db/schema';
 import { nextId, pageOf } from '@/modules/exam/_shared/helpers';
 import type {
   CreateTopicDto,
@@ -15,31 +18,216 @@ import type {
   UpdateTopicDto,
 } from '@/modules/exam/topics/dto/topic.dto';
 
+// Laravel TopicTypeEnum::get(int) — exam.exam_types.{one|two|three|four}.
+const TOPIC_TYPE_KEYS: Record<number, string> = {
+  1: 'messages.exam.exam_types.one',
+  2: 'messages.exam.exam_types.two',
+  3: 'messages.exam.exam_types.three',
+  4: 'messages.exam.exam_types.four',
+};
+
 @Injectable()
 export class TopicService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
   ) {}
 
-  // Topic'larni paginatsiya bilan ro'yxatlash. `search` query bo'yicha name filter.
+  // Topic'larni paginatsiya bilan ro'yxatlash.
+  // Laravel: filter($user) — where('user_id', $user->id), search — name LIKE,
+  //          with(['organization']), withCount('exams'), paginate(per_page).
   async list(q: QueryTopicDto) {
     const { page, perPage, offset } = pageOf(q);
-    const conds: any[] = [notDeleted(topics)];
-    if (q.search) conds.push(ilike(topics.name, `%${q.search}%`));
-    const where = conds.length > 1 ? sql`${conds[0]} AND ${conds[1]}` : conds[0];
+    const lang = this.ctx.lang;
+    const userId = this.ctx.user_or_fail.id;
+
+    // Laravel scopeSearch: when(request('name'), whereLike('name', $name)).
+    // Lekin NestJS DTO `search` ishlatadi — ikkalasini ham qo'llaymiz.
+    const nameFilter = q.search ?? (q as { name?: string }).name;
+
+    const where = and(
+      notDeleted(topics),
+      eq(topics.user_id, userId),
+      nameFilter ? ilike(topics.name, `%${nameFilter}%`) : undefined,
+    );
+
     const [rows, [{ total }]] = await Promise.all([
       this.db.select().from(topics).where(where).limit(perPage).offset(offset),
       this.db.select({ total: count() }).from(topics).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+
+    // Batch-load organizations + exams_count (withCount('exams') parity).
+    const orgIds = [
+      ...new Set(
+        rows
+          .map((r) => r.organization_id)
+          .filter((id): id is number => id != null),
+      ),
+    ];
+    const topicIds = rows.map((r) => r.id);
+
+    const [orgList, examsCountList] = await Promise.all([
+      orgIds.length
+        ? this.db
+            .select({
+              id: organizations.id,
+              name: organizations.name,
+              name_ru: organizations.name_ru,
+              name_en: organizations.name_en,
+              group: organizations.group,
+            })
+            .from(organizations)
+            .where(inArray(organizations.id, orgIds))
+        : [],
+      topicIds.length
+        ? (this.db
+            .select({
+              topic_id: exams.topic_id,
+              cnt: count(),
+            })
+            .from(exams)
+            .where(
+              and(inArray(exams.topic_id, topicIds), isNull(exams.deleted_at)),
+            )
+            .groupBy(exams.topic_id) as unknown as Promise<
+            Array<{ topic_id: number | null; cnt: number }>
+          >)
+        : (Promise.resolve([]) as Promise<
+            Array<{ topic_id: number | null; cnt: number }>
+          >),
+    ]);
+
+    const orgMap = new Map(orgList.map((o) => [o.id, o] as const));
+    const examsCountMap = new Map<number, number>(
+      examsCountList
+        .filter((e) => e.topic_id != null)
+        .map((e) => [e.topic_id as number, Number(e.cnt)]),
+    );
+
+    const localizedOrg = (o: {
+      name: string | null;
+      name_ru: string | null;
+      name_en: string | null;
+    }) =>
+      lang === 'ru'
+        ? (o.name_ru ?? o.name)
+        : lang === 'en'
+          ? (o.name_en ?? o.name)
+          : o.name;
+
+    const data = rows.map((r) => {
+      const org =
+        r.organization_id != null ? orgMap.get(r.organization_id) : null;
+      const typeKey = TOPIC_TYPE_KEYS[r.type];
+      const typeLabel = typeKey ? this.i18n.t(typeKey, { lang }) : '';
+      return {
+        id: r.id,
+        name: r.name,
+        organization: org
+          ? {
+              id: org.id,
+              name: localizedOrg(org),
+              group: org.group ?? false,
+            }
+          : null,
+        type: {
+          id: r.type,
+          name: typeof typeLabel === 'string' ? typeLabel : '',
+        },
+        exams_count: examsCountMap.get(r.id) ?? 0,
+      };
+    });
+
+    return { current_page: page, total: Number(total), data };
   }
 
   // Bitta topic'ni ko'rsatish. Laravel `findOrFail` ekvivalenti → 404 agar topilmasa.
+  // Laravel: $topic->load('organizations') → TopicOrganizationResource.
+  // Shape: {id, name, organization:{id,name,group}, type:{id,name},
+  //         organizations:[{id,name,group}, ...]}.
   async show(id: number) {
-    const [row] = await this.db.select().from(topics).where(eq(topics.id, id)).limit(1);
+    const lang = this.ctx.lang;
+    const [row] = await this.db
+      .select()
+      .from(topics)
+      .where(eq(topics.id, id))
+      .limit(1);
     if (!row) throw new BusinessException(404, 'not_found');
-    return row;
+
+    // Batch: tegishli organization + pivot orqali bog'langan organizations.
+    const [orgRows, pivotRows] = await Promise.all([
+      row.organization_id != null
+        ? this.db
+            .select({
+              id: organizations.id,
+              name: organizations.name,
+              name_ru: organizations.name_ru,
+              name_en: organizations.name_en,
+              group: organizations.group,
+            })
+            .from(organizations)
+            .where(eq(organizations.id, row.organization_id))
+            .limit(1)
+        : Promise.resolve(
+            [] as Array<{
+              id: number;
+              name: string | null;
+              name_ru: string | null;
+              name_en: string | null;
+              group: boolean | null;
+            }>,
+          ),
+      this.db
+        .select({
+          org_id: organizations.id,
+          name: organizations.name,
+          name_ru: organizations.name_ru,
+          name_en: organizations.name_en,
+          group: organizations.group,
+        })
+        .from(topic_organizations)
+        .innerJoin(
+          organizations,
+          and(
+            eq(organizations.id, topic_organizations.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
+        .where(eq(topic_organizations.topic_id, id)),
+    ]);
+
+    const localized = (o: {
+      name: string | null;
+      name_ru: string | null;
+      name_en: string | null;
+    }) =>
+      lang === 'ru'
+        ? (o.name_ru ?? o.name)
+        : lang === 'en'
+          ? (o.name_en ?? o.name)
+          : o.name;
+
+    const org = orgRows[0];
+    const typeKey = TOPIC_TYPE_KEYS[row.type];
+    const typeLabel = typeKey ? this.i18n.t(typeKey, { lang }) : '';
+
+    return {
+      id: row.id,
+      name: row.name,
+      organization: org
+        ? { id: org.id, name: localized(org), group: org.group ?? false }
+        : null,
+      type: {
+        id: row.type,
+        name: typeof typeLabel === 'string' ? typeLabel : '',
+      },
+      organizations: pivotRows.map((p) => ({
+        id: p.org_id,
+        name: localized(p),
+        group: p.group ?? false,
+      })),
+    };
   }
 
   // Yangi topic yaratish. `user_id` joriy foydalanuvchidan olinadi.
@@ -76,9 +264,14 @@ export class TopicService {
   }
 
   // Laravel: filter/topics — PaginateResource bilan o'ralgan {id, name} ro'yxat.
+  // search() + whereHas('hasOrganizations' where organization_id = user.org).
   async filter(q: QueryTopicDto) {
     const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(topics);
+    const nameFilter = q.search ?? (q as { name?: string }).name;
+    const where = and(
+      notDeleted(topics),
+      nameFilter ? ilike(topics.name, `%${nameFilter}%`) : undefined,
+    );
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select({ id: topics.id, name: topics.name })
@@ -89,6 +282,6 @@ export class TopicService {
         .offset(offset),
       this.db.select({ total: count() }).from(topics).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return { current_page: page, total: Number(total), data: rows };
   }
 }

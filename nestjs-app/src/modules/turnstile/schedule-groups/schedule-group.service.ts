@@ -28,9 +28,17 @@ export class ScheduleGroupService {
         .orderBy(turnstile_schedule_groups.order)
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(turnstile_schedule_groups).where(where),
+      this.db
+        .select({ total: count() })
+        .from(turnstile_schedule_groups)
+        .where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   async remove(groupId: number) {
@@ -54,7 +62,12 @@ export class ScheduleGroupService {
   async groupWorkers(q: QueryScheduleGroupWorkersDto) {
     const { page, perPage, offset } = pageOf(q);
     if (!q.group_id) {
-      return { current_page: page, per_page: perPage, total: 0, data: [] as Array<unknown> };
+      return {
+        current_page: page,
+        per_page: perPage,
+        total: 0,
+        data: [] as Array<unknown>,
+      };
     }
     const result = await this.db.execute(sql`
       SELECT DISTINCT worker_id, worker_position_id
@@ -73,7 +86,9 @@ export class ScheduleGroupService {
       worker_id: number;
       worker_position_id: number;
     }>;
-    const total = Number(((countResult as any).rows ?? countResult)[0]?.total ?? 0);
+    const total = Number(
+      ((countResult as any).rows ?? countResult)[0]?.total ?? 0,
+    );
     const workerIds = rows.map((r) => Number(r.worker_id)).filter(Boolean);
     const wRows = workerIds.length
       ? await this.db
@@ -87,7 +102,9 @@ export class ScheduleGroupService {
           .from(workers)
           .where(inArray(workers.id, workerIds))
       : [];
-    const wMap = new Map<number, (typeof wRows)[number]>(wRows.map((w) => [w.id, w] as const));
+    const wMap = new Map<number, (typeof wRows)[number]>(
+      wRows.map((w) => [w.id, w] as const),
+    );
     return {
       current_page: page,
       per_page: perPage,

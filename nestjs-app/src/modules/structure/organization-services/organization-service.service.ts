@@ -39,7 +39,7 @@ export class OrganizationServiceService {
         ),
       );
 
-    return OrganizationServiceMapper.toEnumList(rows as OrganizationServiceRow[]);
+    return OrganizationServiceMapper.toEnumList(rows);
   }
 
   // Laravel updateOrCreate(['organization_id' => ...], [...]) — match only by organization_id.

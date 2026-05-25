@@ -36,14 +36,16 @@ export class WorkerPhotoController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker photos (by worker_id)' })
   async findAll(@Query() query: QueryWorkerPhotoDto) {
     return buildSuccess(true, await this.service.findAll(query.worker_id));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Upload new worker photo (base64)' })
   async create(@Body() dto: CreateWorkerPhotoDto) {
     return buildSuccess(
@@ -53,7 +55,8 @@ export class WorkerPhotoController {
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Update worker photo (re-upload + set current)' })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -64,7 +67,8 @@ export class WorkerPhotoController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Delete worker photo (non-current only)' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);

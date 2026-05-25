@@ -39,7 +39,8 @@ export class VacationScheduleYearController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Vacation schedule years list' })
   @ApiOkResponse({ type: VacationScheduleYearListResponseDto })
   async findAll(@Query() query: QueryVacationScheduleYearDto) {
@@ -47,15 +48,19 @@ export class VacationScheduleYearController {
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Create/update vacation schedule year + assignments' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Create/update vacation schedule year + assignments',
+  })
   async store(@Body() dto: StoreVacationScheduleYearDto) {
     await this.service.store(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Get(':id/auto-generate')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Auto-generate vacation distribution' })
   async autoGenerate(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.autoGenerate(id));
@@ -71,8 +76,11 @@ export class VacationScheduleYearWorkersController {
   constructor(private readonly service: VacationScheduleYearService) {}
 
   @Get('vacation-schedule-workers')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Workers eligible for vacation schedule assignment' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Workers eligible for vacation schedule assignment',
+  })
   async workers(@Query() query: QueryVacationScheduleYearDto) {
     return buildSuccess(true, await this.service.workers(query));
   }

@@ -86,7 +86,12 @@ export const CommandMapper = {
         : null,
       generate: c.generate,
       created_at: toLaravelTs(c.created_at),
-      confirmation: enumIdName(i18n, c.confirmation, CONFIRMATION_STATUS_KEYS, lang),
+      confirmation: enumIdName(
+        i18n,
+        c.confirmation,
+        CONFIRMATION_STATUS_KEYS,
+        lang,
+      ),
     };
   },
 };

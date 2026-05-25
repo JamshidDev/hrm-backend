@@ -113,10 +113,29 @@ export class StatementService {
    * Kodlar 4 guruhga bo'lingan: plus / minus_one / minus_two / hold.
    * Har guruh oxirida "Jami" qator, eng oxirida kombinatsiya qatorlari.
    */
-  async decoding(q: { year?: string | number; lang?: string }) {
+  async decoding(q: {
+    year?: string | number;
+    month?: string | number;
+    organizations?: string;
+    lang?: string;
+  }) {
     const year =
       q?.year !== undefined ? Number(q.year) : new Date().getFullYear();
     const lang = q?.lang ?? 'uz';
+
+    // Laravel StatementAggregate::filter → QueryHelper::filterByOrganizations —
+    // `organizations` (vergulli ID'lar) bo'yicha filtr. `month` esa decode()'da
+    // ishlatilmaydi (faqat 12 oyning hammasi pivotlanadi).
+    const conds = [eq(statement_aggregates.year, year)];
+    if (q.organizations) {
+      const ids = q.organizations
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !Number.isNaN(n));
+      if (ids.length) {
+        conds.push(inArray(statement_aggregates.organization_id, ids));
+      }
+    }
 
     // 1. statement_aggregates'dan har month × code uchun SUM
     const rows = await this.db
@@ -126,7 +145,7 @@ export class StatementService {
         total_sum: sql<number>`SUM(${statement_aggregates.total_sum})`,
       })
       .from(statement_aggregates)
-      .where(eq(statement_aggregates.year, year))
+      .where(and(...conds))
       .groupBy(statement_aggregates.month, statement_aggregates.code);
 
     // 2. monthData[month][code] = sum

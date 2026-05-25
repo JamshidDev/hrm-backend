@@ -16,7 +16,10 @@ export class EnumsController {
   constructor(private readonly service: EnumsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'All structure enums (contract_types, schedules, command_types, ...)' })
+  @ApiOperation({
+    summary:
+      'All structure enums (contract_types, schedules, command_types, ...)',
+  })
   @ApiOkResponse()
   list() {
     return this.service.list();

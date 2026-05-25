@@ -17,6 +17,7 @@ import {
   commands,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -71,6 +72,7 @@ export class VacationService {
     private readonly minio: MinioService,
     private readonly excel: ExcelService,
     private readonly exportRunner: ExportTaskRunner,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(filters: QueryVacationDto): Promise<VacationListResponseDto> {
@@ -78,27 +80,20 @@ export class VacationService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
-
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel Vacation::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(vacations.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     const today = new Date().toISOString().split('T')[0];
 
     const where = and(
       isNull(vacations.deleted_at),
       gte(vacations.to, today),
-      filters.organization_id
-        ? eq(vacations.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(vacations.organization_id, orgIds)
-        : undefined,
+      inScope,
       searchCond,
     );
 
@@ -148,7 +143,10 @@ export class VacationService {
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, vacations.organization_id),
+          and(
+            eq(organizations.id, vacations.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(desc(vacations.to))
@@ -163,7 +161,6 @@ export class VacationService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map((r) =>
@@ -190,24 +187,17 @@ export class VacationService {
     filters: QueryVacationDto,
     lang: string,
   ): Promise<Buffer> {
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
     const searchCond = buildWorkerSearchCond(filters.search);
+    const inScope = await this.scope.whereOrg(vacations.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
     const today = new Date().toISOString().split('T')[0];
 
     const where = and(
       isNull(vacations.deleted_at),
       gte(vacations.to, today),
-      filters.organization_id
-        ? eq(vacations.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(vacations.organization_id, orgIds)
-        : undefined,
+      inScope,
       searchCond,
     );
 

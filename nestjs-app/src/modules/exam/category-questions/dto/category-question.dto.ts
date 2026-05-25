@@ -1,7 +1,13 @@
 // Category question DTO'lar. Laravel: Exam/TopicQuestionController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class QueryCategoryQuestionDto {
   @ApiPropertyOptional() @IsOptional() page?: number;
@@ -13,7 +19,10 @@ export class QuestionOptionDto {
   @IsString()
   text!: string;
 
-  @ApiPropertyOptional({ description: 'Mark as correct answer', default: false })
+  @ApiPropertyOptional({
+    description: 'Mark as correct answer',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   is_correct?: boolean;
@@ -25,7 +34,10 @@ export class CreateQuestionDto {
   @IsNotEmpty()
   ques!: string;
 
-  @ApiPropertyOptional({ type: [QuestionOptionDto], description: 'Answer options' })
+  @ApiPropertyOptional({
+    type: [QuestionOptionDto],
+    description: 'Answer options',
+  })
   @IsOptional()
   @IsArray()
   options?: QuestionOptionDto[];

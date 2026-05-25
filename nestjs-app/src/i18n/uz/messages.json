@@ -46,6 +46,13 @@
     "med": {
       "one": "Sog'lom",
       "two": "Nosog'lom"
+    },
+    "already": "Ushbu xodimda asosiy lavozim mavjud, siz ushbu lavozimga ishga qabul qila olmaysiz!",
+    "political_party": {
+      "two": "Xalq demokratik partiyasi",
+      "three": "OʻzLiDeP partiyasi",
+      "four": "Adolat partiyasi",
+      "five": "Milliy tiklanish partiyasi"
     }
   },
   "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
@@ -53,7 +60,7 @@
   "user_block": "Sizning profilingiz tizim ma'muriyati tomonidan vaqtincha cheklab qo'yildi.",
   "token_is_expired": "Token muddati tugagan.",
   "not_found": "Ma'lumot topilmadi",
-  "server_error": "Tizimda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring.",
+  "server_error": "Tizimda xatolik yuzaga keldi. Birozdan so'ng qayta urinib ko'ring.",
   "successfully_stored": "Muvaffaqqiyatli qo'shildi",
   "successfully_updated": "Muvaffaqqiyatli yangilandi",
   "successfully_deleted": "Muvaffaqqiyatli o'chirildi",
@@ -517,7 +524,13 @@
   "user_all_ready": "Bunday foydalanuvchi tizimda allaqachon mavjud",
   "exam": {
     "finished": "Yakunlangan",
-    "result_updated_successfully": "Javob muvaffaqqiyatli yangilandi"
+    "result_updated_successfully": "Javob muvaffaqqiyatli yangilandi",
+    "exam_types": {
+      "one": "Attestatsiya (Sanoat xavfsizligi)",
+      "two": "Attestatsiya (Lavozimga loyiqligi)",
+      "three": "Malaka sinovi (Razryadni oshirish uchun)",
+      "four": "Bilim sinovi (Mehnat muhofazasi)"
+    }
   },
   "chat": {
     "notifications": {

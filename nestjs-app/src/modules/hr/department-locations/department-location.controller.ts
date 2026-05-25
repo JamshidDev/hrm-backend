@@ -36,26 +36,30 @@ export class DepartmentLocationController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async findAll(@Query() query: QueryDepartmentLocationDto) {
     return buildSuccess(true, await this.service.findAll(query));
   }
 
   @Get(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.findOne(id));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr-departments-write')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-departments-write')
   async create(@Body() dto: CreateDepartmentLocationDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
-  @UseGuards(PermissionGuard) @Permission('hr-departments-write')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-departments-write')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateDepartmentLocationDto,
@@ -65,7 +69,8 @@ export class DepartmentLocationController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr-departments-write')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-departments-write')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
@@ -81,7 +86,8 @@ export class DepartmentLocationListController {
   constructor(private readonly service: DepartmentLocationService) {}
 
   @Get('list')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Department locations short list' })
   async list() {
     return buildSuccess(true, await this.service.list());

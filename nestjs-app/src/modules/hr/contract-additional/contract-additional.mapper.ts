@@ -90,10 +90,20 @@ export const ContractAdditionalMapper = {
       contract_date: r.contract_date,
       contract_to_date: r.contract_to_date,
       type: enumIdName(i18n, r.type, CONTRACT_ADDITIONAL_TYPE_KEYS, lang),
-      command_status: enumIdName(i18n, r.command_status, COMMAND_STATUS_KEYS, lang),
+      command_status: enumIdName(
+        i18n,
+        r.command_status,
+        COMMAND_STATUS_KEYS,
+        lang,
+      ),
       generate: r.generate,
       created_at: toLaravelTs(r.created_at),
-      confirmation: enumIdName(i18n, r.confirmation, CONFIRMATION_STATUS_KEYS, lang),
+      confirmation: enumIdName(
+        i18n,
+        r.confirmation,
+        CONFIRMATION_STATUS_KEYS,
+        lang,
+      ),
     };
   },
 };

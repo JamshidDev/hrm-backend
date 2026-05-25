@@ -2,17 +2,16 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryDocumentFileDto extends SearchPaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() model_type?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() model_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  model_id?: number;
 }
 
 // GET /api/v1/document/files?model=&document_id=  — Laravel: index().
@@ -49,7 +48,8 @@ export class CreateDocumentFileDto {
   status?: string;
 
   @ApiPropertyOptional({
-    description: "status=application bo'lganda — vergul bilan ajratilgan id lar",
+    description:
+      "status=application bo'lganda — vergul bilan ajratilgan id lar",
   })
   @IsOptional()
   @IsString()

@@ -2,6 +2,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsInt,
   IsNotEmpty,
@@ -36,7 +37,10 @@ export class CreateExamDto {
   @IsInt()
   minute?: number;
 
-  @ApiPropertyOptional({ description: 'Question count per variant', default: 36 })
+  @ApiPropertyOptional({
+    description: 'Question count per variant',
+    default: 36,
+  })
   @IsOptional()
   @IsInt()
   tests_count?: number;
@@ -65,6 +69,78 @@ export class CreateExamDto {
   @IsOptional()
   @IsBoolean()
   camera?: boolean;
+
+  // Laravel: whom_ids — whom=2 bo'lsa positions[], whom=3 bo'lsa worker_position[].
+  @ApiPropertyOptional({
+    description: 'whom=2 → position_id[], whom=3 → worker_position_id[]',
+    type: [Number],
+    example: [5],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  whom_ids?: number[];
 }
 
-export class UpdateExamDto extends CreateExamDto {}
+// Laravel UpdateExamRequest — barcha field'lar `sometimes` (optional).
+// PATCH-style update: ixtiyoriy field'lar kelgan bo'lsa yangilanadi.
+export class UpdateExamDto {
+  @ApiPropertyOptional({ description: 'Exam title' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Deadline timestamp (ISO)' })
+  @IsOptional()
+  @IsString()
+  deadline?: string;
+
+  @ApiPropertyOptional({ description: 'Number of variants' })
+  @IsOptional()
+  @IsInt()
+  variant?: number;
+
+  @ApiPropertyOptional({ description: 'Allowed time in minutes' })
+  @IsOptional()
+  @IsInt()
+  minute?: number;
+
+  @ApiPropertyOptional({ description: 'Question count per variant' })
+  @IsOptional()
+  @IsInt()
+  tests_count?: number;
+
+  @ApiPropertyOptional({ description: 'Allowed attempts' })
+  @IsOptional()
+  @IsInt()
+  chances?: number;
+
+  @ApiPropertyOptional({ description: 'Active flag' })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @ApiPropertyOptional({ description: 'Exam description' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Audience (whom)' })
+  @IsOptional()
+  @IsInt()
+  whom?: number;
+
+  @ApiPropertyOptional({ description: 'Require camera' })
+  @IsOptional()
+  @IsBoolean()
+  camera?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'whom=2 → position_id[], whom=3 → worker_position_id[]',
+    type: [Number],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  whom_ids?: number[];
+}

@@ -47,9 +47,7 @@ export class VacancyApproveService {
         .from(vacancy_approve_organizations)
         .limit(perPage)
         .offset(offset),
-      this.db
-        .select({ total: count() })
-        .from(vacancy_approve_organizations),
+      this.db.select({ total: count() }).from(vacancy_approve_organizations),
     ]);
 
     // Org IDs ni yig'amiz va batch load qilamiz.

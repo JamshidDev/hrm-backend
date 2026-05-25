@@ -14,6 +14,8 @@ export const CLS_KEYS = {
   DEVICE_ID: 'deviceId',
   IP: 'ip',
   USER_AGENT: 'userAgent',
+  // Laravel QueryHelper::childIds — request davomida bir marta hisoblanadi, cache.
+  ORG_SCOPE_IDS: 'orgScopeIds',
 } as const;
 
 export type ClsUser = AuthUser | null;

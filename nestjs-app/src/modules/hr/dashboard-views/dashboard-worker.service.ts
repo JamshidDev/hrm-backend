@@ -2,7 +2,18 @@
 // birthdays, educations, age, passport, pension, contract-types, meds.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -15,17 +26,14 @@ import {
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { MinioService } from '@/shared/minio/minio.service';
 import { DashboardViewsMapper } from '@/modules/hr/dashboard-views/dashboard-views.mapper';
 import {
   ACTIVE_POSITION_STATUS,
   DEFAULT_PER_PAGE,
 } from '@/modules/hr/dashboard-views/dashboard-views.constants';
-import {
-  activeWorkerPositionExists,
-  validOrganizationExists,
-  wpCols,
-} from '@/modules/hr/dashboard-views/dashboard-views.query';
+import { wpCols } from '@/modules/hr/dashboard-views/dashboard-views.query';
 import {
   buildShortPosition,
   calcAge,
@@ -52,6 +60,8 @@ export class DashboardWorkerService {
     @InjectDb() private readonly db: DataSource,
     private readonly minio: MinioService,
     private readonly mapper: DashboardViewsMapper,
+    private readonly scope: OrgScopeService,
+    private readonly i18n: I18nService,
   ) {}
 
   // GET /api/v1/hr/dashboard/birthdays
@@ -102,37 +112,39 @@ export class DashboardWorkerService {
           )})
             AND wu.deleted_at IS NULL
         `);
+        // Laravel WorkerUniversityResource: flat strings + education label.
+        const eduLabels: Record<number, string> = {
+          1: 'one',
+          2: 'two',
+          3: 'three',
+        };
         const grouped: Record<number, unknown[]> = {};
         for (const row of unis as Array<Record<string, unknown>>) {
           const wid = Number(row.worker_id);
           if (!grouped[wid]) grouped[wid] = [];
+          const eduRaw = row.education as number | null;
+          const eduKey = eduRaw != null ? eduLabels[eduRaw] : null;
           grouped[wid].push({
-            id: row.id,
-            university_id: row.university_id,
-            speciality_id: row.speciality_id,
-            from_date: row.from_date,
-            to_date: row.to_date,
+            id: row.id != null ? Number(row.id) : null,
             speciality: row.speciality_id_v
-              ? {
-                  id: row.speciality_id_v,
-                  name: this.mapper.pickLang(
-                    row.speciality_name as string | null,
-                    row.speciality_name_ru as string | null,
-                    row.speciality_name_en as string | null,
-                  ),
-                }
+              ? this.mapper.pickLang(
+                  row.speciality_name as string | null,
+                  row.speciality_name_ru as string | null,
+                  row.speciality_name_en as string | null,
+                )
               : null,
             university: row.university_id_v
-              ? {
-                  id: row.university_id_v,
-                  name: this.mapper.pickLang(
-                    row.university_name as string | null,
-                    row.university_name_ru as string | null,
-                    row.university_name_en as string | null,
-                  ),
-                  education: row.education,
-                }
+              ? this.mapper.pickLang(
+                  row.university_name as string | null,
+                  row.university_name_ru as string | null,
+                  row.university_name_en as string | null,
+                )
               : null,
+            education: eduKey
+              ? this.i18n.t(`messages.education.level.${eduKey}`)
+              : '',
+            from_date: row.from_date,
+            to_date: row.to_date,
           });
         }
         const universitiesGrouped: Record<number, unknown[]> = {};
@@ -275,18 +287,20 @@ export class DashboardWorkerService {
         ? sql`latest_meds.to <= ${today}::date`
         : sql`latest_meds.to > ${today}::date AND latest_meds.to < ${nextMonth}::date`;
 
+    // Laravel whereHas('positions', filter) — scope-aware EXISTS.
+    const activeWorker = await this.scope.activeWorkerExists(sql`w.id`);
     const wRows = await this.db.execute(sql`
       SELECT w.id, latest_meds.to AS med_to
       FROM workers w
       LEFT JOIN (
+        -- Laravel raw DB::table('meds') — SoftDeletes qo'llamaydi.
         SELECT m1.worker_id, MAX(m1."to") AS "to"
         FROM ${meds} m1
-        WHERE m1.deleted_at IS NULL
         GROUP BY m1.worker_id
       ) latest_meds ON latest_meds.worker_id = w.id
       WHERE w.deleted_at IS NULL
         AND ${medFilter}
-        AND ${activeWorkerPositionExists(sql`w.id`)}
+        AND ${activeWorker}
       ORDER BY w.id
     `);
     const allRows = wRows as unknown as Array<{
@@ -372,10 +386,14 @@ export class DashboardWorkerService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
 
-    // Laravel scopeFilter: status = ACTIVE + tashkilot o'chirilmagan.
+    // Laravel scopeFilter: status = ACTIVE + role asosida org-scope.
+    // notDeleted(workers) — Eloquent whereHas('worker') SoftDeletes orqali
+    // workers.deleted_at IS NULL ni avto qo'shadi.
     const finalWhere = and(
+      notDeleted(worker_positions),
       eq(worker_positions.status, ACTIVE_POSITION_STATUS),
-      validOrganizationExists(worker_positions.organization_id),
+      notDeleted(workers),
+      await this.scope.whereOrg(worker_positions.organization_id),
       where,
     );
 
@@ -384,7 +402,8 @@ export class DashboardWorkerService {
       this.db
         .select({ total: count() })
         .from(worker_positions)
-        .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+        // INNER JOIN — Laravel whereHas('worker') faqat matching+non-deleted workerni qaytaradi.
+        .innerJoin(workers, eq(workers.id, worker_positions.worker_id))
         .where(finalWhere),
     ]);
 
@@ -439,12 +458,12 @@ export class DashboardWorkerService {
             ? {}
             : { type: this.mapper.contractTypeLabel(r.wp_type) }),
           ...(extras.universities &&
-          (extras.universities as Record<number, unknown[]>)[r.worker_id!] !=
+          (extras.universities as Record<number, unknown[]>)[r.worker_id] !=
             null
             ? {
                 universities: (
                   extras.universities as Record<number, unknown[]>
-                )[r.worker_id!],
+                )[r.worker_id],
               }
             : extras.universities
               ? { universities: [] }
@@ -452,7 +471,7 @@ export class DashboardWorkerService {
           ...(extras.passport
             ? {
                 passport:
-                  (extras.passport as Record<number, unknown>)[r.worker_id!] ??
+                  (extras.passport as Record<number, unknown>)[r.worker_id] ??
                   null,
               }
             : {}),
@@ -466,10 +485,14 @@ export class DashboardWorkerService {
     limit?: number,
     offset?: number,
   ) {
+    // Laravel `paginate()` ORDER BY qo'ymaydi (Postgres ad-hoc tartib).
+    // NestJS bu yerda explicit tartib qo'ymaydi — Laravel'ga to'liq mos kelishi
+    // uchun. Determinizm uchun frontend o'zi tartiblashi mumkin.
     const q = this.db
       .select(wpCols)
       .from(worker_positions)
-      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      // INNER JOIN — Laravel whereHas('worker') parity.
+      .innerJoin(workers, eq(workers.id, worker_positions.worker_id))
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(
         positionsTable,
@@ -477,10 +500,12 @@ export class DashboardWorkerService {
       )
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
-      .where(where)
-      .orderBy(asc(worker_positions.id));
+      .where(where);
     if (limit != null) {
       return q.limit(limit).offset(offset ?? 0);
     }

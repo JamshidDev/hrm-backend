@@ -43,13 +43,13 @@ export class OrganizationTerminalController {
   @ApiOperation({ summary: 'Sync terminals for an organization (replace all)' })
   async store(@Body() dto: SyncOrganizationTerminalsDto) {
     await this.service.sync(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Detach all terminals from an organization' })
   async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.detachAll(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

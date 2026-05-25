@@ -27,6 +27,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -40,6 +41,8 @@ import { randomUUID } from 'crypto';
 
 const CONFIRMATION_STATUS_SUCCESS = 3;
 const POSITION_STATUS_ACTIVE = 2;
+// ContractTypeEnum::ONE — muddatsiz asosiy mehnat shartnomasi.
+const CONTRACT_TYPE_ONE = 1;
 
 @Injectable()
 export class ContractService {
@@ -48,20 +51,15 @@ export class ContractService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
-  ) {
-    void notDeleted; // silencer
-  }
+    private readonly scope: OrgScopeService,
+  ) {}
 
   async findAll(filters: QueryContractDto): Promise<ContractListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
-      : [];
-
-    // Worker name search — Laravel scopeSearchByFullName parity (split by space).
+    // Worker name search — Laravel scopeSearchByFullName parity.
     const workerSearch = buildWorkerSearchCond(filters.search);
     const searchCond = filters.search
       ? or(
@@ -69,13 +67,15 @@ export class ContractService {
           ...(workerSearch ? [workerSearch] : []),
         )
       : undefined;
+    // Laravel Contract::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(contracts.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     const where = and(
       isNull(contracts.deleted_at),
-      filters.organization_id
-        ? eq(contracts.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0 ? inArray(contracts.organization_id, orgIds) : undefined,
+      inScope,
       filters.confirmation
         ? eq(contracts.confirmation, filters.confirmation)
         : undefined,
@@ -99,7 +99,6 @@ export class ContractService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map((r) => ContractMapper.toItem(r, this.i18n, lang, this.minio)),
@@ -142,7 +141,13 @@ export class ContractService {
       })
       .from(contracts)
       .leftJoin(workers, eq(workers.id, contracts.worker_id))
-      .leftJoin(organizations, eq(organizations.id, contracts.organization_id))
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, contracts.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
       .where(where)
       .orderBy(desc(contracts.id))
       .limit(limit)
@@ -155,6 +160,29 @@ export class ContractService {
   // asosiy yozuv qoldirilgan.
   async create(dto: CreateContractDto): Promise<{ contract_id: number }> {
     const userId = this.ctx.user_or_fail.id;
+
+    // Laravel ContractService::store — xodimda allaqachon faol asosiy (type=1)
+    // lavozim bo'lsa va yangi shartnoma ham type=1 bo'lsa, qabul qilmaymiz.
+    if (dto.type === CONTRACT_TYPE_ONE) {
+      const [existing] = await this.db
+        .select({ id: worker_positions.id })
+        .from(worker_positions)
+        .where(
+          and(
+            eq(worker_positions.worker_id, dto.worker_id),
+            eq(worker_positions.type, CONTRACT_TYPE_ONE),
+            eq(worker_positions.status, POSITION_STATUS_ACTIVE),
+            notDeleted(worker_positions),
+          ),
+        )
+        .limit(1);
+      if (existing) {
+        throw new BusinessException(
+          400,
+          this.i18n.t('messages.worker.already'),
+        );
+      }
+    }
 
     return await this.db.transaction(async (tx) => {
       const [contract] = await tx
@@ -234,7 +262,13 @@ export class ContractService {
       })
       .from(contracts)
       .leftJoin(workers, eq(workers.id, contracts.worker_id))
-      .leftJoin(organizations, eq(organizations.id, contracts.organization_id))
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, contracts.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
       .where(and(eq(contracts.id, id), notDeleted(contracts)))
       .limit(1);
 
@@ -263,7 +297,10 @@ export class ContractService {
       )
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .where(
         and(
@@ -358,7 +395,9 @@ export class ContractService {
     if (contract.confirmation === CONFIRMATION_STATUS_SUCCESS) {
       throw new BusinessException(
         409,
-        this.i18n.t('messages.you_cannot_delete_a_document_that_has_been_approved'),
+        this.i18n.t(
+          'messages.you_cannot_delete_a_document_that_has_been_approved',
+        ),
       );
     }
     await this.db

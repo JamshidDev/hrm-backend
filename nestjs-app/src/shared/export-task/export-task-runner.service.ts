@@ -25,10 +25,16 @@ const STATUS_ERROR = 3;
 export interface ExportTaskOptions {
   // ExportTaskEnum qiymati (masalan 26=vacation_workers, 28=incentive).
   type: number;
-  // MinIO papka nomi: tasks/export/{folder}/{md5(taskId)}.xlsx.
+  // MinIO papka nomi: tasks/export/{folder}/{md5(taskId)}.{ext}.
   folder: string;
-  // Modulga xos qism: ma'lumotni olib, Excel buffer qaytaradi.
+  // Modulga xos qism: ma'lumotni olib, file buffer qaytaradi.
   build: () => Promise<Buffer>;
+  // Fayl kengaytmasi (default: xlsx).
+  ext?: string;
+  // MIME (default: XLSX MIME).
+  contentType?: string;
+  // To'liq yo'lni o'zi yasash uchun (Laravel: zip → `tasks/zip/{n}.zip`).
+  keyBuilder?: (taskId: number) => string;
 }
 
 @Injectable()
@@ -55,22 +61,26 @@ export class ExportTaskRunner {
       })
       .returning({ id: user_export_tasks.id });
 
-    void this.generate(task.id, opts.folder, opts.build);
+    void this.generate(task.id, opts);
   }
 
-  // Excel'ni tayyorlab MinIO'ga yuklaydi va task statusini yangilaydi.
+  // Buffer'ni tayyorlab MinIO'ga yuklaydi va task statusini yangilaydi.
   private async generate(
     taskId: number,
-    folder: string,
-    build: () => Promise<Buffer>,
+    opts: ExportTaskOptions,
   ): Promise<void> {
     try {
-      const buffer = await build();
-      // Laravel: 'tasks/export/{folder}/' . md5($task->id) . '.xlsx'.
-      const key = `tasks/export/${folder}/${createHash('md5')
-        .update(String(taskId))
-        .digest('hex')}.xlsx`;
-      await this.minio.putObject(key, buffer, XLSX_MIME);
+      const buffer = await opts.build();
+      const ext = opts.ext ?? 'xlsx';
+      const contentType = opts.contentType ?? XLSX_MIME;
+      // Laravel: 'tasks/export/{folder}/' . md5($task->id) . '.{ext}' (default)
+      // yoki keyBuilder bilan to'liq override.
+      const key =
+        opts.keyBuilder?.(taskId) ??
+        `tasks/export/${opts.folder}/${createHash('md5')
+          .update(String(taskId))
+          .digest('hex')}.${ext}`;
+      await this.minio.putObject(key, buffer, contentType);
       await this.db
         .update(user_export_tasks)
         .set({ file: key, status: STATUS_DONE, updated_at: sql`NOW()` })

@@ -47,7 +47,9 @@ export class WorkerUniversityService {
     // Laravel `scopeFilter`: when($worker_id, fn => where('worker_id', $worker_id)).
     // Agar uuid yo'q yoki invalid bo'lsa — filter qo'shilmaydi (barcha rows).
     const where = and(
-      workerId != null ? eq(worker_universities.worker_id, workerId) : undefined,
+      workerId != null
+        ? eq(worker_universities.worker_id, workerId)
+        : undefined,
       notDeleted(worker_universities),
     );
 
@@ -177,8 +179,11 @@ export class WorkerUniversityService {
     const [row] = await this.db
       .select({ id: worker_universities.id })
       .from(worker_universities)
-      .where(and(eq(worker_universities.id, id), notDeleted(worker_universities)))
+      .where(
+        and(eq(worker_universities.id, id), notDeleted(worker_universities)),
+      )
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
   }
 }

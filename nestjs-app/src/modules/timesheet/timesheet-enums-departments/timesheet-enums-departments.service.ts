@@ -108,7 +108,10 @@ export class TimeSheetEnumsDepartmentsService {
             })
             .from(departments)
             .where(
-              and(inArray(departments.id, deptIds), isNull(departments.deleted_at)),
+              and(
+                inArray(departments.id, deptIds),
+                isNull(departments.deleted_at),
+              ),
             )
         : Promise.resolve([] as DepartmentListItem[]),
       orgIds.length

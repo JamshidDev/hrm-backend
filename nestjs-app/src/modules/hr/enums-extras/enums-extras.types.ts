@@ -101,7 +101,7 @@ export const COMMAND_TYPES_BY_CONTRACT_TYPE: Record<number, number[]> = {
 export const COMMAND_REASON_TYPE_LABELS: Record<number, string> = {
   1: 'pullik kompensatsiya bilan almashtirilsin',
   2: 'mazkur ish yili davomida berilsin',
-  3: "xodimning keyingi ish yiliga ko‘chirilsin",
+  3: 'xodimning keyingi ish yiliga ko‘chirilsin',
   4: "vaqtincha mehnatga layoqatsizlik ta'tilida",
   5: "o'quv ta'tilida",
   6: 'xomiladorlik va tug‘ish ta’tilida',

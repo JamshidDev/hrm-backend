@@ -33,7 +33,8 @@ export class AccessLevelService {
   async list(q: QueryAccessLevelDto) {
     const { page, perPage, offset } = pageOf(q);
     const conds: any[] = [notDeleted(hik_central_access_levels)];
-    if (q.search) conds.push(ilike(hik_central_access_levels.name, `%${q.search}%`));
+    if (q.search)
+      conds.push(ilike(hik_central_access_levels.name, `%${q.search}%`));
     const where = and(...conds);
     const [rows, [{ total }]] = await Promise.all([
       this.db
@@ -43,12 +44,19 @@ export class AccessLevelService {
         .orderBy(desc(hik_central_access_levels.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(hik_central_access_levels).where(where),
+      this.db
+        .select({ total: count() })
+        .from(hik_central_access_levels)
+        .where(where),
     ]);
 
     // Batch-load departments + devices.
     const deptIds = [
-      ...new Set(rows.map((r) => r.hik_central_department_id).filter(Boolean) as number[]),
+      ...new Set(
+        rows
+          .map((r) => r.hik_central_department_id)
+          .filter(Boolean) as number[],
+      ),
     ];
     const deptRows = deptIds.length
       ? await this.db
@@ -96,14 +104,14 @@ export class AccessLevelService {
       data: rows.map((r) => {
         const devicesList = (r.devices ?? []) as unknown;
         const myDevs = Array.isArray(devicesList)
-          ? (devicesList
+          ? devicesList
               .map((id) => devMap.get(Number(id)))
               .filter((d): d is NonNullable<typeof d> => Boolean(d))
               .map((d) => ({
                 id: d.device_id,
                 name: d.name,
                 status: d.status ? 1 : 2,
-              })))
+              }))
           : [];
         return {
           id: r.id,
@@ -112,7 +120,7 @@ export class AccessLevelService {
           description: (r as any).description ?? null,
           devices_count: myDevs.length,
           department: r.hik_central_department_id
-            ? deptMap.get(r.hik_central_department_id) ?? null
+            ? (deptMap.get(r.hik_central_department_id) ?? null)
             : null,
           devices: myDevs,
         };
@@ -125,7 +133,10 @@ export class AccessLevelService {
   async departments() {
     const [deptRows, devRows] = await Promise.all([
       this.db
-        .select({ id: hik_central_departments.id, name: hik_central_departments.name })
+        .select({
+          id: hik_central_departments.id,
+          name: hik_central_departments.name,
+        })
         .from(hik_central_departments)
         .where(notDeleted(hik_central_departments)),
       this.db
@@ -140,7 +151,11 @@ export class AccessLevelService {
     return {
       departments: deptRows,
       // Laravel returns `status` as bool (truthy in PHP, not 1|2).
-      devices: devRows.map((d) => ({ id: d.device_id, name: d.name, status: Boolean(d.status) })),
+      devices: devRows.map((d) => ({
+        id: d.device_id,
+        name: d.name,
+        status: Boolean(d.status),
+      })),
     };
   }
 
@@ -162,17 +177,22 @@ export class AccessLevelService {
 
   // Laravel: AccessLevelMinResource — flat list of {id, name}.
   async organizationAccessLevels(organizationId: number) {
-    if (!organizationId) return [] as Array<{ id: number; name: string | null }>;
+    if (!organizationId)
+      return [] as Array<{ id: number; name: string | null }>;
     const orgAcLevels = await this.db
       .select({
-        hik_central_access_level_id: organization_access_levels.hik_central_access_level_id,
+        hik_central_access_level_id:
+          organization_access_levels.hik_central_access_level_id,
       })
       .from(organization_access_levels)
       .where(eq(organization_access_levels.organization_id, organizationId));
     if (!orgAcLevels.length) return [];
     const ids = orgAcLevels.map((o) => o.hik_central_access_level_id);
     return this.db
-      .select({ id: hik_central_access_levels.id, name: hik_central_access_levels.name })
+      .select({
+        id: hik_central_access_levels.id,
+        name: hik_central_access_levels.name,
+      })
       .from(hik_central_access_levels)
       .where(
         and(
@@ -187,10 +207,14 @@ export class AccessLevelService {
   // For NestJS — return all (Admin) by default.
   async allAccessLevels(q: QueryAccessLevelDto) {
     const conds: any[] = [notDeleted(hik_central_access_levels)];
-    if (q.search) conds.push(ilike(hik_central_access_levels.name, `%${q.search}%`));
+    if (q.search)
+      conds.push(ilike(hik_central_access_levels.name, `%${q.search}%`));
     const where = and(...conds);
     return this.db
-      .select({ id: hik_central_access_levels.id, name: hik_central_access_levels.name })
+      .select({
+        id: hik_central_access_levels.id,
+        name: hik_central_access_levels.name,
+      })
       .from(hik_central_access_levels)
       .where(where)
       .orderBy(desc(hik_central_access_levels.id));
@@ -203,7 +227,9 @@ export class AccessLevelService {
     }
     await this.db
       .delete(organization_access_levels)
-      .where(eq(organization_access_levels.organization_id, dto.organization_id));
+      .where(
+        eq(organization_access_levels.organization_id, dto.organization_id),
+      );
     if (dto.access_level_ids?.length) {
       let baseId = await nextId(this.db, organization_access_levels);
       const values = dto.access_level_ids.map((alId) => ({

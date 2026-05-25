@@ -11,7 +11,10 @@ export class SendApplicationDto {
   @IsInt()
   vacancy_position_id!: number;
 
-  @ApiPropertyOptional({ description: 'Optional uploaded files', type: [Object] })
+  @ApiPropertyOptional({
+    description: 'Optional uploaded files',
+    type: [Object],
+  })
   @IsOptional()
   @IsArray()
   files?: unknown[];

@@ -17,7 +17,7 @@ import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 export class QueryLearningCenterDto extends SearchPaginationQueryDto {}
 
 export class CreateLearningCenterDto {
-  @ApiProperty({ example: 'Toshkent o\'quv markazi' })
+  @ApiProperty({ example: "Toshkent o'quv markazi" })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
@@ -96,7 +96,7 @@ export class LearningCenterItemDto {
   @ApiProperty({ example: 'TASH001', nullable: true })
   code!: string | null;
 
-  @ApiProperty({ example: 'Toshkent o\'quv markazi' })
+  @ApiProperty({ example: "Toshkent o'quv markazi" })
   name!: string;
 
   @ApiProperty({ example: 'Учебный центр Ташкент', nullable: true })

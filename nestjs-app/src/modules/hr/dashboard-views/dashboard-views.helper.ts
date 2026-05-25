@@ -46,6 +46,36 @@ export function calcAge(birthday: string | null): number {
   );
 }
 
+// Laravel PositionHelper::replace — birlashtirilgan dept+pos nomlarda dublikat
+// so'zlarni qisqartiradi ("bo'limi bo'lim boshlig'i" → "bo'limi boshlig'i").
+const POSITION_REPLACEMENTS: Array<[string | RegExp, string]> = [
+  [/bo['‘]limi bo['‘]lim/g, 'bo‘limi'],
+  ['kotibiyati kotibiyat', 'kotibiyati'],
+  ['devonxona devonxona', 'devonxona'],
+  ['ofisi ofis', 'ofis'],
+  ['filiali filial', 'filiali'],
+  ['departamenti departament', 'departament'],
+  ['boshqarmasi boshqarma', 'boshqarmasi'],
+  ['sexi sex', 'sexi'],
+  ['deposi depo', 'deposi'],
+  ['stansiyasi stansiya', 'stansiyasi'],
+  ['bekati bekat', 'bekati'],
+  ['markazi markaz', 'markaz'],
+  ['muassasasi muassasa', 'muassasasi'],
+  ['uchastkasi uchastka', 'uchastkasi'],
+];
+
+function applyPositionReplacements(s: string): string {
+  let out = s;
+  for (const [from, to] of POSITION_REPLACEMENTS) {
+    out =
+      typeof from === 'string'
+        ? out.split(from).join(to)
+        : out.replace(from, to);
+  }
+  return out;
+}
+
 // Laravel PositionHelper::getShortPosition — (dept.name agar level!=1) + pos.name, ucfirst.
 export function buildShortPosition(
   deptName: string | null,
@@ -55,7 +85,9 @@ export function buildShortPosition(
   if (!posName) return '';
   let position = posName;
   if (deptLevel !== 1 && deptName) position = `${deptName} ${position}`;
-  return position.charAt(0).toUpperCase() + position.slice(1);
+  position = position.trim();
+  position = position.charAt(0).toUpperCase() + position.slice(1);
+  return applyPositionReplacements(position);
 }
 
 // Laravel PositionHelper::getFullPosition — org.full_name + (dept.name agar level!=1) + pos.name.

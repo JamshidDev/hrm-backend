@@ -46,6 +46,13 @@
     "med": {
       "one": "Healthy",
       "two": "Unhealthy"
+    },
+    "already": "This employee holds a key position, you cannot hire for this position!",
+    "political_party": {
+      "two": "People's Democratic Party",
+      "three": "UzLiDeP Party",
+      "four": "Adolat Party",
+      "five": "Milliy Tiklanish Party"
     }
   },
   "invalid_credentials": "Such user was not found in the system. Please verify the entered information...",
@@ -517,7 +524,13 @@
   "user_all_ready": "Such user already exists in the system",
   "exam": {
     "finished": "Finished",
-    "result_updated_successfully": "Answer updated successfully"
+    "result_updated_successfully": "Answer updated successfully",
+    "exam_types": {
+      "one": "Certification (Industrial Safety)",
+      "two": "Certification (Job Suitability)",
+      "three": "Qualification Test (For Rank Promotion)",
+      "four": "Knowledge Test (Occupational Safety)"
+    }
   },
   "chat": {
     "notifications": {

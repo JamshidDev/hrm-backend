@@ -1,7 +1,12 @@
 // Career DTO'lar. Laravel: Vacancy/VacancyUserCareerController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 // POST /v1/vacancies/careers — Laravel `from` va `position` majburiy.
 export class CreateCareerDto {

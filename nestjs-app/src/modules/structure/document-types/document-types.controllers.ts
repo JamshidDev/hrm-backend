@@ -83,7 +83,9 @@ export class ContractTypeController {
   @Permission('admin')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Create contract type (upload doc/docx, bulk per organization)' })
+  @ApiOperation({
+    summary: 'Create contract type (upload doc/docx, bulk per organization)',
+  })
   @ApiOkResponse()
   async create(
     @Body() body: { type?: string; organizations?: string },

@@ -31,9 +31,14 @@ export class SyncService {
         .orderBy(desc(sync_h_c_p_access_logs.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(sync_h_c_p_access_logs).where(where),
+      this.db
+        .select({ total: count() })
+        .from(sync_h_c_p_access_logs)
+        .where(where),
     ]);
-    const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean) as number[])];
+    const userIds = [
+      ...new Set(rows.map((r) => r.user_id).filter(Boolean) as number[]),
+    ];
     const uRows = userIds.length
       ? await this.db
           .select({ id: users.id, worker_id: users.worker_id })
@@ -53,15 +58,19 @@ export class SyncService {
           .from(workers)
           .where(inArray(workers.id, workerIds))
       : [];
-    const uMap = new Map<number, (typeof uRows)[number]>(uRows.map((u) => [u.id, u] as const));
-    const wMap = new Map<number, (typeof wRows)[number]>(wRows.map((w) => [w.id, w] as const));
+    const uMap = new Map<number, (typeof uRows)[number]>(
+      uRows.map((u) => [u.id, u] as const),
+    );
+    const wMap = new Map<number, (typeof wRows)[number]>(
+      wRows.map((w) => [w.id, w] as const),
+    );
     return {
       current_page: page,
       per_page: perPage,
       total: Number(total),
       data: rows.map((r) => {
-        const u = r.user_id ? uMap.get(r.user_id) ?? null : null;
-        const w = u?.worker_id ? wMap.get(u.worker_id) ?? null : null;
+        const u = r.user_id ? (uMap.get(r.user_id) ?? null) : null;
+        const w = u?.worker_id ? (wMap.get(u.worker_id) ?? null) : null;
         return { ...r, user: u ? { ...u, worker: w } : null };
       }),
     };
@@ -86,7 +95,9 @@ export class SyncService {
           .from(h_c_p_devices)
           .where(inArray(h_c_p_devices.device_id, deviceIds))
       : [];
-    const dMap = new Map<number, (typeof devs)[number]>(devs.map((d) => [Number(d.device_id), d] as const));
+    const dMap = new Map<number, (typeof devs)[number]>(
+      devs.map((d) => [Number(d.device_id), d] as const),
+    );
     return events.map((e) => ({
       device: dMap.get(Number(e.hik_central_device_id)) ?? null,
       start_time: e.start_time,

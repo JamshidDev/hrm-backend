@@ -16,12 +16,14 @@ import {
   model_has_permissions,
   role_has_permissions,
   personal_access_tokens,
+  workers,
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { paginate } from '@/common/pagination/paginate.util';
 import { SanctumService } from '@/modules/auth/sanctum.service';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import {
   AdminUserMapper,
   type UserPermissionItem,
@@ -68,35 +70,92 @@ export class AdminUserService {
 
     const lang = this.ctx.lang;
 
-    // phone bigint — ilike to'g'ridan-to'g'ri ishlamaydi. Search bo'lsa, avval
-    // builder API orqali CAST'lab user_id'larni topamiz, so'ng relational query'da
-    // shu id'lar bilan filter qo'yamiz.
+    // Laravel User::scopeSearch — OR ichida quyidagi shartlar:
+    //   1) whereHas('worker', searchByFullName) — last/first/middle/pin/card terms.
+    //   2) orWhereLike('phone', "%$search%") — phone CAST(TEXT) ILIKE.
+    //   3) whereHas('roles', whereLike('name', "%$search%")) — role nomi.
+    // Builder API'da OR EXISTS qilish murakkab — avval mos user_id'larni
+    // har bir manbadan toplab, birlashtirib so'ng filterga qo'yamiz.
     let searchUserIds: number[] | null = null;
     if (search) {
-      const matches = await this.db
+      const setIds = new Set<number>();
+
+      // 1) Worker search (Worker::scopeSearchByFullName parity).
+      const workerCond = buildWorkerSearchCond(search);
+      if (workerCond) {
+        const workerMatches = await this.db
+          .select({ id: users.id })
+          .from(users)
+          .innerJoin(workers, eq(workers.id, users.worker_id))
+          .where(workerCond);
+        for (const m of workerMatches) setIds.add(m.id);
+      }
+
+      // 2) Phone like.
+      const phoneMatches = await this.db
         .select({ id: users.id })
         .from(users)
         .where(ilike(sql`CAST(${users.phone} AS TEXT)`, `%${search}%`));
-      searchUserIds = matches.map((m) => m.id);
-      // Hech qanday natija topilmasa — bo'sh javob, query'larni ishlatish shart emas.
+      for (const m of phoneMatches) setIds.add(m.id);
+
+      // 3) Role name like — model_has_roles → roles.name ILIKE.
+      const roleMatches = await this.db
+        .select({ id: model_has_roles.model_id })
+        .from(model_has_roles)
+        .innerJoin(roles, eq(roles.id, model_has_roles.role_id))
+        .where(
+          and(
+            eq(model_has_roles.model_type, USER_TYPE),
+            ilike(roles.name, `%${search}%`),
+          ),
+        );
+      for (const m of roleMatches) setIds.add(m.id);
+
+      searchUserIds = [...setIds];
       if (searchUserIds.length === 0) {
-        return {
-          current_page: page,
-          per_page: perPage,
-          total: 0,
-          data: [],
-        };
+        return { current_page: page, total: 0, data: [] };
       }
+    }
+
+    // Role filtri (Laravel: whereHas('roles', id=$roleId)) — model_has_roles'dan
+    // shu rolga ega userlar.
+    let roleUserIds: number[] | null = null;
+    if (filters.role != null) {
+      const matches = await this.db
+        .select({ id: model_has_roles.model_id })
+        .from(model_has_roles)
+        .where(
+          and(
+            eq(model_has_roles.role_id, filters.role),
+            eq(model_has_roles.model_type, USER_TYPE),
+          ),
+        );
+      roleUserIds = [...new Set(matches.map((m) => m.id))];
+      if (roleUserIds.length === 0) {
+        return { current_page: page, total: 0, data: [] };
+      }
+    }
+
+    // Search + role IDlarini birlashtirish (ikkalasi ham bo'lsa — kesishma).
+    let filterIds: number[] | null = null;
+    if (searchUserIds && roleUserIds) {
+      const roleSet = new Set(roleUserIds);
+      filterIds = searchUserIds.filter((id) => roleSet.has(id));
+      if (filterIds.length === 0) {
+        return { current_page: page, total: 0, data: [] };
+      }
+    } else {
+      filterIds = searchUserIds ?? roleUserIds;
     }
 
     // Paginate util — count + list parallel.
     const result = await paginate({
       db: this.db,
       countTable: users,
-      countWhere: this.buildUserCountWhere(orgIds, search),
+      countWhere: this.buildUserCountWhere(orgIds, filterIds),
       query: ({ limit, offset }) =>
         this.db.query.users.findMany({
-          where: this.buildUserWhere(orgIds, searchUserIds),
+          where: this.buildUserWhere(orgIds, filterIds),
           with: {
             worker: {
               columns: {
@@ -148,7 +207,6 @@ export class AdminUserService {
 
     return {
       current_page: result.current_page,
-      per_page: result.per_page,
       total: result.total,
       data,
     };
@@ -722,16 +780,16 @@ export class AdminUserService {
 
   private buildUserWhere(
     orgIds: number[] | null,
-    searchUserIds: number[] | null,
+    userIds: number[] | null,
   ): Record<string, unknown> | undefined {
     const conditions: Record<string, unknown> = {};
     if (orgIds && orgIds.length > 0) {
       conditions.organization_id = { in: orgIds };
     }
-    // Phone bigint bo'lgani uchun search avval builder API orqali ID'larga
-    // o'tkaziladi (`findAll` ichida) va bu yerga `searchUserIds` sifatida keladi.
-    if (searchUserIds && searchUserIds.length > 0) {
-      conditions.id = { in: searchUserIds };
+    // search (phone ilike) + role (model_has_roles) → user_ids `findAll` ichida
+    // birlashtiriladi va bu yerga `userIds` sifatida keladi.
+    if (userIds && userIds.length > 0) {
+      conditions.id = { in: userIds };
     }
     if (Object.keys(conditions).length === 0) return undefined;
     return conditions;
@@ -739,14 +797,14 @@ export class AdminUserService {
 
   private buildUserCountWhere(
     orgIds: number[] | null,
-    search: string | undefined,
+    userIds: number[] | null,
   ) {
     const parts: ReturnType<typeof eq>[] = [];
     if (orgIds && orgIds.length > 0) {
       parts.push(inArray(users.organization_id, orgIds));
     }
-    if (search) {
-      parts.push(ilike(sql`CAST(${users.phone} AS TEXT)`, `%${search}%`));
+    if (userIds && userIds.length > 0) {
+      parts.push(inArray(users.id, userIds));
     }
     if (parts.length === 0) return undefined;
     return parts.length === 1 ? parts[0] : and(...parts);

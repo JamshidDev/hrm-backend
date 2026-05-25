@@ -35,7 +35,10 @@ export class TimesheetConfirmationService {
   ) {}
 
   // POST /api/v1/timesheet/{timesheetId}/confirmations
-  async attach(timesheetId: number, dto: AttachConfirmationsDto): Promise<void> {
+  async attach(
+    timesheetId: number,
+    dto: AttachConfirmationsDto,
+  ): Promise<void> {
     await this.assertTimesheetExists(timesheetId);
 
     const ids = dto.confirmations.map((c) => c.id);
@@ -121,9 +124,7 @@ export class TimesheetConfirmationService {
 
     const workerIds = [
       ...new Set(
-        rows
-          .map((r) => r.worker_id)
-          .filter((id): id is number => id !== null),
+        rows.map((r) => r.worker_id).filter((id): id is number => id !== null),
       ),
     ];
 

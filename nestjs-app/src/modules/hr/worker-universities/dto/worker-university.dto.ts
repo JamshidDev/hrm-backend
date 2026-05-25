@@ -2,13 +2,27 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerUniversityDto {
   @ApiPropertyOptional() @IsOptional() @IsString() uuid?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() page?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() per_page?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  per_page?: number;
 }
 
 // Laravel WorkerUniversityStoreRequest: { uuid, university_id, speciality_id, from_date, to_date, file? }
@@ -19,10 +33,16 @@ export class CreateWorkerUniversityDto {
   @Exists('workers', 'uuid')
   uuid!: string;
 
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('universities', 'id')
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('universities', 'id')
   university_id!: number;
 
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('specialities', 'id')
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('specialities', 'id')
   speciality_id!: number;
 
   @ApiProperty() @IsDateString() from_date!: string;
@@ -32,10 +52,16 @@ export class CreateWorkerUniversityDto {
 
 // Update — no `uuid` (worker unchanged).
 export class UpdateWorkerUniversityDto {
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('universities', 'id')
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('universities', 'id')
   university_id!: number;
 
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('specialities', 'id')
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('specialities', 'id')
   speciality_id!: number;
 
   @ApiProperty() @IsDateString() from_date!: string;
@@ -73,7 +99,7 @@ export class WorkerUniversityUniversityDto {
   city!: WorkerUniversityCityDto | null;
   @ApiProperty({ example: { id: 1, name: 'Oliy' } })
   education!: { id: number; name: string };
-  @ApiProperty({ example: { id: 1, name: 'Oliy ta\'lim muassasasi' } })
+  @ApiProperty({ example: { id: 1, name: "Oliy ta'lim muassasasi" } })
   type!: { id: number; name: string };
   @ApiProperty({ nullable: true }) name!: string | null;
   @ApiProperty({ nullable: true }) name_ru!: string | null;

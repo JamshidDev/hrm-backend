@@ -38,7 +38,7 @@ export class ApplicationController {
   @ApiOperation({ summary: 'Submit a vacancy application' })
   async send(@Body() dto: SendApplicationDto) {
     await this.service.send(0, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Get('applications')
@@ -66,7 +66,7 @@ export class ApplicationController {
     @Body() dto: UploadFilesDto,
   ) {
     await this.service.uploadFiles(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete('applications/:applicationId/files/:fileId')
@@ -76,6 +76,6 @@ export class ApplicationController {
     @Param('fileId', ParseIntPipe) fileId: number,
   ) {
     await this.service.deleteFile(fileId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

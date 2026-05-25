@@ -18,24 +18,40 @@ import { Exists } from '@/common/validators/exists.validator';
 
 // PUT /worker-positions/{id}/update
 export class UpdateWorkerPositionDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @Exists('organizations', 'id')
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @Exists('department_positions', 'id')
   department_position_id?: number;
 
   @ApiProperty() @IsString() @IsNotEmpty() contract_number!: string;
-  @ApiProperty({ example: '2025-01-15' }) @IsDateString() contract_date!: string;
+  @ApiProperty({ example: '2025-01-15' })
+  @IsDateString()
+  contract_date!: string;
   @ApiProperty() @IsNotEmpty() group!: number | string;
   @ApiProperty() @IsNotEmpty() rank!: number | string;
   @ApiProperty({ example: 100 }) @Type(() => Number) @IsNumber() rate!: number;
   @ApiProperty() @IsNotEmpty() type!: number | string;
-  @ApiProperty({ example: 5000000 }) @Type(() => Number) @IsNumber() salary!: number;
-  @ApiProperty() @Type(() => Number) @IsInt() @Exists('schedules', 'id')
+  @ApiProperty({ example: 5000000 })
+  @Type(() => Number)
+  @IsNumber()
+  salary!: number;
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('schedules', 'id')
   schedule_id!: number;
-  @ApiProperty({ example: '2025-01-15' }) @IsDateString() position_date!: string;
+  @ApiProperty({ example: '2025-01-15' })
+  @IsDateString()
+  position_date!: string;
 }
 
 // POST/PUT /worker-positions/{uuid}/edit/{attach|detach}-role
@@ -228,9 +244,6 @@ export class WorkerPositionListItemDto {
 export class WorkerPositionListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
-
-  @ApiProperty({ example: 10 })
-  per_page!: number;
 
   @ApiProperty({ example: 50 })
   total!: number;

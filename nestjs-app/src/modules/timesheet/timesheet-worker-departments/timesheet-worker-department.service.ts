@@ -4,17 +4,7 @@
 // detach: hard delete by worker_position_id OR department_id.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  exists,
-  inArray,
-  isNull,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, eq, exists, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -28,7 +18,7 @@ import {
   users as usersTable,
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
-import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { getShortPosition } from '@/modules/hr/_shared/position-helper';
@@ -46,6 +36,7 @@ export class TimeSheetWorkerDepartmentService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -56,13 +47,14 @@ export class TimeSheetWorkerDepartmentService {
     const lang = this.ctx.lang;
     const offset = (page - 1) * perPage;
 
-    // `organizations` — vergul bilan ajratilgan organization id lar.
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => Number.isFinite(n) && n > 0)
-      : [];
+    // Laravel WorkerPosition::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     // EXISTS time_sheet_worker_departments — faqat shu worker_position'ga
     // TimeSheet department biriktirilganlar.
@@ -70,16 +62,17 @@ export class TimeSheetWorkerDepartmentService {
     const where = and(
       eq(worker_positions.status, 2),
       isNull(worker_positions.deleted_at),
-      orgIds.length > 0
-        ? inArray(worker_positions.organization_id, orgIds)
-        : undefined,
+      inScope,
       exists(
         this.db
           .select({ x: sql`1` })
           .from(time_sheet_worker_departments)
           .where(
             and(
-              eq(time_sheet_worker_departments.worker_position_id, worker_positions.id),
+              eq(
+                time_sheet_worker_departments.worker_position_id,
+                worker_positions.id,
+              ),
               isNull(time_sheet_worker_departments.deleted_at),
             ),
           ),
@@ -102,9 +95,21 @@ export class TimeSheetWorkerDepartmentService {
         })
         .from(worker_positions)
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
-        .leftJoin(positionsTable, eq(positionsTable.id, worker_positions.position_id))
-        .leftJoin(organizations, eq(organizations.id, worker_positions.organization_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
+        .leftJoin(
+          positionsTable,
+          eq(positionsTable.id, worker_positions.position_id),
+        )
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
         .where(where)
         .orderBy(
           asc(worker_positions.organization_id),
@@ -123,7 +128,8 @@ export class TimeSheetWorkerDepartmentService {
       ? await this.db
           .select({
             id: time_sheet_worker_departments.id,
-            worker_position_id: time_sheet_worker_departments.worker_position_id,
+            worker_position_id:
+              time_sheet_worker_departments.worker_position_id,
             department_id: departments.id,
             department_name: departments.name,
             department_level: departments.level,
@@ -134,10 +140,19 @@ export class TimeSheetWorkerDepartmentService {
             org_group: organizations.group,
           })
           .from(time_sheet_worker_departments)
-          .leftJoin(departments, eq(departments.id, time_sheet_worker_departments.department_id))
+          .leftJoin(
+            departments,
+            eq(departments.id, time_sheet_worker_departments.department_id),
+          )
           .leftJoin(
             organizations,
-            eq(organizations.id, time_sheet_worker_departments.organization_id),
+            and(
+              eq(
+                organizations.id,
+                time_sheet_worker_departments.organization_id,
+              ),
+              isNull(organizations.deleted_at),
+            ),
           )
           .where(
             and(
@@ -155,7 +170,6 @@ export class TimeSheetWorkerDepartmentService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         wpRows.map(async (r) => ({
@@ -213,7 +227,10 @@ export class TimeSheetWorkerDepartmentService {
       .where(eq(worker_positions.id, dto.worker_position_id))
       .limit(1);
     if (!wp) {
-      throw new BusinessException(400, this.i18n.t('messages.worker_position_not_found'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
     }
     if (!wp.worker_id) {
       throw new BusinessException(400, this.i18n.t('messages.user_not_found'));
@@ -270,7 +287,10 @@ export class TimeSheetWorkerDepartmentService {
         .update(time_sheet_worker_departments)
         .set({ deleted_at: sql`NOW()` })
         .where(
-          eq(time_sheet_worker_departments.worker_position_id, dto.worker_position_id),
+          eq(
+            time_sheet_worker_departments.worker_position_id,
+            dto.worker_position_id,
+          ),
         );
     }
     if (dto.department_id) {

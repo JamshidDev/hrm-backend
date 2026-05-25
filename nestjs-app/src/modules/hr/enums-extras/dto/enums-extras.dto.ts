@@ -5,7 +5,10 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class ContractAdditionalTypesQueryDto {
-  @ApiPropertyOptional({ description: 'ContractType id (filters subset)', example: 2 })
+  @ApiPropertyOptional({
+    description: 'ContractType id (filters subset)',
+    example: 2,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -22,7 +25,10 @@ export class CommandTypesQueryDto {
   @IsString()
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Type id (semantics depends on status).', example: 1 })
+  @ApiPropertyOptional({
+    description: 'Type id (semantics depends on status).',
+    example: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

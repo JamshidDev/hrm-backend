@@ -1,18 +1,7 @@
 // VacationScheduleYear service. Multi-batch loaded relations.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import PizZip from 'pizzip';
@@ -32,6 +21,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -53,6 +43,7 @@ export class VacationScheduleYearService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly convert: ConvertService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -61,7 +52,15 @@ export class VacationScheduleYearService {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
-    const where = isNull(vacation_schedule_years.deleted_at);
+    // Laravel VacationScheduleYear::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      vacation_schedule_years.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
+    const where = and(isNull(vacation_schedule_years.deleted_at), inScope);
     const offset = (page - 1) * perPage;
 
     const [rows, [{ total }]] = await Promise.all([
@@ -98,7 +97,9 @@ export class VacationScheduleYearService {
     // Batch-load director + tradeUnion via ConfirmationWorker.
     const cwIds = [
       ...rows.map((r) => r.director_id).filter((x): x is number => x != null),
-      ...rows.map((r) => r.trade_union_id).filter((x): x is number => x != null),
+      ...rows
+        .map((r) => r.trade_union_id)
+        .filter((x): x is number => x != null),
     ];
     const cwRows = cwIds.length
       ? await this.db
@@ -139,9 +140,15 @@ export class VacationScheduleYearService {
           .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
           .leftJoin(
             organizations,
-            eq(organizations.id, worker_positions.organization_id),
+            and(
+              eq(organizations.id, worker_positions.organization_id),
+              isNull(organizations.deleted_at),
+            ),
           )
-          .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+          .leftJoin(
+            departments,
+            eq(departments.id, worker_positions.department_id),
+          )
           .leftJoin(
             positionsTable,
             eq(positionsTable.id, worker_positions.position_id),
@@ -154,9 +161,13 @@ export class VacationScheduleYearService {
       rows.map((r) =>
         VacationScheduleYearMapper.toItem(
           r,
-          r.organization_id != null ? (orgMap.get(r.organization_id) ?? null) : null,
+          r.organization_id != null
+            ? (orgMap.get(r.organization_id) ?? null)
+            : null,
           r.director_id != null ? (cwMap.get(r.director_id) ?? null) : null,
-          r.trade_union_id != null ? (cwMap.get(r.trade_union_id) ?? null) : null,
+          r.trade_union_id != null
+            ? (cwMap.get(r.trade_union_id) ?? null)
+            : null,
           r.creator_id != null ? (creatorMap.get(r.creator_id) ?? null) : null,
           this.i18n,
           lang,
@@ -167,7 +178,6 @@ export class VacationScheduleYearService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data,
     };
@@ -374,7 +384,11 @@ export class VacationScheduleYearService {
       order: number;
     }> = [];
     if (director?.worker_id != null) {
-      rows.push({ position: director.position, worker_id: director.worker_id, order: 4 });
+      rows.push({
+        position: director.position,
+        worker_id: director.worker_id,
+        order: 4,
+      });
     }
     if (
       tradeUnion?.worker_id != null &&
@@ -390,7 +404,11 @@ export class VacationScheduleYearService {
       creator?.worker_id != null &&
       [director?.worker_id, tradeUnion?.worker_id].includes(creator.worker_id)
     ) {
-      rows.push({ position: creator.pos_name, worker_id: creator.worker_id, order: 2 });
+      rows.push({
+        position: creator.pos_name,
+        worker_id: creator.worker_id,
+        order: 2,
+      });
     }
 
     for (const r of rows) {
@@ -467,7 +485,12 @@ export class VacationScheduleYearService {
   }
 
   // GET /api/v1/hr/vacation-schedule-workers
-  async workers(filters: { per_page?: number; page?: number; year?: number; search?: string }) {
+  async workers(filters: {
+    per_page?: number;
+    page?: number;
+    year?: number;
+    search?: string;
+  }) {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
@@ -494,14 +517,20 @@ export class VacationScheduleYearService {
         })
         .from(worker_positions)
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(

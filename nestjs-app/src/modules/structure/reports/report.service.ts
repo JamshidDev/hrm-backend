@@ -28,10 +28,12 @@ import {
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ExcelService } from '@/shared/excel/excel.service';
 import { ConvertService } from '@/shared/convert/convert.service';
+import { PermissionService } from '@/shared/permission/permission.service';
 import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import { buildReportExcel } from '@/modules/structure/reports/report-excel.builder';
 import { generateReport } from '@/modules/structure/reports/report-generate.builder';
@@ -93,32 +95,24 @@ export class ReportService {
     private readonly minio: MinioService,
     private readonly excel: ExcelService,
     private readonly convert: ConvertService,
+    private readonly perms: PermissionService,
+    private readonly scope: OrgScopeService,
   ) {}
 
-  // Laravel: Report::query()->filter($user, request->all())->withCount(details)->where('active', true)->with('organization').
-  // Filter $user — agar admin permission bo'lmasa, faqat user.organization_id.
-  // Bizning test admin user — barcha orglar. Hozir oddiy version: active=true filter.
+  // Laravel ReportController::index — Report::query()->filter($user, request->all())
+  //   ->where('active', true)->paginate(per_page). YEAR/MONTH filter ishlatilmaydi.
   async findAll(filters: QueryReportDto): Promise<ReportListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => !Number.isNaN(n))
-      : null;
+    // Laravel Report::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(reports.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
-    const where = and(
-      notDeleted(reports),
-      eq(reports.active, true),
-      orgIds && orgIds.length > 0
-        ? inArray(reports.organization_id, orgIds)
-        : undefined,
-      filters.year ? eq(reports.year, filters.year) : undefined,
-      filters.month ? eq(reports.month, filters.month) : undefined,
-    );
+    const where = and(notDeleted(reports), eq(reports.active, true), inScope);
 
     const result = await paginate({
       db: this.db,
@@ -158,7 +152,6 @@ export class ReportService {
 
     return {
       current_page: result.current_page,
-      per_page: result.per_page,
       total: result.total,
       data,
     };
@@ -166,12 +159,34 @@ export class ReportService {
 
   async remove(id: number): Promise<void> {
     const [row] = await this.db
-      .select({ id: reports.id })
+      .select({
+        id: reports.id,
+        confirmation: reports.confirmation,
+        organization_id: reports.organization_id,
+      })
       .from(reports)
       .where(and(eq(reports.id, id), notDeleted(reports)))
       .limit(1);
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    // Laravel: faqat o'z tashkiloti hisobotini o'chirishga ruxsat beriladi.
+    const user = this.ctx.user_or_fail;
+    if (row.organization_id !== user.organization_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.errors.organization_not_allowed_permission'),
+      );
+    }
+    // Laravel: imzolangan (SUCCESS) hisobotni o'chirish — delete_report ruxsati kerak.
+    if (row.confirmation === 3) {
+      const ok = await this.perms.hasPermission(user.id, 'delete_report');
+      if (!ok) {
+        throw new BusinessException(
+          400,
+          "Tasdiqlangan hujjatni o'chirish mumkin emas",
+        );
+      }
     }
     await this.db
       .update(reports)
@@ -204,12 +219,23 @@ export class ReportService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
+    // Laravel: when(year), when(month) — ixtiyoriy filtrlar.
+    const where = and(
+      filters.year ? eq(report_moth_pers.year, filters.year) : undefined,
+      filters.month ? eq(report_moth_pers.month, filters.month) : undefined,
+    );
+
     const result = await paginate({
       db: this.db,
       countTable: report_moth_pers,
-      countWhere: undefined,
+      countWhere: where,
       query: ({ limit, offset }) =>
-        this.db.select().from(report_moth_pers).limit(limit).offset(offset),
+        this.db
+          .select()
+          .from(report_moth_pers)
+          .where(where)
+          .limit(limit)
+          .offset(offset),
       page,
       perPage,
       mapper: (r) => r,
@@ -588,9 +614,14 @@ export class ReportService {
     for (const { org } of detailOrgs) {
       const allowed = await this.checkGeneratePermission(org);
       if (!allowed) {
+        const [o] = await this.db
+          .select({ name: organizations.name })
+          .from(organizations)
+          .where(eq(organizations.id, org))
+          .limit(1);
         throw new BusinessException(
           400,
-          'Ushbu oyda hisobot yuklash muddati tugadi',
+          `Ushbu ${o?.name ?? ''} uchun joriy oyda hisobot yuklash muddati tugadi`,
         );
       }
     }
@@ -624,35 +655,42 @@ export class ReportService {
     await this.generateDocument(report.id);
   }
 
-  // Laravel checkGeneratePermission — hisobot yuklash muddati (oyning 1-5 kuni;
-  // 5-kun dam olish kuniga to'g'ri kelsa keyingi ish kuniga suriladi).
-  // Muddat o'tgan bo'lsa — faqat ReportMothPer ruxsati bo'lsa true.
+  // Laravel checkGeneratePermission — hisobot yuklash muddati: joriy oyning
+  // 10-kuni (dam olish kuniga to'g'ri kelsa keyingi ish kuniga suriladi).
+  // Muddat o'tgan bo'lsa — o'tgan oy uchun ReportMothPer ruxsati bo'lsagina true.
   private async checkGeneratePermission(orgId: number): Promise<boolean> {
     const now = new Date();
     const year = now.getFullYear();
-    const monthIdx = now.getMonth(); // 0-asosli
+    const monthIdx = now.getMonth(); // 0-asosli (joriy oy)
 
-    const startDay = new Date(year, monthIdx, 1, 0, 0, 0, 0);
-    const base = new Date(year, monthIdx, 5, 0, 0, 0, 0);
+    // Laravel: Carbon::create(year, month, 10).
+    const base = new Date(year, monthIdx, 10, 0, 0, 0, 0);
     let lastDay: Date;
     const dow = base.getDay(); // 0=yakshanba, 6=shanba
     if (dow === 6) {
-      lastDay = new Date(year, monthIdx, 7, 23, 59, 59, 999);
+      lastDay = new Date(year, monthIdx, 12, 23, 59, 59, 999);
     } else if (dow === 0) {
-      lastDay = new Date(year, monthIdx, 6, 23, 59, 59, 999);
+      lastDay = new Date(year, monthIdx, 11, 23, 59, 59, 999);
     } else {
       lastDay = base;
     }
 
-    if (now < startDay || now > lastDay) {
+    if (now > lastDay) {
+      // ReportMothPer — o'tgan oy uchun (now - 1 oy).
+      let pm = monthIdx; // 0-asosli joriy = 1-asosli o'tgan oy
+      let py = year;
+      if (pm < 1) {
+        pm = 12;
+        py -= 1;
+      }
       const [row] = await this.db
         .select({ id: report_moth_pers.id })
         .from(report_moth_pers)
         .where(
           and(
             eq(report_moth_pers.organization_id, orgId),
-            eq(report_moth_pers.year, year),
-            eq(report_moth_pers.month, monthIdx + 1),
+            eq(report_moth_pers.year, py),
+            eq(report_moth_pers.month, pm),
           ),
         )
         .limit(1);
@@ -781,7 +819,13 @@ export class ReportService {
     const [u] = await this.db
       .select({ org_name: organizations.name })
       .from(users)
-      .leftJoin(organizations, eq(organizations.id, users.organization_id))
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, users.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
       .where(eq(users.id, report.user_id))
       .limit(1);
     if (u) userOrgName = u.org_name ?? '';

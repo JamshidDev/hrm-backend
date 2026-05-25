@@ -97,7 +97,10 @@ export class ConfirmationWorkerService {
         .leftJoin(workers, eq(workers.id, confirmation_workers.worker_id))
         .leftJoin(
           organizations,
-          eq(organizations.id, confirmation_workers.organization_id),
+          and(
+            eq(organizations.id, confirmation_workers.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(asc(confirmation_workers.id))

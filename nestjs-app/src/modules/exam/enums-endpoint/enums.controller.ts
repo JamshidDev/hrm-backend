@@ -40,7 +40,9 @@ const RESULT_TYPES = [{ id: 1, name: 'Imtihon natijasi' }];
 @Controller('api/v1/exam/enums')
 export class ExamEnumsController {
   @Get()
-  @ApiOperation({ summary: 'Exam enums (topic types, whom, file types, result types)' })
+  @ApiOperation({
+    summary: 'Exam enums (topic types, whom, file types, result types)',
+  })
   enums() {
     return buildSuccess(true, {
       topic_types: TOPIC_TYPES,

@@ -56,7 +56,7 @@ export class TopicController {
   @ApiOperation({ summary: 'Create a topic' })
   async store(@Body() dto: CreateTopicDto) {
     await this.service.create(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put('topics/:id')
@@ -66,13 +66,13 @@ export class TopicController {
     @Body() dto: UpdateTopicDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete('topics/:id')
   @ApiOperation({ summary: 'Soft-delete a topic' })
   async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

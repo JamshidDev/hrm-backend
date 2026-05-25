@@ -21,7 +21,8 @@ import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class CheckWorkerQueryDto {
   @ApiProperty({ example: '12345678901234' })
-  @IsString() @Length(14, 14)
+  @IsString()
+  @Length(14, 14)
   pin!: string;
 }
 
@@ -36,11 +37,15 @@ export class StoreTimeSheetWorkersDto {
   workers!: Array<{ id: number; day: string }>;
 
   @ApiPropertyOptional({ example: 1, description: 'TimeSheetTypeEnum value' })
-  @IsOptional() @Type(() => Number) @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   status?: number;
 
   @ApiPropertyOptional({ example: 8 })
-  @IsOptional() @Type(() => Number) @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   hours?: number;
 }
 
@@ -67,7 +72,8 @@ export class TimeSheetWorkerItemDto {
   @ApiProperty({ nullable: true }) table!: string | null;
   @ApiProperty({ nullable: true }) photo!: string | null;
   @ApiProperty({ nullable: true }) position!: string | null;
-  @ApiProperty({ type: [TimeSheetWorkerDayDto] }) days!: TimeSheetWorkerDayDto[];
+  @ApiProperty({ type: [TimeSheetWorkerDayDto] })
+  days!: TimeSheetWorkerDayDto[];
 }
 
 export class TimeSheetWorkerListResponseDto {

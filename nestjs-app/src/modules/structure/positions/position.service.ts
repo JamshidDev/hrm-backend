@@ -65,10 +65,7 @@ export class PositionService {
     });
   }
 
-  async create(
-    dto: CreatePositionDto,
-    file?: UploadedFile,
-  ): Promise<void> {
+  async create(dto: CreatePositionDto, file?: UploadedFile): Promise<void> {
     const nextId = await this.nextId();
     let filePath: string | null = null;
     if (file) {

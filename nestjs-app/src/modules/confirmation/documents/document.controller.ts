@@ -81,7 +81,10 @@ export class DocumentController {
   @Get('generate-url')
   @ApiOperation({ summary: 'Generate signed document confirmation URL' })
   async generateUrl(@Query() query: GenerateConfirmationUrlDto) {
-    return buildSuccess(true, await this.service.generateConfirmationUrl(query));
+    return buildSuccess(
+      true,
+      await this.service.generateConfirmationUrl(query),
+    );
   }
 
   @Post('document-confirm')

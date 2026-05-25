@@ -38,6 +38,7 @@ import { ScheduleTypeModule } from '@/modules/turnstile/schedule-types/schedule-
 import { ScheduleGroupModule } from '@/modules/turnstile/schedule-groups/schedule-group.module';
 import { WorkerScheduleModule } from '@/modules/turnstile/worker-schedules/worker-schedule.module';
 import { ScheduleStatsModule } from '@/modules/turnstile/schedule-stats/schedule-stats.module';
+import { AbsentWorkersModule } from '@/modules/turnstile/absent-workers/absent-workers.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { ScheduleStatsModule } from '@/modules/turnstile/schedule-stats/schedule
     ScheduleGroupModule,
     WorkerScheduleModule,
     ScheduleStatsModule,
+    AbsentWorkersModule,
   ],
 })
 export class TurnstileModule {}

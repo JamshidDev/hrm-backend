@@ -40,7 +40,8 @@ export class ContractController {
   ) {}
 
   @Get()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Contracts list (with worker+organization joins)' })
   @ApiOkResponse({ type: ContractListResponseDto })
   async findAll(@Query() query: QueryContractDto) {
@@ -48,14 +49,19 @@ export class ContractController {
   }
 
   @Get(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Contract detail (worker + contract_position + command + confirmations)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary:
+      'Contract detail (worker + contract_position + command + confirmations)',
+  })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return buildSuccess(true, await this.service.findOne(id));
   }
 
   @Post()
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Create contract (+ optional worker_position)' })
   async create(@Body() dto: CreateContractDto) {
     return buildSuccess(
@@ -65,8 +71,11 @@ export class ContractController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Delete contract (cannot delete if confirmed=SUCCESS)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Delete contract (cannot delete if confirmed=SUCCESS)',
+  })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);

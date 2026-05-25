@@ -1,7 +1,12 @@
 // Education DTO'lar. Laravel: Vacancy/VacancyUserEducationController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 // POST /v1/vacancies/educations — Laravel `from` (date) va `university` majburiy.
 export class CreateEducationDto {

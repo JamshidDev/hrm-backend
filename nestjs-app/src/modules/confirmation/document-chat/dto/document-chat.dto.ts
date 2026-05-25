@@ -19,9 +19,21 @@ export class ChatQueryDto {
 export class ChatMessagesQueryDto {
   @ApiProperty() @IsString() @IsNotEmpty() model!: string;
   @ApiProperty() @Type(() => Number) @IsInt() document_id!: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() user_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() per_page?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() page?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  user_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  per_page?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
 }
 
 export class SendMessageDto {

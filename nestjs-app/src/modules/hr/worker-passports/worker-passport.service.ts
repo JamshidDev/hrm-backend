@@ -125,6 +125,7 @@ export class WorkerPassportService {
       .from(worker_passports)
       .where(and(eq(worker_passports.id, id), notDeleted(worker_passports)))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
   }
 }

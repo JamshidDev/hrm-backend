@@ -46,7 +46,12 @@ export class HcpWorkerService {
         .offset(offset),
       this.db.select({ total: count() }).from(worker_hik_centrals).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: HikCentralWorkerController::showAccessLevels — worker_hik_centrals
@@ -64,7 +69,12 @@ export class HcpWorkerService {
     const { page, perPage, offset } = pageOf(q);
     const conds: any[] = [notDeleted(export_worker_errors)];
     if (q.job_id) {
-      conds.push(eq(export_worker_errors.export_worker_to_hik_central_job_id, Number(q.job_id)));
+      conds.push(
+        eq(
+          export_worker_errors.export_worker_to_hik_central_job_id,
+          Number(q.job_id),
+        ),
+      );
     }
     const where = and(...conds);
     const [rows, [{ total }]] = await Promise.all([
@@ -75,7 +85,10 @@ export class HcpWorkerService {
         .orderBy(desc(export_worker_errors.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(export_worker_errors).where(where),
+      this.db
+        .select({ total: count() })
+        .from(export_worker_errors)
+        .where(where),
     ]);
     return this.attachWorker(rows, page, perPage, Number(total));
   }
@@ -113,7 +126,9 @@ export class HcpWorkerService {
       .limit(1);
     if (existing) return { id: existing.id, restored: true };
     const id = await nextId(this.db, worker_hik_centrals);
-    await this.db.insert(worker_hik_centrals).values({ id, worker_id: dto.worker_id } as any);
+    await this.db
+      .insert(worker_hik_centrals)
+      .values({ id, worker_id: dto.worker_id } as any);
     return { id };
   }
 
@@ -134,14 +149,17 @@ export class HcpWorkerService {
       user_id: userId,
       name: dto.name,
       status: 1,
-    } as any);
+    });
     const [existing] = await this.db
       .select({ id: organization_access_levels.id })
       .from(organization_access_levels)
       .where(
         and(
           eq(organization_access_levels.organization_id, dto.organization_id),
-          eq(organization_access_levels.hik_central_access_level_id, dto.access_level_id),
+          eq(
+            organization_access_levels.hik_central_access_level_id,
+            dto.access_level_id,
+          ),
         ),
       )
       .limit(1);
@@ -168,9 +186,17 @@ export class HcpWorkerService {
         .orderBy(desc(export_worker_to_hik_central_jobs.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(export_worker_to_hik_central_jobs).where(where),
+      this.db
+        .select({ total: count() })
+        .from(export_worker_to_hik_central_jobs)
+        .where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: HikCentralController::errorWorkers — requires job_id.
@@ -178,7 +204,10 @@ export class HcpWorkerService {
     const { page, perPage, offset } = pageOf(q);
     if (!q.job_id) throw new BusinessException(422, 'job_id is required');
     const where = and(
-      eq(export_worker_errors.export_worker_to_hik_central_job_id, Number(q.job_id)),
+      eq(
+        export_worker_errors.export_worker_to_hik_central_job_id,
+        Number(q.job_id),
+      ),
       notDeleted(export_worker_errors),
     );
     const [rows, [{ total }]] = await Promise.all([
@@ -189,7 +218,10 @@ export class HcpWorkerService {
         .orderBy(desc(export_worker_errors.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(export_worker_errors).where(where),
+      this.db
+        .select({ total: count() })
+        .from(export_worker_errors)
+        .where(where),
     ]);
     return this.attachWorker(rows, page, perPage, Number(total));
   }
@@ -206,9 +238,17 @@ export class HcpWorkerService {
         .orderBy(desc(hcp_added_worker_logs.id))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(hcp_added_worker_logs).where(where),
+      this.db
+        .select({ total: count() })
+        .from(hcp_added_worker_logs)
+        .where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: TurnstileController::invalidWorkersByHcp.
@@ -217,7 +257,12 @@ export class HcpWorkerService {
   async invalidWorkersByHcp() {
     return {
       time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      data: { current_page: 1, per_page: 10, total: 0, data: [] as Array<unknown> },
+      data: {
+        current_page: 1,
+        per_page: 10,
+        total: 0,
+        data: [] as Array<unknown>,
+      },
     };
   }
 
@@ -228,7 +273,9 @@ export class HcpWorkerService {
     perPage: number,
     total: number,
   ) {
-    const workerIds = [...new Set(rows.map((r) => r.worker_id).filter(Boolean))];
+    const workerIds = [
+      ...new Set(rows.map((r) => r.worker_id).filter(Boolean)),
+    ];
     const wRows = workerIds.length
       ? await this.db
           .select({
@@ -241,7 +288,9 @@ export class HcpWorkerService {
           .from(workers)
           .where(inArray(workers.id, workerIds))
       : [];
-    const wMap = new Map<number, (typeof wRows)[number]>(wRows.map((w) => [w.id, w] as const));
+    const wMap = new Map<number, (typeof wRows)[number]>(
+      wRows.map((w) => [w.id, w] as const),
+    );
     return {
       current_page: page,
       per_page: perPage,

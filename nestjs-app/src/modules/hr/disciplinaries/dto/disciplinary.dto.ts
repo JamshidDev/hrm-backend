@@ -65,7 +65,6 @@ export class DisciplinaryItemDto {
 
 export class DisciplinaryListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [DisciplinaryItemDto] }) data!: DisciplinaryItemDto[];
 }

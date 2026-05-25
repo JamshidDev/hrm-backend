@@ -12,7 +12,9 @@ import { buildSuccess } from '@/common/utils/response.util';
 export class VacancyZoomController {
   @Public()
   @Post('check-meet')
-  @ApiOperation({ summary: 'Check Zoom meeting availability (external API stub)' })
+  @ApiOperation({
+    summary: 'Check Zoom meeting availability (external API stub)',
+  })
   checkMeeting(@Body() _body: Record<string, unknown>) {
     // Laravel tashqi Zoom API'sini chaqiradi; hozircha doim mavjud deb qaytaramiz.
     return buildSuccess(true, { available: true });

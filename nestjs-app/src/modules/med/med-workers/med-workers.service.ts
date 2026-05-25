@@ -67,7 +67,10 @@ export class MedWorkersService {
       per_page: perPage,
       total: Number(total),
       data: await Promise.all(
-        rows.map(async (r) => ({ ...r, file: await this.minio.fileUrl(r.file) })),
+        rows.map(async (r) => ({
+          ...r,
+          file: await this.minio.fileUrl(r.file),
+        })),
       ),
     };
   }
@@ -102,54 +105,54 @@ export class MedWorkersService {
       ? inArray(meds.organization_id, scopeOrgIds)
       : sql`false`;
 
-    const [
-      [sendedWorkers],
-      [sendedWorkersByYear],
-      [medCount],
-      [polyclinics],
-    ] = await Promise.all([
-      // status IS NULL — hali ko'rikdan o'tmaganlar.
-      this.db
-        .select({ c: count() })
-        .from(sended_workers)
-        .where(
-          and(notDeleted(sended_workers), isNull(sended_workers.status), orgScope),
-        ),
-      // confirmation = SUCCESS(3) — yil bo'yicha tasdiqlanganlar.
-      this.db
-        .select({ c: count() })
-        .from(sended_workers)
-        .where(
-          and(
-            notDeleted(sended_workers),
-            eq(sended_workers.confirmation, 3),
-            orgScope,
+    const [[sendedWorkers], [sendedWorkersByYear], [medCount], [polyclinics]] =
+      await Promise.all([
+        // status IS NULL — hali ko'rikdan o'tmaganlar.
+        this.db
+          .select({ c: count() })
+          .from(sended_workers)
+          .where(
+            and(
+              notDeleted(sended_workers),
+              isNull(sended_workers.status),
+              orgScope,
+            ),
           ),
-        ),
-      // current = true va `to` 15 kundan kam qolgan tibbiy ko'riklar.
-      this.db
-        .select({ c: count() })
-        .from(meds)
-        .where(
-          and(
-            notDeleted(meds),
-            eq(meds.current, true),
-            // Laravel: where('to','<', now()->addDays(15)) — `to` (date) ustuni
-            // bilan taqqoslashda sana-only bo'ladi → CURRENT_DATE + 15 kun.
-            sql`${meds.to} < CURRENT_DATE + INTERVAL '15 days'`,
-            medOrgScope,
+        // confirmation = SUCCESS(3) — yil bo'yicha tasdiqlanganlar.
+        this.db
+          .select({ c: count() })
+          .from(sended_workers)
+          .where(
+            and(
+              notDeleted(sended_workers),
+              eq(sended_workers.confirmation, 3),
+              orgScope,
+            ),
           ),
-        ),
-      // polyclinics — faqat joriy user org'i.
-      this.db
-        .select({ c: count() })
-        .from(organization_polyclinics)
-        .where(
-          userOrgId
-            ? eq(organization_polyclinics.organization_id, userOrgId)
-            : sql`false`,
-        ),
-    ]);
+        // current = true va `to` 15 kundan kam qolgan tibbiy ko'riklar.
+        this.db
+          .select({ c: count() })
+          .from(meds)
+          .where(
+            and(
+              notDeleted(meds),
+              eq(meds.current, true),
+              // Laravel: where('to','<', now()->addDays(15)) — `to` (date) ustuni
+              // bilan taqqoslashda sana-only bo'ladi → CURRENT_DATE + 15 kun.
+              sql`${meds.to} < CURRENT_DATE + INTERVAL '15 days'`,
+              medOrgScope,
+            ),
+          ),
+        // polyclinics — faqat joriy user org'i.
+        this.db
+          .select({ c: count() })
+          .from(organization_polyclinics)
+          .where(
+            userOrgId
+              ? eq(organization_polyclinics.organization_id, userOrgId)
+              : sql`false`,
+          ),
+      ]);
 
     return {
       sendedWorkers: Number(sendedWorkers?.c ?? 0),

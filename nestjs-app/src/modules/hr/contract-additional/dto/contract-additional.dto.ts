@@ -23,7 +23,9 @@ export class CreateContractAdditionalDto {
 
   @ApiProperty() @Type(() => Number) @IsInt() type!: number;
   @ApiProperty() @IsNotEmpty() number!: string | number;
-  @ApiProperty({ example: '2025-01-15' }) @IsDateString() contract_date!: string;
+  @ApiProperty({ example: '2025-01-15' })
+  @IsDateString()
+  contract_date!: string;
 
   @ApiProperty()
   @Type(() => Number)
@@ -33,33 +35,81 @@ export class CreateContractAdditionalDto {
 
   @ApiProperty() @IsNotEmpty() command_status!: number | string | boolean;
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() organization_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() probation?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  probation?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() post_name?: string;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) salary?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() vacation_main_day?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() additional_vacation_day?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() department_id?: number;
-  @ApiPropertyOptional() @IsOptional() @IsDateString() contract_to_date?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() department_position_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() position_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  vacation_main_day?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  additional_vacation_day?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  department_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  contract_to_date?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  department_position_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  position_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsDateString() command_date?: string;
   @ApiPropertyOptional() @IsOptional() @IsArray() confirmations?: unknown[];
   @ApiPropertyOptional() @IsOptional() group?: number | string;
   @ApiPropertyOptional() @IsOptional() rank?: string;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) rate?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() position_status?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  position_status?: number;
   @ApiPropertyOptional() @IsOptional() table_number?: number | string;
   @ApiPropertyOptional() @IsOptional() @IsString() command_number?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() temporary_worker_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() worker_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  temporary_worker_id?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  worker_id?: number;
 }
 
 export class QueryContractAdditionalDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   organizations?: string;
 }
 

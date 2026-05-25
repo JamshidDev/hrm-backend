@@ -32,7 +32,15 @@ const MODEL_FQCN: Record<string, string> = {
   'lms-certificate': 'Modules\\LMS\\Models\\LmsCertificate',
 };
 
-const DOCUMENT_FILE_TYPES = ['pdf', 'xlsx', 'xls', 'docx', 'png', 'jpg', 'jpeg'];
+const DOCUMENT_FILE_TYPES = [
+  'pdf',
+  'xlsx',
+  'xls',
+  'docx',
+  'png',
+  'jpg',
+  'jpeg',
+];
 
 @Injectable()
 export class DocumentFileService {
@@ -152,10 +160,7 @@ export class DocumentFileService {
       if (dto.status === 'application') {
         // worker_application'larni hujjatga bog'lash.
         if (!dto.worker_applications) {
-          throw new BusinessException(
-            422,
-            this.i18n.t('messages.not_found'),
-          );
+          throw new BusinessException(422, this.i18n.t('messages.not_found'));
         }
         const appIds = dto.worker_applications
           .split(',')
@@ -222,7 +227,8 @@ export class DocumentFileService {
         setData.file = dto.file;
       }
     }
-    if (dto.original_name !== undefined) setData.original_name = dto.original_name;
+    if (dto.original_name !== undefined)
+      setData.original_name = dto.original_name;
 
     await this.db
       .update(document_files)

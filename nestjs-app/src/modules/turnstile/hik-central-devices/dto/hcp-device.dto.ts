@@ -1,13 +1,7 @@
 // HCP Device DTOs. Laravel: HikCentralController (storeDevice, updateDevice, deleteDevice).
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsInt,
-  IsIP,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsBoolean, IsInt, IsIP, IsOptional, IsString } from 'class-validator';
 
 export class QueryHcpDeviceDto {
   @ApiPropertyOptional() @IsOptional() page?: number;

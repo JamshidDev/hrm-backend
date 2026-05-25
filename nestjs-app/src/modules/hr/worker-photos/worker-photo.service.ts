@@ -56,11 +56,11 @@ export class WorkerPhotoService {
 
   // POST /api/v1/hr/worker-photos — store: base64 upload + worker_photos insert.
   async create(dto: CreateWorkerPhotoDto): Promise<WorkerPhotoItemDto[]> {
-    const path = await this.minio.uploadBase64File(
-      dto.photo,
-      'worker-photos',
-      ['jpg', 'jpeg', 'png'],
-    );
+    const path = await this.minio.uploadBase64File(dto.photo, 'worker-photos', [
+      'jpg',
+      'jpeg',
+      'png',
+    ]);
 
     if (dto.current) {
       // Unset previous current photos, set worker.photo.
@@ -114,7 +114,8 @@ export class WorkerPhotoService {
               ne(worker_photos.id, id),
             ),
           );
-        const finalPath = (setData.photo as string | undefined) ?? existing.photo;
+        const finalPath =
+          (setData.photo as string | undefined) ?? existing.photo;
         await this.db
           .update(workers)
           .set({ photo: finalPath })

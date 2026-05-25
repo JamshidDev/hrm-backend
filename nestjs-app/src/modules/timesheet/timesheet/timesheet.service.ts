@@ -6,12 +6,7 @@ import { and, asc, count, eq, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
-import {
-  time_sheets,
-  time_sheet_workers,
-  departments,
-  organizations,
-} from '@/db/schema';
+import { time_sheets, departments, organizations } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
@@ -70,11 +65,19 @@ export class TimeSheetService {
           org_name_ru: organizations.name_ru,
           org_name_en: organizations.name_en,
           org_group: organizations.group,
-          workers_count: sql<number>`(SELECT COUNT(*) FROM ${time_sheet_workers} WHERE ${time_sheet_workers.time_sheet_id} = ${time_sheets.id} AND ${time_sheet_workers.deleted_at} IS NULL)`,
+          // Laravel TimeSheetController::index withCount('workers') chaqirmaydi
+          // → $this->workers_count = null (parity).
+          workers_count: sql<number | null>`NULL`,
         })
         .from(time_sheets)
         .leftJoin(departments, eq(departments.id, time_sheets.department_id))
-        .leftJoin(organizations, eq(organizations.id, time_sheets.work_place_id))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, time_sheets.work_place_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
         .where(where)
         .orderBy(asc(time_sheets.id))
         .limit(perPage)
@@ -86,9 +89,7 @@ export class TimeSheetService {
     return {
       current_page: page,
       total: Number(total),
-      data: await Promise.all(
-        rows.map((r) => this.toItem(r, lang)),
-      ),
+      data: await Promise.all(rows.map((r) => this.toItem(r, lang))),
     };
   }
 
@@ -141,7 +142,8 @@ export class TimeSheetService {
       .from(time_sheets)
       .where(and(eq(time_sheets.id, id), notDeleted(time_sheets)))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
   }
 
   private async toItem(
@@ -159,7 +161,7 @@ export class TimeSheetService {
       org_name_ru: string | null;
       org_name_en: string | null;
       org_group: boolean | null;
-      workers_count: number;
+      workers_count: number | null;
     },
     lang: string,
   ): Promise<TimeSheetItemDto> {
@@ -190,7 +192,7 @@ export class TimeSheetService {
         id: r.confirmation,
         name: typeof confLabel === 'string' ? confLabel : '',
       },
-      workers_count: Number(r.workers_count ?? 0),
+      workers_count: r.workers_count,
     };
   }
 }

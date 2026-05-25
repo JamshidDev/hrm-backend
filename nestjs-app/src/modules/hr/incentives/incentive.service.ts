@@ -13,6 +13,7 @@ import {
   positions as positionsTable,
 } from '@/db/schema';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ExcelService } from '@/shared/excel/excel.service';
@@ -31,6 +32,7 @@ export class IncentiveService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
     private readonly minio: MinioService,
     private readonly excel: ExcelService,
     private readonly exportRunner: ExportTaskRunner,
@@ -41,24 +43,20 @@ export class IncentiveService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s))
-          .filter((n) => !Number.isNaN(n))
-      : [];
-
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel OrganizationIncentive::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      organization_incentives.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       isNull(organization_incentives.deleted_at),
-      filters.organization_id
-        ? eq(organization_incentives.organization_id, filters.organization_id)
-        : undefined,
-      orgIds.length > 0
-        ? inArray(organization_incentives.organization_id, orgIds)
-        : undefined,
+      inScope,
       searchCond,
     );
 
@@ -93,7 +91,10 @@ export class IncentiveService {
         .from(organization_incentives)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_incentives.organization_id),
+          and(
+            eq(organizations.id, organization_incentives.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(
           worker_positions,
@@ -121,7 +122,6 @@ export class IncentiveService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => {
@@ -226,7 +226,10 @@ export class IncentiveService {
       .from(organization_incentives)
       .leftJoin(
         organizations,
-        eq(organizations.id, organization_incentives.organization_id),
+        and(
+          eq(organizations.id, organization_incentives.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(
         worker_positions,

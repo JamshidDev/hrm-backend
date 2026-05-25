@@ -71,7 +71,10 @@ export class ApplicationService {
           vacancy_position_id: dto.vacancy_position_id,
           vacancy_user_id: userId,
         })
-        .returning({ id: vacancy_applications.id, created_at: vacancy_applications.created_at });
+        .returning({
+          id: vacancy_applications.id,
+          created_at: vacancy_applications.created_at,
+        });
 
       await tx.insert(vacancy_application_statuses).values({
         vacancy_application_id: app.id,
@@ -131,7 +134,12 @@ export class ApplicationService {
       this.db
         .select()
         .from(vacancy_application_statuses)
-        .where(eq(vacancy_application_statuses.vacancy_application_id, applicationId)),
+        .where(
+          eq(
+            vacancy_application_statuses.vacancy_application_id,
+            applicationId,
+          ),
+        ),
     ]);
     return { ...row, files, statuses };
   }

@@ -73,7 +73,9 @@ export class ExportTaskService {
     private readonly minio: MinioService,
   ) {}
 
-  async findAll(filters: QueryExportTaskDto): Promise<ExportTaskListResponseDto> {
+  async findAll(
+    filters: QueryExportTaskDto,
+  ): Promise<ExportTaskListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;

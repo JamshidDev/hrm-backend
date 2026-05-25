@@ -74,7 +74,9 @@ export class DocumentTypeService {
       orgIds && orgIds.length > 0
         ? inArray(cfg.table.organization_id as never, orgIds)
         : undefined,
-      singleOrgId ? eq(cfg.table.organization_id as never, singleOrgId) : undefined,
+      singleOrgId
+        ? eq(cfg.table.organization_id as never, singleOrgId)
+        : undefined,
     );
 
     return paginate({
@@ -122,7 +124,7 @@ export class DocumentTypeService {
         file: filePath,
         organization_id: orgId,
       }));
-      await tx.insert(cfg.table).values(values as never);
+      await tx.insert(cfg.table).values(values);
     });
   }
 

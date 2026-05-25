@@ -66,7 +66,6 @@ export class IncentiveItemDto {
 
 export class IncentiveListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [IncentiveItemDto] }) data!: IncentiveItemDto[];
 }

@@ -106,7 +106,6 @@ export class PensionerItemDto {
 
 export class PensionerListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [PensionerItemDto] }) data!: PensionerItemDto[];
 }

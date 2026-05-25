@@ -43,7 +43,7 @@ export class EducationController {
   @ApiOperation({ summary: 'Add an education record' })
   async store(@Body() dto: CreateEducationDto) {
     await this.service.create(0, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Put(':id')
@@ -53,13 +53,13 @@ export class EducationController {
     @Body() dto: UpdateEducationDto,
   ) {
     await this.service.update(id, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Soft-delete an education record' })
   async destroy(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

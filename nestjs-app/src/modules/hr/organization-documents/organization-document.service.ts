@@ -1,13 +1,14 @@
 // OrganizationDocument service. Visibility scope: ALL / OWN / OWN_AND_BELOW.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { organization_documents, organizations } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -30,6 +31,7 @@ export class OrganizationDocumentService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -44,7 +46,11 @@ export class OrganizationDocumentService {
     //   visibility_type='ALL' OR
     //   (visibility_type='OWN' AND organization_id=userOrg) OR
     //   (visibility_type='OWN_AND_BELOW' AND organization_id IN [userOrg, ...children])
-    // Soddalashtirilgan: children subtree skip — faqat userOrg.
+    // childIds — `Organization::getAllChildrenIds($orgId)` parity. NestJS'da
+    // OrgScopeService.ids() — userning ruxsat etilgan org subtree IDlari.
+    const subtreeIds = await this.scope.ids();
+    const allOrgIds = subtreeIds.length > 0 ? subtreeIds : [orgId];
+
     const where = and(
       isNull(organization_documents.deleted_at),
       or(
@@ -55,7 +61,7 @@ export class OrganizationDocumentService {
         ),
         and(
           eq(organization_documents.visibility_type, 'OWN_AND_BELOW'),
-          eq(organization_documents.organization_id, orgId),
+          inArray(organization_documents.organization_id, allOrgIds),
         ),
       ),
     );
@@ -81,18 +87,23 @@ export class OrganizationDocumentService {
         .from(organization_documents)
         .leftJoin(
           organizations,
-          eq(organizations.id, organization_documents.organization_id),
+          and(
+            eq(organizations.id, organization_documents.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .where(where)
         .orderBy(desc(organization_documents.created_at))
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(organization_documents).where(where),
+      this.db
+        .select({ total: count() })
+        .from(organization_documents)
+        .where(where),
     ]);
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({
@@ -164,7 +175,10 @@ export class OrganizationDocumentService {
     file?: Express.Multer.File,
   ): Promise<void> {
     const [row] = await this.db
-      .select({ id: organization_documents.id, file: organization_documents.file })
+      .select({
+        id: organization_documents.id,
+        file: organization_documents.file,
+      })
       .from(organization_documents)
       .where(
         and(

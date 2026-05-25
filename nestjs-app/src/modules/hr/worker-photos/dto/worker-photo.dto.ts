@@ -38,7 +38,9 @@ export class CreateWorkerPhotoDto {
 }
 
 export class UpdateWorkerPhotoDto {
-  @ApiPropertyOptional({ description: 'Base64-encoded image (data URI or raw)' })
+  @ApiPropertyOptional({
+    description: 'Base64-encoded image (data URI or raw)',
+  })
   @IsOptional()
   @IsString()
   photo?: string;

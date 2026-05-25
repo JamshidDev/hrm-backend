@@ -40,7 +40,12 @@ export class WorkDurationService {
         .offset(offset),
       this.db.select({ total: count() }).from(terminal_logs).where(where),
     ]);
-    return { current_page: page, per_page: perPage, total: Number(total), data: rows };
+    return {
+      current_page: page,
+      per_page: perPage,
+      total: Number(total),
+      data: rows,
+    };
   }
 
   // Laravel: WorkDurationController::logs — worker's logs for a specific date.

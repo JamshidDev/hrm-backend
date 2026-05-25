@@ -20,6 +20,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { getShortPosition } from '@/modules/hr/_shared/position-helper';
 import { RequestContext } from '@/common/context/request.context';
@@ -49,6 +50,7 @@ export class EduPlanService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // GET /api/v1/hr/edu-plans
@@ -165,7 +167,10 @@ export class EduPlanService {
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(
           departments,
@@ -258,9 +263,18 @@ export class EduPlanService {
 
     // Laravel: when(search) → whereHas('worker', searchByFullName).
     const searchCond = buildWorkerSearchCond(filters.search);
+    // Laravel EduPlanWorker::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      edu_plan_workers.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       notDeleted(edu_plan_workers),
+      inScope,
       filters.edu_plan_id
         ? eq(edu_plan_workers.edu_plan_id, filters.edu_plan_id)
         : undefined,
@@ -308,7 +322,10 @@ export class EduPlanService {
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(
           departments,
@@ -327,8 +344,8 @@ export class EduPlanService {
           learning_centers,
           eq(learning_centers.id, edu_plan_workers.learning_center_id),
         )
+        // Laravel paginate() — explicit orderBy yo'q, PostgreSQL natural order.
         .where(where)
-        .orderBy(asc(edu_plan_workers.id))
         .limit(perPage)
         .offset(offset),
       this.db
@@ -392,7 +409,6 @@ export class EduPlanService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => {

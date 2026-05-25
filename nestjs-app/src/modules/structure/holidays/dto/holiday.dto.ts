@@ -16,7 +16,10 @@ import {
 import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryHolidayDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ example: 5, description: 'Month filter (1..12), default current month' })
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Month filter (1..12), default current month',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

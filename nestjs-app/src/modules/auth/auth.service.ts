@@ -2,15 +2,20 @@
 
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { and, eq } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
+import { model_has_roles } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { buildSuccess } from '@/common/utils/response.util';
 import type { ApiSuccessResponse } from '@/common/types/api-response.type';
 import { RequestContext } from '@/common/context/request.context';
 import { SanctumService } from '@/modules/auth/sanctum.service';
 import type { LoginDto } from '@/modules/auth/dto/auth.dto';
+
+// Spatie model_has_roles.model_type — foydalanuvchi rollari.
+const USER_TYPE = 'App\\Models\\User';
 
 @Injectable()
 export class AuthService {
@@ -28,12 +33,9 @@ export class AuthService {
   }> {
     const phoneNumber = Number(dto.phone);
 
-    // Phone bo'yicha user + uning role'larini bitta relational query'da olamiz.
+    // Phone bo'yicha user'ni olamiz.
     const user = await this.db.query.users.findFirst({
       where: { phone: phoneNumber },
-      with: {
-        roles: { columns: { id: true } },
-      },
     });
 
     // Timing attack himoyasi: user yo'q bo'lsa ham bcrypt ishlatamiz.
@@ -44,7 +46,32 @@ export class AuthService {
       rawHash.replace(/^\$2y\$/, '$2b$'),
     );
 
-    if (!user || !passwordValid || !user.worker_id || user.roles.length === 0) {
+    if (!user || !passwordValid || !user.worker_id) {
+      throw new BusinessException(
+        401,
+        this.i18n.t('messages.invalid_credentials'),
+      );
+    }
+
+    // Laravel Helper::userRoleAndPermissions — foydalanuvchining joriy
+    // tashkilotiga biriktirilgan kamida bitta roli bo'lishi shart
+    // (model_has_roles.organization_id = user.organization_id).
+    let hasOrgRole = false;
+    if (user.organization_id != null) {
+      const [orgRole] = await this.db
+        .select({ role_id: model_has_roles.role_id })
+        .from(model_has_roles)
+        .where(
+          and(
+            eq(model_has_roles.model_id, user.id),
+            eq(model_has_roles.model_type, USER_TYPE),
+            eq(model_has_roles.organization_id, user.organization_id),
+          ),
+        )
+        .limit(1);
+      hasOrgRole = orgRole != null;
+    }
+    if (!hasOrgRole) {
       throw new BusinessException(
         401,
         this.i18n.t('messages.invalid_credentials'),

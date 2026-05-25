@@ -111,7 +111,8 @@ export class WorkerMilitaryService {
         ),
       )
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
   }
 
   private tr(key: string | undefined, lang: string): string {

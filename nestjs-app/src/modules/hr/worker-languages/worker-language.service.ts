@@ -137,6 +137,7 @@ export class WorkerLanguageService {
       .from(worker_languages)
       .where(and(eq(worker_languages.id, id), notDeleted(worker_languages)))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
   }
 }

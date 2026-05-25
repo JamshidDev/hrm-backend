@@ -17,7 +17,10 @@ export class CreateWorkerLanguageDto {
   @Exists('workers', 'uuid')
   uuid!: string;
 
-  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() @Exists('languages', 'id')
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Exists('languages', 'id')
   language_id!: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() file?: string;
@@ -25,7 +28,10 @@ export class CreateWorkerLanguageDto {
 
 // Update — no `uuid` (worker remains).
 export class UpdateWorkerLanguageDto {
-  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() @Exists('languages', 'id')
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Exists('languages', 'id')
   language_id!: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() file?: string;

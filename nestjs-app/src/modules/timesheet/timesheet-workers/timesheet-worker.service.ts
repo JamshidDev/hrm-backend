@@ -29,7 +29,10 @@ import {
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { MinioService } from '@/shared/minio/minio.service';
-import { getShortPosition, getFullPosition } from '@/modules/hr/_shared/position-helper';
+import {
+  getShortPosition,
+  getFullPosition,
+} from '@/modules/hr/_shared/position-helper';
 import {
   CheckWorkerItemDto,
   DayInMonthResponseDto,
@@ -113,7 +116,7 @@ export class TimeSheetWorkerService {
           usedWpIds.length > 0
             ? inArray(worker_positions.id, usedWpIds)
             : sql`FALSE`,
-        ) as unknown as ReturnType<typeof and>,
+        ),
       );
     } else if (ts.work_place_id) {
       filterConds.push(
@@ -122,7 +125,7 @@ export class TimeSheetWorkerService {
           usedWpIds.length > 0
             ? inArray(worker_positions.id, usedWpIds)
             : sql`FALSE`,
-        ) as unknown as ReturnType<typeof and>,
+        ),
       );
     }
 
@@ -197,10 +200,12 @@ export class TimeSheetWorkerService {
         const wpMap = grouped.get(r.id) ?? new Map();
         const days = Array.from(wpMap.entries()).map(([date, items]) => ({
           day: new Date(date).getUTCDate(),
-          details: (items as Array<{ hours: number; status: number }>).map((it) => ({
-            hours: it.hours ?? 0,
-            status: TIMESHEET_TYPE_KEY[it.status] ?? null,
-          })),
+          details: (items as Array<{ hours: number; status: number }>).map(
+            (it) => ({
+              hours: it.hours ?? 0,
+              status: TIMESHEET_TYPE_KEY[it.status] ?? null,
+            }),
+          ),
         }));
         const shortName = r.worker_id
           ? `${r.worker_last ?? ''} ${(r.worker_first ?? '').charAt(0)}.${(r.worker_middle ?? '').charAt(0) ? `${(r.worker_middle ?? '').charAt(0)}.` : ''}`.trim()
@@ -224,7 +229,10 @@ export class TimeSheetWorkerService {
     };
   }
 
-  async store(timesheetId: number, dto: StoreTimeSheetWorkersDto): Promise<void> {
+  async store(
+    timesheetId: number,
+    dto: StoreTimeSheetWorkersDto,
+  ): Promise<void> {
     const ts = await this.fetchTimesheet(timesheetId);
     if (ts.status) {
       throw new BusinessException(
@@ -354,11 +362,17 @@ export class TimeSheetWorkerService {
       .from(worker_positions)
       .innerJoin(
         workers,
-        and(eq(workers.id, worker_positions.worker_id), eq(workers.pin, pinNum)),
+        and(
+          eq(workers.id, worker_positions.worker_id),
+          eq(workers.pin, pinNum),
+        ),
       )
       .leftJoin(
         organizations,
-        eq(organizations.id, worker_positions.organization_id),
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(departments, eq(departments.id, worker_positions.department_id))
       .leftJoin(

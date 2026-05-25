@@ -1,20 +1,12 @@
 // Department service. Laravel: DepartmentController + DepartmentService.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { departments, organizations, worker_positions } from '@/db/schema';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
@@ -45,6 +37,7 @@ export class DepartmentService {
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -53,13 +46,11 @@ export class DepartmentService {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
-
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => !Number.isNaN(n))
-      : null;
+    // Laravel Department::filterByOrganization — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(departments.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     // Laravel `whereIsRoot()` — nested set roots = parent_id IS NULL.
     const where = and(
@@ -68,12 +59,7 @@ export class DepartmentService {
       filters.search
         ? ilike(departments.name, `%${filters.search}%`)
         : undefined,
-      orgIds && orgIds.length > 0
-        ? inArray(departments.organization_id, orgIds)
-        : undefined,
-      filters.organization_id
-        ? eq(departments.organization_id, filters.organization_id)
-        : undefined,
+      inScope,
     );
 
     const result = await paginate({
@@ -99,24 +85,18 @@ export class DepartmentService {
     const perPage = filters.per_page ?? 50;
     const page = filters.page ?? 1;
 
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => !Number.isNaN(n))
-      : null;
+    // Laravel Department::filterByOrganization — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(departments.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
 
     const where = and(
       notDeleted(departments),
       filters.search
         ? ilike(departments.name, `%${filters.search}%`)
         : undefined,
-      orgIds && orgIds.length > 0
-        ? inArray(departments.organization_id, orgIds)
-        : undefined,
-      filters.organization_id
-        ? eq(departments.organization_id, filters.organization_id)
-        : undefined,
+      inScope,
     );
 
     const result = await paginate({

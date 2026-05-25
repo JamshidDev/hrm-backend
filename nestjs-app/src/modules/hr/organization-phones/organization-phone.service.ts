@@ -44,10 +44,7 @@ export class OrganizationPhoneService {
         .orderBy(asc(organization_phones.id))
         .limit(perPage)
         .offset(offset),
-      this.db
-        .select({ total: count() })
-        .from(organization_phones)
-        .where(where),
+      this.db.select({ total: count() }).from(organization_phones).where(where),
     ]);
 
     return {

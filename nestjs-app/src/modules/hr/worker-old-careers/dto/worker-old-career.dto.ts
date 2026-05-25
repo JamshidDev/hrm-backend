@@ -2,7 +2,13 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerOldCareerDto {
@@ -20,7 +26,11 @@ export class CreateWorkerOldCareerDto {
   @ApiProperty() @IsDateString() from_date!: string;
   @ApiProperty() @IsDateString() to_date!: string;
   @ApiProperty() @IsString() post_name!: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() sort?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sort?: number;
 }
 
 // Update — no `uuid` (worker unchanged).
@@ -28,7 +38,11 @@ export class UpdateWorkerOldCareerDto {
   @ApiProperty() @IsDateString() from_date!: string;
   @ApiProperty() @IsDateString() to_date!: string;
   @ApiProperty() @IsString() post_name!: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() sort?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sort?: number;
 }
 
 // ---------- Response ----------

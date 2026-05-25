@@ -42,7 +42,10 @@ export class EventController {
     @Param('workerId', ParseIntPipe) workerId: number,
     @Query() q: any,
   ) {
-    return buildSuccess(true, await this.service.durationsForWorker(workerId, q));
+    return buildSuccess(
+      true,
+      await this.service.durationsForWorker(workerId, q),
+    );
   }
 
   @Get('work-durations/:workerId/events') async eventsInDay(
@@ -54,7 +57,7 @@ export class EventController {
 
   @Post('events/sync') async sync(@Body() body: any) {
     return buildSuccess(
-      this.i18n.t('messages.successfully_exported') as string,
+      this.i18n.t('messages.successfully_exported'),
       await this.service.syncEvents(body),
     );
   }

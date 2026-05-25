@@ -87,10 +87,16 @@ export class ReportOrderableDto {
   @IsIn(['department', 'position'])
   type!: 'department' | 'position';
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   organization_id?: number;
 
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   department_id?: number;
 
   @ApiProperty({ type: () => [OrderableItemDto] })

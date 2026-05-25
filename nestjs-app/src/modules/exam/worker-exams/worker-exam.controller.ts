@@ -41,7 +41,10 @@ export class WorkerExamController {
 
   @Post(':examId/start')
   @ApiOperation({ summary: 'Start a worker exam (allocate token + questions)' })
-  async start(@Param('examId', ParseIntPipe) examId: number, @Body() body: any) {
+  async start(
+    @Param('examId', ParseIntPipe) examId: number,
+    @Body() body: any,
+  ) {
     return buildSuccess(true, await this.service.start(examId, body));
   }
 
@@ -67,7 +70,7 @@ export class WorkerExamController {
   @ApiOperation({ summary: 'Soft-delete a worker exam attempt' })
   async destroy(@Param('examId', ParseIntPipe) examId: number) {
     await this.service.destroy(examId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Post(':examId/send-result/:questionId')
@@ -77,6 +80,9 @@ export class WorkerExamController {
     @Param('questionId', ParseIntPipe) questionId: number,
     @Body() body: any,
   ) {
-    return buildSuccess(true, await this.service.sendResult(examId, questionId, body));
+    return buildSuccess(
+      true,
+      await this.service.sendResult(examId, questionId, body),
+    );
   }
 }

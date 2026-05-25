@@ -8,17 +8,36 @@ import {
   IsDateString,
   IsInt,
   IsOptional,
+  IsString,
 } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryVacationScheduleYearDto extends SearchPaginationQueryDto {
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() year?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional({ example: '151,154' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ example: 222 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
 }
 
 export class StoreVacationScheduleYearDto {
   @ApiProperty({ example: 2025 }) @Type(() => Number) @IsInt() year!: number;
 
-  @ApiProperty({ type: () => [Object], description: 'Worker position assignments' })
+  @ApiProperty({
+    type: () => [Object],
+    description: 'Worker position assignments',
+  })
   @IsArray()
   @ArrayMinSize(1)
   worker_position_ids!: Array<{ id: number; month?: number }>;
@@ -63,7 +82,8 @@ export class VSYOrgDto {
 
 export class VacationScheduleYearItemDto {
   @ApiProperty() id!: number;
-  @ApiProperty({ type: VSYOrgDto, nullable: true }) organization!: VSYOrgDto | null;
+  @ApiProperty({ type: VSYOrgDto, nullable: true })
+  organization!: VSYOrgDto | null;
   @ApiProperty() year!: number;
   @ApiProperty({ nullable: true }) number!: string | null;
   @ApiProperty({ nullable: true }) date!: string | null;
@@ -81,7 +101,6 @@ export class VacationScheduleYearItemDto {
 
 export class VacationScheduleYearListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [VacationScheduleYearItemDto] })
   data!: VacationScheduleYearItemDto[];

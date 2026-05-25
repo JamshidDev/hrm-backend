@@ -127,7 +127,12 @@ export class ScheduleStatsService {
   // Laravel: DashboardPreviewController::preview — multi-section payload.
   async preview() {
     return {
-      work_durations: { current_page: 1, per_page: 10, total: 0, data: [] as Array<unknown> },
+      work_durations: {
+        current_page: 1,
+        per_page: 10,
+        total: 0,
+        data: [] as Array<unknown>,
+      },
       late_count: 0,
       early_count: 0,
       devices: { all: 0, online: 0, offline: 0 },

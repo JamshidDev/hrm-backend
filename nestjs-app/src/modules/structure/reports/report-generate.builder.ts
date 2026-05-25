@@ -24,6 +24,7 @@ import {
   worker_universities,
   workers,
 } from '@/db/schema';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { buildReportStats } from '@/modules/structure/reports/report-labels.constant';
 
 // ============================================================
@@ -77,7 +78,7 @@ export async function generateReport(
 ): Promise<ReportGenerateResult> {
   const { userId, userOrganizationId, organizationIds } = params;
 
-  // Laravel: Carbon::now()->subMonthNoOverflow() — o'tgan oy.
+  // Laravel: now()->subMonth() — o'tgan oy.
   const now = new Date();
   let month = now.getMonth(); // 0-asosli → joriy oy - 1
   let year = now.getFullYear();
@@ -88,6 +89,27 @@ export async function generateReport(
 
   if (organizationIds.length === 0) {
     return { report: null, data: [] };
+  }
+
+  // Laravel: joriy oy uchun org'da imzolangan (SUCCESS) hisobot bo'lsa — xato.
+  const [signed] = await db
+    .select({ id: reports.id })
+    .from(reports)
+    .where(
+      and(
+        inArray(reports.organization_id, organizationIds),
+        eq(reports.year, year),
+        eq(reports.month, month),
+        eq(reports.confirmation, 3),
+        isNull(reports.deleted_at),
+      ),
+    )
+    .limit(1);
+  if (signed) {
+    throw new BusinessException(
+      400,
+      'Ushbu tashkilotda joriy oy uchun hisobot allaqachon imzolangan!',
+    );
   }
 
   // 1-5. Parallel agregatsiyalar.
@@ -273,68 +295,68 @@ async function fetchWorkerStats(
   const result = await db.execute(sql`
     SELECT
       wp.organization_id,
-      COUNT(DISTINCT w.id) as total,
+      COUNT(DISTINCT w.id) FILTER (WHERE wp.type IN (1, 6, 3)) as total,
       SUM(wp.rate) as total_rate,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '1') as men,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '0') as women,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '1' AND wp.type IN (1, 6, 3)) as men,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '0' AND wp.type IN (1, 6, 3)) as women,
       COUNT(DISTINCT w.id) FILTER (WHERE c.type = 2) as part_time_contract,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 1) as higher_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 1 AND w.sex = '1') as higher_men_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 1 AND w.sex = '0') as higher_women_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 2) as special_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 2 AND w.sex = '1') as special_men_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 2 AND w.sex = '0') as special_women_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 3) as middle_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 3 AND w.sex = '1') as middle_men_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 3 AND w.sex = '0') as middle_women_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 1 AND wp.type IN (1, 6, 3)) as higher_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 1 AND w.sex = '1' AND wp.type IN (1, 6, 3)) as higher_men_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 1 AND w.sex = '0' AND wp.type IN (1, 6, 3)) as higher_women_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 2 AND wp.type IN (1, 6, 3)) as special_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 2 AND w.sex = '1' AND wp.type IN (1, 6, 3)) as special_men_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 2 AND w.sex = '0' AND wp.type IN (1, 6, 3)) as special_women_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 3 AND wp.type IN (1, 6, 3)) as middle_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 3 AND w.sex = '1' AND wp.type IN (1, 6, 3)) as middle_men_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE w.education = 3 AND w.sex = '0' AND wp.type IN (1, 6, 3)) as middle_women_count,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday >= CURRENT_DATE - INTERVAL '30 years'
+        WHERE w.birthday >= CURRENT_DATE - INTERVAL '30 years' AND wp.type IN (1, 6, 3)
       ) as age_under_30,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday >= CURRENT_DATE - INTERVAL '30 years' AND w.sex = true
+        WHERE w.birthday >= CURRENT_DATE - INTERVAL '30 years' AND wp.type IN (1, 6, 3) AND w.sex = true
       ) as age_under_30_men,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday >= CURRENT_DATE - INTERVAL '30 years' AND w.sex = false
+        WHERE w.birthday >= CURRENT_DATE - INTERVAL '30 years' AND wp.type IN (1, 6, 3) AND w.sex = false
       ) as age_under_30_women,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday < CURRENT_DATE - INTERVAL '30 years'
+        WHERE w.birthday < CURRENT_DATE - INTERVAL '30 years' AND wp.type IN (1, 6, 3)
           AND w.birthday >= CURRENT_DATE - INTERVAL '45 years'
       ) as age_31_45,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday < CURRENT_DATE - INTERVAL '30 years'
+        WHERE w.birthday < CURRENT_DATE - INTERVAL '30 years' AND wp.type IN (1, 6, 3)
           AND w.birthday >= CURRENT_DATE - INTERVAL '45 years' AND w.sex = true
       ) as age_31_45_men,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday < CURRENT_DATE - INTERVAL '30 years'
+        WHERE w.birthday < CURRENT_DATE - INTERVAL '30 years' AND wp.type IN (1, 6, 3)
           AND w.birthday >= CURRENT_DATE - INTERVAL '45 years' AND w.sex = false
       ) as age_31_45_women,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday < CURRENT_DATE - INTERVAL '45 years'
+        WHERE w.birthday < CURRENT_DATE - INTERVAL '45 years' AND wp.type IN (1, 6, 3)
       ) as age_46_plus,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday < CURRENT_DATE - INTERVAL '45 years' AND w.sex = true
+        WHERE w.birthday < CURRENT_DATE - INTERVAL '45 years' AND wp.type IN (1, 6, 3) AND w.sex = true
       ) as age_46_plus_men,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.birthday < CURRENT_DATE - INTERVAL '45 years' AND w.sex = false
+        WHERE w.birthday < CURRENT_DATE - INTERVAL '45 years' AND wp.type IN (1, 6, 3) AND w.sex = false
       ) as age_46_plus_women,
       COUNT(DISTINCT w.id) FILTER (
         WHERE (
-          (w.sex = '1' AND DATE_PART('year', AGE(w.birthday)) >= 60)
-          OR (w.sex = '0' AND DATE_PART('year', AGE(w.birthday)) >= 55)
+          (w.sex = '1' AND DATE_PART('year', AGE(w.birthday)) >= 60) AND wp.type IN (1, 6, 3)
+          OR (w.sex = '0' AND DATE_PART('year', AGE(w.birthday)) >= 55) AND wp.type IN (1, 6, 3)
         )
       ) as pension_age_count,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.sex = '1' AND DATE_PART('year', AGE(w.birthday)) >= 60
+        WHERE w.sex = '1' AND DATE_PART('year', AGE(w.birthday)) >= 60 AND wp.type IN (1, 6, 3)
       ) as pension_count_men,
       COUNT(DISTINCT w.id) FILTER (
-        WHERE w.sex = '0' AND DATE_PART('year', AGE(w.birthday)) >= 55
+        WHERE w.sex = '0' AND DATE_PART('year', AGE(w.birthday)) >= 55 AND wp.type IN (1, 6, 3)
       ) as pension_count_women,
-      COUNT(DISTINCT w.id) FILTER (WHERE wd.id IS NOT NULL) as disability_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE wd.id IS NOT NULL AND w.sex = '1') as disability_men_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE wd.id IS NOT NULL AND w.sex = '0') as disability_women_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE v.id IS NOT NULL AND v.type IN (45, 46, 49)) as vacation_count,
-      COUNT(DISTINCT w.id) FILTER (WHERE v.id IS NOT NULL AND v.type IN (45, 46, 49) AND w.sex = '1') as vacation_count_men,
-      COUNT(DISTINCT w.id) FILTER (WHERE v.id IS NOT NULL AND v.type IN (45, 46, 49) AND w.sex = '0') as vacation_count_women
+      COUNT(DISTINCT w.id) FILTER (WHERE wd.id IS NOT NULL AND wp.type IN (1, 6, 3)) as disability_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE wd.id IS NOT NULL AND w.sex = '1' AND wp.type IN (1, 6, 3)) as disability_men_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE wd.id IS NOT NULL AND w.sex = '0' AND wp.type IN (1, 6, 3)) as disability_women_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE v.id IS NOT NULL AND v.type IN (45, 46, 49) AND wp.type IN (1, 6, 3)) as vacation_count,
+      COUNT(DISTINCT w.id) FILTER (WHERE v.id IS NOT NULL AND v.type IN (45, 46, 49) AND w.sex = '1' AND wp.type IN (1, 6, 3)) as vacation_count_men,
+      COUNT(DISTINCT w.id) FILTER (WHERE v.id IS NOT NULL AND v.type IN (45, 46, 49) AND w.sex = '0' AND wp.type IN (1, 6, 3)) as vacation_count_women
     FROM worker_positions wp
     JOIN workers w ON w.id = wp.worker_id
     JOIN contracts c ON c.id = wp.contract_id
@@ -679,7 +701,10 @@ async function fetchContractDetails(
           .from(worker_positions)
           .leftJoin(
             organizations,
-            eq(organizations.id, worker_positions.organization_id),
+            and(
+              eq(organizations.id, worker_positions.organization_id),
+              isNull(organizations.deleted_at),
+            ),
           )
           .leftJoin(positions, eq(positions.id, worker_positions.position_id))
           .where(

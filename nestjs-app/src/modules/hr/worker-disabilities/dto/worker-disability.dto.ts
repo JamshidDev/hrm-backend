@@ -23,23 +23,31 @@ export class CreateWorkerDisabilityDto {
   @Exists('workers', 'uuid')
   uuid!: string;
 
-  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt()
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
   level!: number;
 
   @ApiProperty() @IsString() number!: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() from?: string;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() to?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() to?:
+    | string
+    | null;
   @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
 }
 
 // Update: no `uuid` (worker is taken from existing row).
 export class UpdateWorkerDisabilityDto {
-  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt()
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
   level!: number;
 
   @ApiProperty() @IsString() number!: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() from?: string;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() to?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsDateString() to?:
+    | string
+    | null;
   @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
 }
 

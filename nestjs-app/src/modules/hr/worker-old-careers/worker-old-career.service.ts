@@ -95,6 +95,7 @@ export class WorkerOldCareerService {
       .from(worker_old_careers)
       .where(and(eq(worker_old_careers.id, id), notDeleted(worker_old_careers)))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
   }
 }

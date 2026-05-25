@@ -13,7 +13,10 @@ import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class QueryDocumentTypeDto extends PaginationQueryDto {
   // Laravel QueryHelper::filterByOrganizations — organizations / organization_id query params.
-  @ApiPropertyOptional({ example: '1,2', description: 'Comma-separated organization IDs' })
+  @ApiPropertyOptional({
+    example: '1,2',
+    description: 'Comma-separated organization IDs',
+  })
   @IsOptional()
   @IsString()
   organizations?: string;

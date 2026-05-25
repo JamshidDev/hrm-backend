@@ -25,6 +25,7 @@ import {
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import {
   DepartmentPositionMapper,
@@ -49,6 +50,7 @@ export class DepartmentPositionService {
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
   ) {}
 
   async findAll(
@@ -57,13 +59,6 @@ export class DepartmentPositionService {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
-
-    const orgIds = filters.organizations
-      ? filters.organizations
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => !Number.isNaN(n))
-      : null;
 
     const deptIds = filters.departments
       ? filters.departments
@@ -80,15 +75,19 @@ export class DepartmentPositionService {
         )
       : undefined;
 
+    // Laravel DepartmentPosition::filter — role + organizations + organization_id.
+    const inScope = await this.scope.whereOrg(
+      department_positions.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
+
     const where = and(
       isNull(department_positions.deleted_at),
       searchCond,
-      orgIds && orgIds.length > 0
-        ? inArray(department_positions.organization_id, orgIds)
-        : undefined,
-      filters.organization_id
-        ? eq(department_positions.organization_id, filters.organization_id)
-        : undefined,
+      inScope,
       deptIds && deptIds.length > 0
         ? inArray(department_positions.department_id, deptIds)
         : undefined,
@@ -127,7 +126,6 @@ export class DepartmentPositionService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((row) =>
         DepartmentPositionMapper.toIndexItem(row, this.i18n, lang),
@@ -304,7 +302,10 @@ export class DepartmentPositionService {
       .from(department_positions)
       .leftJoin(
         organizations,
-        eq(organizations.id, department_positions.organization_id),
+        and(
+          eq(organizations.id, department_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(
         positionsTable,
@@ -395,7 +396,10 @@ export class DepartmentPositionService {
       .from(department_positions)
       .leftJoin(
         organizations,
-        eq(organizations.id, department_positions.organization_id),
+        and(
+          eq(organizations.id, department_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
       )
       .leftJoin(
         departments,

@@ -18,21 +18,43 @@ export class CreateWorkerMilitaryDto {
   uuid!: string;
 
   @ApiProperty({ example: 1, description: 'MilitaryStatusEnum 1..3' })
-  @Type(() => Number) @IsInt() status!: number;
+  @Type(() => Number)
+  @IsInt()
+  status!: number;
 
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() name?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() number?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() speciality?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() commissariat?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() name?:
+    | string
+    | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() number?:
+    | string
+    | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  speciality?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  commissariat?: string | null;
 }
 
 // Update — no `uuid` (worker unchanged).
 export class UpdateWorkerMilitaryDto {
   @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() status!: number;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() name?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() number?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() speciality?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() commissariat?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() name?:
+    | string
+    | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() number?:
+    | string
+    | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  speciality?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  commissariat?: string | null;
 }
 
 // ---------- Response ----------

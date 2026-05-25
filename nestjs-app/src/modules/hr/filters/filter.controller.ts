@@ -24,9 +24,12 @@ export class FilterController {
   constructor(private readonly service: FilterService) {}
 
   @Get('get-department-positions')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Department positions by department_id' })
-  async getDepartmentPositions(@Query() query: FilterDepartmentPositionsQueryDto) {
+  async getDepartmentPositions(
+    @Query() query: FilterDepartmentPositionsQueryDto,
+  ) {
     return buildSuccess(
       true,
       await this.service.departmentPositions(query.department_id),
@@ -34,35 +37,42 @@ export class FilterController {
   }
 
   @Get('get-departments-tree')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Departments tree (flat → nested by parent_id)' })
   async getDepartmentsTree(@Query() query: FilterDepartmentsTreeQueryDto) {
     return buildSuccess(true, await this.service.departmentTree(query));
   }
 
   @Get('get-departments')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Departments paginated by organizations' })
   async getDepartments(@Query() query: FilterDepartmentsByOrgsQueryDto) {
     return this.service.departmentsByOrganizations(query);
   }
 
   @Get('get-department')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'Root departments (whereIsRoot)' })
   async getDepartment(@Query() query: FilterRootDepartmentsQueryDto) {
     return buildSuccess(true, await this.service.rootDepartments(query));
   }
 
   @Get('get-positions')
-  @UseGuards(PermissionGuard) @Permission('hr')
-  @ApiOperation({ summary: 'Active positions (filter by organizations/departments)' })
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
+  @ApiOperation({
+    summary: 'Active positions (filter by organizations/departments)',
+  })
   async getPositions(@Query() query: FilterPositionsQueryDto) {
     return buildSuccess(true, await this.service.positions(query));
   }
 
   @Get('search-workers')
-  @UseGuards(PermissionGuard) @Permission('filter-search-workers')
+  @UseGuards(PermissionGuard)
+  @Permission('filter-search-workers')
   @ApiOperation({ summary: 'Search workers within an organization' })
   async searchWorkers(@Query() query: FilterSearchWorkersQueryDto) {
     return buildSuccess(true, await this.service.searchWorkers(query));

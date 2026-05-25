@@ -2,7 +2,13 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryWorkerPartyDto {
@@ -18,12 +24,15 @@ export class CreateWorkerPartyDto {
   uuid!: string;
 
   @ApiProperty({ example: 2, description: 'PartyEnum 2..5' })
-  @Type(() => Number) @IsInt() party!: number;
+  @Type(() => Number)
+  @IsInt()
+  party!: number;
 
   @ApiProperty({ example: '2020-01-01' }) @IsDateString() from_date!: string;
 
   @ApiPropertyOptional({ example: '2024-01-01', nullable: true })
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   to_date?: string | null;
 }
 
@@ -32,7 +41,8 @@ export class UpdateWorkerPartyDto {
   @ApiProperty({ example: 2 }) @Type(() => Number) @IsInt() party!: number;
   @ApiProperty({ example: '2020-01-01' }) @IsDateString() from_date!: string;
   @ApiPropertyOptional({ example: '2024-01-01', nullable: true })
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   to_date?: string | null;
 }
 

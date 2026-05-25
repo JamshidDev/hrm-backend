@@ -58,7 +58,7 @@ export class CategoryQuestionController {
     @Body() dto: CreateQuestionDto,
   ) {
     return buildSuccess(
-      this.i18n.t('messages.successfully_stored') as string,
+      this.i18n.t('messages.successfully_stored'),
       await this.service.create(categoryId, dto),
     );
   }
@@ -71,7 +71,9 @@ export class CategoryQuestionController {
     @Body() dto: UpdateQuestionDto,
   ) {
     await this.service.update(categoryId, questionId, dto);
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    // Laravel TopicQuestionController::update — `successfully_stored` key ishlatadi
+    // (update emas, store xabari) — parity uchun aynan shunday.
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Delete(':questionId')
@@ -81,6 +83,6 @@ export class CategoryQuestionController {
     @Param('questionId', ParseIntPipe) questionId: number,
   ) {
     await this.service.remove(categoryId, questionId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 }

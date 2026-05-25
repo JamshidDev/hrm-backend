@@ -6,8 +6,15 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
-import { turnstile_schedule_groups, turnstile_schedule_types } from '@/db/schema';
-import { nextId, pageOf, scheduleTypeName } from '@/modules/turnstile/_shared/helpers';
+import {
+  turnstile_schedule_groups,
+  turnstile_schedule_types,
+} from '@/db/schema';
+import {
+  nextId,
+  pageOf,
+  scheduleTypeName,
+} from '@/modules/turnstile/_shared/helpers';
 import type {
   CreateScheduleTypeDto,
   QueryScheduleTypeDto,
@@ -50,7 +57,10 @@ export class ScheduleTypeService {
         .orderBy(turnstile_schedule_types.type)
         .limit(perPage)
         .offset(offset),
-      this.db.select({ total: count() }).from(turnstile_schedule_types).where(where),
+      this.db
+        .select({ total: count() })
+        .from(turnstile_schedule_types)
+        .where(where),
     ]);
 
     // Per-type: groups count + workers count (sum of group.workers_count).
@@ -83,7 +93,7 @@ export class ScheduleTypeService {
       counts.map((c) => [c.id, { groups: c.groups, workers: c.workers }]),
     );
 
-    const localeName = (r: typeof rows[number]): string => {
+    const localeName = (r: (typeof rows)[number]): string => {
       if (lang === 'ru') return r.name_ru ?? r.name;
       if (lang === 'en') return r.name_en ?? r.name;
       return r.name;
@@ -111,7 +121,7 @@ export class ScheduleTypeService {
       name: dto.name,
       type: dto.type,
       days: dto.days,
-    } as any);
+    });
   }
 
   async update(id: number, dto: UpdateScheduleTypeDto) {
@@ -120,7 +130,7 @@ export class ScheduleTypeService {
       .set({
         name: dto.name,
         type: dto.type,
-        days: dto.days as any,
+        days: dto.days,
         updated_at: sql`NOW()`,
       })
       .where(eq(turnstile_schedule_types.id, id));

@@ -24,7 +24,8 @@ export class ExportTaskController {
   constructor(private readonly service: ExportTaskService) {}
 
   @Get('tasks')
-  @UseGuards(PermissionGuard) @Permission('hr')
+  @UseGuards(PermissionGuard)
+  @Permission('hr')
   @ApiOperation({ summary: 'User export tasks list (admin: all, else: own)' })
   @ApiOkResponse({ type: ExportTaskListResponseDto })
   async findAll(@Query() query: QueryExportTaskDto) {

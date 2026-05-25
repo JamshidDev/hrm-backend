@@ -38,21 +38,24 @@ export class ReportController {
   ) {}
 
   @Get('structure')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Organization structure (tree)' })
   async structure(@Query() query: ReportStructureQueryDto) {
     return buildSuccess(true, await this.service.structure(query));
   }
 
   @Get('departments')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Departments tree (by organization)' })
   async departments(@Query() query: ReportDepartmentsQueryDto) {
     return buildSuccess(true, await this.service.departments(query));
   }
 
   @Delete('departments/:id')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Delete department (soft)' })
   async deleteDepartment(@Param('id', ParseIntPipe) id: number) {
     await this.service.deleteDepartment(id);
@@ -60,14 +63,16 @@ export class ReportController {
   }
 
   @Get('department-positions')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Department positions paginated' })
   async departmentPositions(@Query() query: ReportDepartmentPositionsQueryDto) {
     return buildSuccess(true, await this.service.departmentPositions(query));
   }
 
   @Delete('department-positions/:id')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Delete department-position (soft)' })
   async deletePosition(@Param('id', ParseIntPipe) id: number) {
     await this.service.deletePosition(id);
@@ -75,14 +80,16 @@ export class ReportController {
   }
 
   @Get('worker-positions')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Worker positions for report' })
   async workerPositions(@Query() query: ReportWorkerPositionsQueryDto) {
     return buildSuccess(true, await this.service.workerPositions(query));
   }
 
   @Get('optimization')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Merge duplicate department-positions' })
   async optimization(@Query() query: ReportOptimizationQueryDto) {
     await this.service.optimization(query);
@@ -90,7 +97,8 @@ export class ReportController {
   }
 
   @Post('orderable')
-  @UseGuards(PermissionGuard) @Permission('hr-report')
+  @UseGuards(PermissionGuard)
+  @Permission('hr-report')
   @ApiOperation({ summary: 'Bulk sort departments or positions' })
   async orderable(@Body() dto: ReportOrderableDto) {
     await this.service.orderable(dto);

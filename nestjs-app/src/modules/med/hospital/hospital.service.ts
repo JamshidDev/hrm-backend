@@ -44,7 +44,10 @@ export class HospitalService {
       per_page: perPage,
       total: Number(total),
       data: await Promise.all(
-        rows.map(async (r) => ({ ...r, file: await this.minio.fileUrl(r.file) })),
+        rows.map(async (r) => ({
+          ...r,
+          file: await this.minio.fileUrl(r.file),
+        })),
       ),
     };
   }

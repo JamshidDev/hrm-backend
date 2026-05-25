@@ -60,10 +60,16 @@ export class MedService {
     const offset = (page - 1) * perPage;
 
     const orgIds = filters.organizations
-      ? filters.organizations.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.organizations
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
     const deptIds = filters.departments
-      ? filters.departments.split(',').map((s) => Number(s)).filter((n) => !Number.isNaN(n))
+      ? filters.departments
+          .split(',')
+          .map((s) => Number(s))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
     // Laravel scopeSearchByFullName parity.
@@ -154,12 +160,21 @@ export class MedService {
         })
         .from(meds)
         .leftJoin(workers, eq(workers.id, meds.worker_id))
-        .leftJoin(organizations, eq(organizations.id, meds.organization_id))
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, meds.organization_id),
+            isNull(organizations.deleted_at),
+          ),
+        )
         .leftJoin(
           worker_positions,
           eq(worker_positions.id, meds.worker_position_id),
         )
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
@@ -301,14 +316,20 @@ export class MedService {
           worker_photo: workers.photo,
         })
         .from(worker_positions)
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(
           positionsTable,
           eq(positionsTable.id, worker_positions.position_id),
         )
         .leftJoin(
           organizations,
-          eq(organizations.id, worker_positions.organization_id),
+          and(
+            eq(organizations.id, worker_positions.organization_id),
+            isNull(organizations.deleted_at),
+          ),
         )
         .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
         .where(eq(worker_positions.id, row.worker_position_id))
@@ -425,12 +446,12 @@ export class MedService {
   }
 
   // POST /api/v1/hr/worker-meds — store.
-  async create(
-    dto: CreateMedDto,
-    file?: Express.Multer.File,
-  ): Promise<void> {
+  async create(dto: CreateMedDto, file?: Express.Multer.File): Promise<void> {
     const [wp] = await this.db
-      .select({ id: worker_positions.id, worker_id: worker_positions.worker_id })
+      .select({
+        id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+      })
       .from(worker_positions)
       .where(eq(worker_positions.id, dto.worker_position_id))
       .limit(1);

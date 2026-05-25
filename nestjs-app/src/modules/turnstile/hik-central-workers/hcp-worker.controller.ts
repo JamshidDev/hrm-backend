@@ -53,40 +53,46 @@ export class HcpWorkerController {
     @Param('workerId', ParseIntPipe) workerId: number,
   ) {
     await this.service.destroy(workerId);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
   }
 
   @Post('workers/add') async add(@Body() dto: AddHcpWorkerDto) {
     return buildSuccess(
-      this.i18n.t('messages.successfully_stored') as string,
+      this.i18n.t('messages.successfully_stored'),
       await this.service.addWorker(dto),
     );
   }
 
   @Post('workers/update-face') async updateFace(@Body() _body: any) {
     await this.service.updateFace();
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Post('workers/refresh') async refreshAccessLevel(@Body() _body: any) {
     await this.service.refreshAccessLevel();
-    return buildSuccess(this.i18n.t('messages.successfully_updated') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('workers/access-levels') async accessLevels() {
     return buildSuccess(true, await this.service.accessLevels());
   }
 
-  @Post('workers/sync-to-server') async syncToServer(@Body() dto: SyncWorkersToHcpDto) {
+  @Post('workers/sync-to-server') async syncToServer(
+    @Body() dto: SyncWorkersToHcpDto,
+  ) {
     await this.service.syncWorkersToHikCentral(dto);
-    return buildSuccess(this.i18n.t('messages.successfully_stored') as string, []);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
-  @Get('workers/exported-jobs') async exportedJobs(@Query() q: QueryHcpWorkerDto) {
+  @Get('workers/exported-jobs') async exportedJobs(
+    @Query() q: QueryHcpWorkerDto,
+  ) {
     return buildSuccess(true, await this.service.jobs(q));
   }
 
-  @Get('workers/exported-errors') async exportedErrors(@Query() q: QueryHcpWorkerDto) {
+  @Get('workers/exported-errors') async exportedErrors(
+    @Query() q: QueryHcpWorkerDto,
+  ) {
     return buildSuccess(true, await this.service.errorWorkers(q));
   }
 
