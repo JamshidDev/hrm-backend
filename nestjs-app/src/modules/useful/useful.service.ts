@@ -48,23 +48,41 @@ export class UsefulService {
     private readonly minio: MinioService,
   ) {}
 
-  // Laravel UsefulController::codex — resumes/documents/codex{,_ru}.html.
+  // Laravel UsefulController::codex — `file_get_contents('resumes/documents/codex.html')`.
+  //
+  // Static HTML asset (~1 MB). Laravel'da public dir'da. NestJS'da fayllar mavjud
+  // bo'lmasa Laravel'ning public/resumes/documents'iga fallback (parallel-app deploy).
   async codex(lang?: string): Promise<{ codex: string }> {
-    const filename = lang === 'ru' ? 'codex_ru.html' : 'codex.html';
-    const filePath = join(
-      process.cwd(),
-      'public',
-      'resumes',
-      'documents',
-      filename,
-    );
-    try {
-      const content = await readFile(filePath, 'utf-8');
-      return { codex: content };
-    } catch (err) {
-      this.logger.warn(`codex: ${filename} not found (${(err as Error).message})`);
-      return { codex: '' };
+    const localeRu =
+      typeof lang === 'string' && lang.toLowerCase().startsWith('ru');
+    const filename = localeRu ? 'codex_ru.html' : 'codex.html';
+
+    // Search candidates (priority order): NestJS public → Laravel public.
+    const candidates = [
+      join(process.cwd(), 'public', 'resumes', 'documents', filename),
+      // Laravel app sibling fallback. Both apps usually deployed side-by-side
+      // under hrm-backend/. Resolve from NestJS root one level up + laravel-app.
+      join(
+        process.cwd(),
+        '..',
+        'laravel-app',
+        'public',
+        'resumes',
+        'documents',
+        filename,
+      ),
+    ];
+
+    for (const filePath of candidates) {
+      try {
+        const content = await readFile(filePath, 'utf-8');
+        return { codex: content };
+      } catch {
+        // try next candidate
+      }
     }
+    this.logger.warn(`codex: ${filename} not found in any candidate path`);
+    return { codex: '' };
   }
 
   // GET /api/v1/useful/leaders

@@ -10,7 +10,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Max,
+
   Min,
 } from 'class-validator';
 
@@ -22,12 +22,11 @@ export class EduPlanListQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   per_page?: number;
 
   @ApiPropertyOptional({ example: 'NestJS 2026' })
@@ -97,6 +96,22 @@ export class UpsertEduPlanDto {
   @Type(() => Number)
   @IsInt()
   count_workers?: number;
+
+  // Laravel: 'serial' => 'nullable|integer' (SerialTypeEnum: 1=MO-RW, 2=MO-LM, 3=MO-SM)
+  @ApiPropertyOptional({ example: 2, description: '1=MO-RW, 2=MO-LM, 3=MO-SM' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  serial?: number;
+
+  // Laravel: `if ($request->subjects) $eduPlan->subjects()->sync($request->subjects)`.
+  // Pivot: edu_plan_subjects (edu_plan_id, subject_id) — delete-then-insert.
+  @ApiPropertyOptional({ example: [34, 32], type: [Number] })
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  subjects?: number[];
 }
 
 export class DetachEduPlanWorkersDto {

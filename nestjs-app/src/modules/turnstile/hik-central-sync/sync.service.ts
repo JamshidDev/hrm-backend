@@ -72,25 +72,10 @@ export class SyncService {
       }
     }
 
-    // 2) access_levels filter — sync_h_c_p_access_logs.id IN (events for those ALs).
-    if (q.access_levels) {
-      const alIds = q.access_levels
-        .split(',')
-        .map((s) => Number(s.trim()))
-        .filter((n) => Number.isInteger(n) && n > 0);
-      if (alIds.length) {
-        conds.push(
-          sql`${sync_h_c_p_access_logs.id} IN (
-            SELECT DISTINCT e.sync_h_c_p_access_log_id
-            FROM h_c_p_device_events e
-            JOIN hik_central_access_level_devices ald
-              ON ald.hik_central_device_id = e.hik_central_device_id
-            WHERE ald.hik_central_access_level_id IN (${sql.join(alIds.map((n) => sql`${n}`), sql`, `)})
-              AND e.deleted_at IS NULL
-          )`,
-        );
-      }
-    }
+    // NOTE: `access_levels` filter Laravel'da yo'q (silent-ignore) — parity uchun
+    // shu yerda ham qo'llanmaydi. h_c_p_device_events (22M+ qator) jadvalida
+    // hik_central_device_id ustuniga INDEX yo'q, shu sababli filter seq-scan qilib
+    // 7-10s davom etardi. Performance > yangi feature.
 
     const where = and(...conds);
     const [rows, [{ total }]] = await Promise.all([

@@ -5,16 +5,28 @@
 // /lms/worker-exams → paginated stub.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, max, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import {
+  departments,
   edu_plan_workers,
+  edu_plans,
   group_workers,
   groups,
+  learning_centers,
+  lms_certificates,
   lms_protocols,
+  organizations,
+  positions,
+  worker_positions,
+  workers,
 } from '@/db/schema';
+import { getShortPosition } from '@/modules/hr/_shared/position-helper';
+import { MinioService } from '@/shared/minio/minio.service';
 import {
   lmsPaginate,
   readPaging,
@@ -28,30 +40,182 @@ import type {
 
 @Injectable()
 export class LmsGroupService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly i18n: I18nService,
+    private readonly minio: MinioService,
+  ) {}
 
-  /** POST /lms/generate-groups (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async generate(_dto: GenerateGroupsDto) {
-    return { success: true, stub: true };
-  }
+  // Laravel: GroupController::generateGroups.
+  //
+  //  1) Validate edu_plan_id, load EduPlan + learning_center + workers (edu_plan_workers).
+  //  2) Shuffle workers.
+  //  3) Load existing groups for edu_plan; if empty → create `count_groups`
+  //     new ones (code = (MAX(code) WHERE learning_center_id=...) + 1, incremented per loop).
+  //  4) Filter out workers already assigned to a group (group_id IS NOT NULL).
+  //  5) For each group: needed = count_workers - currentCount; assign first `needed`
+  //     workers to that group (UPDATE edu_plan_workers SET group_id = group.id).
+  async generate(dto: GenerateGroupsDto) {
+    if (!dto.edu_plan_id) {
+      throw new BusinessException(400, this.i18n.t('messages.lms.edu_plan_not_found'));
+    }
 
-  /** POST /lms/detach-workers-in-group — hard delete. */
-  async detachWorkers(dto: DetachGroupWorkersDto) {
-    await this.db
-      .delete(group_workers)
+    // 1) Load edu_plan + learning_center.
+    const [ep] = await this.db
+      .select({
+        id: edu_plans.id,
+        learning_center_id: edu_plans.learning_center_id,
+        count_groups: edu_plans.count_groups,
+        count_workers: edu_plans.count_workers,
+        lc_code: learning_centers.code,
+      })
+      .from(edu_plans)
+      .leftJoin(
+        learning_centers,
+        eq(learning_centers.id, edu_plans.learning_center_id),
+      )
+      .where(and(eq(edu_plans.id, dto.edu_plan_id), notDeleted(edu_plans)))
+      .limit(1);
+    if (!ep) {
+      throw new BusinessException(400, this.i18n.t('messages.lms.edu_plan_not_found'));
+    }
+
+    // 2) Load all edu_plan_workers (id, group_id) for shuffle + assignment tracking.
+    const epwRows = await this.db
+      .select({
+        id: edu_plan_workers.id,
+        worker_id: edu_plan_workers.worker_id,
+        group_id: edu_plan_workers.group_id,
+      })
+      .from(edu_plan_workers)
       .where(
         and(
-          eq(group_workers.group_id, dto.group_id),
-          inArray(group_workers.worker_id, dto.worker_ids),
+          eq(edu_plan_workers.edu_plan_id, ep.id),
+          notDeleted(edu_plan_workers),
         ),
       );
-    return { success: true, detached: dto.worker_ids.length };
+
+    // 3) Load existing groups for edu_plan; create count_groups new ones if none exist.
+    const existingGroups = await this.db
+      .select({ id: groups.id, code: groups.code })
+      .from(groups)
+      .where(
+        and(eq(groups.edu_plan_id, ep.id), notDeleted(groups)),
+      )
+      .orderBy(asc(groups.id));
+
+    const groupList: Array<{ id: number; code: number }> = [...existingGroups];
+
+    if (!groupList.length) {
+      // MAX(code) for this learning_center (across all edu_plans).
+      const [{ maxCode }] = await this.db
+        .select({ maxCode: max(groups.code) })
+        .from(groups)
+        .where(eq(groups.learning_center_id, Number(ep.learning_center_id)));
+      let nextCode = Number(maxCode ?? 0);
+      const lcCode = String(ep.lc_code ?? '');
+
+      // Sequential nextId for groups table (Laravel: PG sequence, but our pattern is MAX+1).
+      const [{ m }] = await this.db
+        .select({ m: max(groups.id) })
+        .from(groups);
+      let nextGroupId = Number(m ?? 0);
+
+      const totalGroups = Number(ep.count_groups ?? 1);
+      const inserts: Array<{
+        id: number;
+        learning_center_id: number;
+        edu_plan_id: number;
+        code: number;
+        name: string;
+      }> = [];
+      for (let i = 1; i <= totalGroups; i++) {
+        nextCode += 1;
+        nextGroupId += 1;
+        inserts.push({
+          id: nextGroupId,
+          learning_center_id: Number(ep.learning_center_id),
+          edu_plan_id: ep.id,
+          code: nextCode,
+          name: `M${lcCode} ${i}-guruh`,
+        });
+        groupList.push({ id: nextGroupId, code: nextCode });
+      }
+      if (inserts.length) {
+        await this.db.insert(groups).values(
+          inserts.map((g) => ({
+            ...g,
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
+          })),
+        );
+      }
+    }
+
+    // 4) Workers already assigned to any group — exclude from pool.
+    const assigned = new Set(
+      epwRows
+        .filter((r) => r.group_id != null)
+        .map((r) => Number(r.worker_id)),
+    );
+    const pool = epwRows
+      .filter((r) => !assigned.has(Number(r.worker_id)))
+      .map((r) => ({ id: r.id, worker_id: r.worker_id }));
+
+    // Shuffle (Fisher-Yates) — Laravel `$workers->shuffle()`.
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    // 5) Distribute pool across groups.
+    const countWorkersPerGroup = Number(ep.count_workers ?? 30);
+    let cursor = 0;
+    for (const g of groupList) {
+      // Current count for this group.
+      const current = epwRows.filter(
+        (r) => Number(r.group_id) === g.id,
+      ).length;
+      const needed = countWorkersPerGroup - current;
+      if (needed <= 0) continue;
+      const slice = pool.slice(cursor, cursor + needed);
+      cursor += slice.length;
+      if (!slice.length) continue;
+      // UPDATE edu_plan_workers SET group_id = g.id WHERE id IN slice.ids.
+      await this.db
+        .update(edu_plan_workers)
+        .set({ group_id: g.id, updated_at: sql`NOW()` })
+        .where(
+          inArray(
+            edu_plan_workers.id,
+            slice.map((s) => Number(s.id)),
+          ),
+        );
+      if (cursor >= pool.length) break;
+    }
+
+    return { success: true, groups: groupList.length, assigned: cursor };
+  }
+
+  // POST /lms/detach-workers-in-group.
+  //
+  // Laravel: detachWorkersInGroups — har doim 400 `does_not_delete_related_item`
+  // qaytaradi (return ostidan keyin actual delete code dead-code). Parity uchun
+  // bizda ham hard-block.
+  detachWorkers(_dto: DetachGroupWorkersDto) {
+    throw new BusinessException(
+      400,
+      this.i18n.t('messages.does_not_delete_related_item'),
+    );
   }
 
   /**
    * GET /lms/groups — Laravel: array qaytaradi (paginatsiyasiz).
-   * Filter: edu_plan_id (Laravel'da MAJBURIY, biz null'ga toleratemiz).
+   *
+   * Filter: edu_plan_id (Laravel'da MAJBURIY).
+   * GroupListResource shape: { id, code: 'M{lc.code} {group.code}-guruh', workers: count }
+   *  - code: Laravel `Group::getCode($learning_center)` — "M{lc.code} {group.code}-guruh"
+   *  - workers: BelongsToMany via `edu_plan_workers` (Laravel: `withCount('workers')`)
    */
   async list(q: GroupListQueryDto) {
     const conditions = [notDeleted(groups)];
@@ -59,18 +223,30 @@ export class LmsGroupService {
     const where = and(...conditions);
 
     const rows = await this.db
-      .select()
+      .select({
+        id: groups.id,
+        code: groups.code,
+        name: groups.name,
+        learning_center_id: groups.learning_center_id,
+        edu_plan_id: groups.edu_plan_id,
+        lc_code: learning_centers.code,
+      })
       .from(groups)
+      .leftJoin(
+        learning_centers,
+        eq(learning_centers.id, groups.learning_center_id),
+      )
       .where(where)
       .orderBy(desc(groups.id));
 
     if (!rows.length) return [];
 
     const groupIds = rows.map((g) => g.id);
+    // Laravel `Group::workers()` is belongsToMany via edu_plan_workers — count DISTINCT worker_id.
     const wCount = await this.db
       .select({
         group_id: edu_plan_workers.group_id,
-        total: count(),
+        total: sql<number>`COUNT(DISTINCT ${edu_plan_workers.worker_id})::int`,
       })
       .from(edu_plan_workers)
       .where(
@@ -86,35 +262,217 @@ export class LmsGroupService {
       if (w.group_id != null) workersCount[w.group_id] = Number(w.total);
     }
 
-    return rows.map((r) => GroupMapper.toListItem(r, workersCount));
+    return rows.map((r) =>
+      GroupMapper.toListItem(
+        { id: r.id, code: r.code, lc_code: r.lc_code },
+        workersCount,
+      ),
+    );
   }
 
-  /** GET /lms/group-workers — paginatsiya (Laravel: with worker/position/cert). */
+  // GET /lms/group-workers — Laravel: GroupController::groupWorkers.
+  //
+  // Query: edu_plan_workers WHERE group_id=$X (NOT `group_workers` jadval!)
+  // Eager-load: worker (id, last/first/middle/photo), worker_position (id, organization_id,
+  //             department_id, position_id) → department (id, name, level), organization
+  //             (id, name, full_name), position (id, name); certificate (lms_certificates hasOne).
+  // GroupWorkersResource: { id, worker, position (short), worker_position_id, certificate }
   async groupWorkers(q: GroupListQueryDto) {
     const { page, perPage } = readPaging(q);
     const where = q.group_id
-      ? eq(group_workers.group_id, q.group_id)
-      : undefined;
+      ? and(
+          eq(edu_plan_workers.group_id, q.group_id),
+          notDeleted(edu_plan_workers),
+        )
+      : notDeleted(edu_plan_workers);
 
-    return lmsPaginate({
-      db: this.db,
-      countTable: group_workers,
-      countWhere: where,
-      page,
-      perPage,
-      query: ({ limit, offset }) =>
-        this.db
-          .select()
-          .from(group_workers)
-          .where(where)
-          .limit(limit)
-          .offset(offset),
-      mapper: (r) => ({
-        group_id: r.group_id,
-        worker_id: r.worker_id,
-        worker_position_id: r.worker_position_id,
+    const [rows, [{ total }]] = await Promise.all([
+      this.db
+        .select({
+          id: edu_plan_workers.id,
+          worker_id: edu_plan_workers.worker_id,
+          worker_position_id: edu_plan_workers.worker_position_id,
+        })
+        .from(edu_plan_workers)
+        .where(where)
+        .orderBy(asc(edu_plan_workers.id))
+        .limit(perPage)
+        .offset((page - 1) * perPage),
+      this.db
+        .select({ total: count() })
+        .from(edu_plan_workers)
+        .where(where),
+    ]);
+
+    if (!rows.length) {
+      return { current_page: page, total: Number(total), data: [] };
+    }
+
+    // Batch loads.
+    const workerIds = [
+      ...new Set(rows.map((r) => Number(r.worker_id)).filter(Boolean)),
+    ];
+    const wpIds = [
+      ...new Set(rows.map((r) => Number(r.worker_position_id)).filter(Boolean)),
+    ];
+
+    const [wRows, wpRows] = await Promise.all([
+      workerIds.length
+        ? this.db
+            .select({
+              id: workers.id,
+              last_name: workers.last_name,
+              first_name: workers.first_name,
+              middle_name: workers.middle_name,
+              photo: workers.photo,
+            })
+            .from(workers)
+            .where(inArray(workers.id, workerIds))
+        : Promise.resolve([] as any[]),
+      wpIds.length
+        ? this.db
+            .select({
+              id: worker_positions.id,
+              organization_id: worker_positions.organization_id,
+              department_id: worker_positions.department_id,
+              position_id: worker_positions.position_id,
+            })
+            .from(worker_positions)
+            .where(inArray(worker_positions.id, wpIds))
+        : Promise.resolve([] as any[]),
+    ]);
+
+    const depIds = [
+      ...new Set(
+        (wpRows as any[]).map((r) => Number(r.department_id)).filter(Boolean),
+      ),
+    ];
+    const posIds = [
+      ...new Set(
+        (wpRows as any[]).map((r) => Number(r.position_id)).filter(Boolean),
+      ),
+    ];
+    const wpOrgIds = [
+      ...new Set(
+        (wpRows as any[]).map((r) => Number(r.organization_id)).filter(Boolean),
+      ),
+    ];
+
+    const [dRows, pRows, wpOrgRows, certRows] = await Promise.all([
+      depIds.length
+        ? this.db
+            .select({
+              id: departments.id,
+              name: departments.name,
+              level: departments.level,
+            })
+            .from(departments)
+            .where(inArray(departments.id, depIds))
+        : Promise.resolve([] as any[]),
+      posIds.length
+        ? this.db
+            .select({ id: positions.id, name: positions.name })
+            .from(positions)
+            .where(inArray(positions.id, posIds))
+        : Promise.resolve([] as any[]),
+      wpOrgIds.length
+        ? this.db
+            .select({ id: organizations.id, full_name: organizations.full_name })
+            .from(organizations)
+            .where(inArray(organizations.id, wpOrgIds))
+        : Promise.resolve([] as any[]),
+      // certificate: lms_certificates hasOne edu_plan_worker_id
+      this.db
+        .select({
+          id: lms_certificates.id,
+          edu_plan_worker_id: lms_certificates.edu_plan_worker_id,
+          cert_from: lms_certificates.cert_from,
+          cert_to: lms_certificates.cert_to,
+          serial: lms_certificates.serial,
+          number: lms_certificates.number,
+        })
+        .from(lms_certificates)
+        .where(
+          and(
+            inArray(
+              lms_certificates.edu_plan_worker_id,
+              rows.map((r) => Number(r.id)),
+            ),
+            notDeleted(lms_certificates),
+          ),
+        ),
+    ]);
+
+    const wPhotoUrls = await Promise.all(
+      (wRows as any[]).map((w) => this.minio.fileUrl(w.photo)),
+    );
+    const wMap = new Map(
+      (wRows as any[]).map(
+        (w, i) =>
+          [
+            Number(w.id),
+            {
+              id: Number(w.id),
+              photo: wPhotoUrls[i],
+              last_name: w.last_name,
+              first_name: w.first_name,
+              middle_name: w.middle_name,
+            },
+          ] as const,
+      ),
+    );
+    const wpMap = new Map((wpRows as any[]).map((wp) => [Number(wp.id), wp] as const));
+    const dMap = new Map((dRows as any[]).map((d) => [Number(d.id), d] as const));
+    const pMap = new Map((pRows as any[]).map((p) => [Number(p.id), p] as const));
+    const wpOrgFullMap = new Map(
+      (wpOrgRows as any[]).map(
+        (o) => [Number(o.id), o.full_name as string | null] as const,
+      ),
+    );
+    const certMap = new Map(
+      (certRows as any[]).map(
+        (c) => [Number(c.edu_plan_worker_id), c] as const,
+      ),
+    );
+
+    return {
+      current_page: page,
+      total: Number(total),
+      data: rows.map((r) => {
+        const wp = r.worker_position_id
+          ? wpMap.get(Number(r.worker_position_id))
+          : null;
+        const pos =
+          wp && wp.position_id ? pMap.get(Number(wp.position_id)) : null;
+        const dep =
+          wp && wp.department_id ? dMap.get(Number(wp.department_id)) : null;
+        const orgFull =
+          wp && wp.organization_id
+            ? wpOrgFullMap.get(Number(wp.organization_id)) ?? null
+            : null;
+        const cert = certMap.get(Number(r.id));
+        return {
+          id: Number(r.id),
+          worker: r.worker_id ? wMap.get(Number(r.worker_id)) ?? null : null,
+          position: getShortPosition({
+            position_name: pos?.name ?? null,
+            department_name: dep?.name ?? null,
+            department_level: dep?.level ?? null,
+            organization_full_name: orgFull,
+          }),
+          worker_position_id: r.worker_position_id,
+          certificate: cert
+            ? {
+                id: Number(cert.id),
+                cert_from: cert.cert_from,
+                cert_to: cert.cert_to,
+                serial: cert.serial,
+                number: cert.number,
+              }
+            : null,
+        };
       }),
-    });
+    };
   }
 
   /** GET /lms/protocol — paginatsiya formatted number bilan. */

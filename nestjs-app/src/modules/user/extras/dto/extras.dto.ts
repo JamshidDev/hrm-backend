@@ -3,7 +3,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   IsArray,
   IsInt,
   IsNotEmpty,
@@ -23,14 +22,28 @@ export class NotificationsQueryDto {
   @Type(() => Number)
   @IsInt()
   per_page?: number;
+
+  // Laravel: parameter mavjudligi → search by data->>'title' / data->>'message'.
+  @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
+
+  // Laravel: parameter MAVJUDLIGI yetarli (qiymat e'tiborga olinmaydi) — agar
+  // `?count=...` kelsa, response sifatida faqat COUNT qaytariladi.
+  @ApiPropertyOptional({ description: 'parameter mavjudligi shart, qiymat ahamiyatsiz' })
+  @IsOptional() count?: string | boolean;
+
+  // Laravel: parameter mavjudligi → `whereNull('read_at')` (faqat o'qilmaganlar).
+  @ApiPropertyOptional({ description: 'mavjudligi → faqat o\'qilmaganlar' })
+  @IsOptional() read_at?: string | boolean;
 }
 
 export class MarkNotificationsDto {
-  @ApiProperty({ example: ['notif-uuid-1', 'notif-uuid-2'], type: [String] })
+  // Laravel: 'all' bo'lsa — barcha unread'larni mark-read. Aks holda 'ids' kerak.
+  @ApiPropertyOptional() @IsOptional() all?: boolean;
+  @ApiPropertyOptional({ example: ['notif-uuid-1', 'notif-uuid-2'], type: [String] })
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
-  ids!: string[];
+  ids?: string[];
 }
 
 export class OrganizationHrsQueryDto {

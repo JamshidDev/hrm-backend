@@ -1,9 +1,9 @@
-// Group mapper. Laravel: GroupListResource — {id, code: formatted, workers: count}.
+// Group mapper. Laravel: GroupListResource — {id, code, workers}.
+//   code = Laravel `Group::getCode($lc)` → `M{lc.code} {group.code}-guruh`
 // ProtocolResource — {id, protocol_date, number: <year><pad(number,3)>, cert_from, cert_to}.
 
-import type { groups, lms_protocols } from '@/db/schema';
+import type { lms_protocols } from '@/db/schema';
 
-type GroupRow = typeof groups.$inferSelect;
 type ProtoRow = typeof lms_protocols.$inferSelect;
 
 export interface GroupListItem {
@@ -26,13 +26,23 @@ function padNumber(n: number | null, len: number): string {
   return String(n).padStart(len, '0');
 }
 
+interface GroupBriefRow {
+  id: number;
+  code: number | null;
+  lc_code: string | null;
+}
+
 export const GroupMapper = {
-  toListItem(r: GroupRow, workersCount: Record<number, number>): GroupListItem {
-    // code = `${lc.short_name}-${pad(group.code, 3)}` — Laravel'da getCode metodi.
-    // Bizda hozir LC short_name yo'q, code raqamini formatlangan stringga aylantiramiz.
+  // Laravel: 'M' . $learningCenter?->code . ' ' . $this->code . '-guruh'
+  toListItem(
+    r: GroupBriefRow,
+    workersCount: Record<number, number>,
+  ): GroupListItem {
+    const lcCode = r.lc_code ?? '';
+    const groupCode = r.code ?? '';
     return {
       id: r.id,
-      code: padNumber(r.code, 3),
+      code: `M${lcCode} ${groupCode}-guruh`,
       workers: workersCount[r.id] ?? 0,
     };
   },

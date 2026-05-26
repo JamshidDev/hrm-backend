@@ -1,4 +1,5 @@
 // Teachers controller. Laravel: TeacherController (apiResource) + TeacherLessonController.
+// (no-op marker)
 
 import {
   Body,
@@ -46,7 +47,7 @@ export class LmsTeacherController {
   }
 
   @Post('teachers')
-  @ApiOperation({ summary: 'Create teacher' })
+  @ApiOperation({ summary: 'Create teacher (updateOrCreate by lc+worker)' })
   async create(@Body() dto: UpsertTeacherDto) {
     await this.service.create(dto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);

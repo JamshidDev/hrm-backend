@@ -3,7 +3,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, Min } from 'class-validator';
 
 export class EduPlanExamListQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1 })
@@ -13,12 +13,12 @@ export class EduPlanExamListQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
+  // Laravel'da `per_page` cheklov yo'q.
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   per_page?: number;
 
   @ApiPropertyOptional({ example: 1 })
@@ -29,10 +29,12 @@ export class EduPlanExamListQueryDto {
 }
 
 export class AttachEduPlanExamDto {
-  @ApiProperty({ example: 1 })
+  // Laravel: edu_plan_id YOKI lesson_id'dan biri shart. Service-level check.
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  edu_plan_id!: number;
+  edu_plan_id?: number;
 
   @ApiProperty({ example: 5 })
   @Type(() => Number)

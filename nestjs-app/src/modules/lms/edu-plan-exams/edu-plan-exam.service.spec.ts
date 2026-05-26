@@ -67,7 +67,7 @@ describe('LmsEduPlanExamService', () => {
         selectResults: [[{ m: 4 }]],
         insertReturning: [{ id: 5 }],
       });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       await svc.attach({ edu_plan_id: 1, exam_id: 10 });
       expect(recorded.inserts).toHaveLength(1);
       expect(recorded.inserts[0]).toMatchObject({
@@ -85,7 +85,7 @@ describe('LmsEduPlanExamService', () => {
         selectResults: [[{ m: 0 }]],
         insertReturning: [{ id: 7 }],
       });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       const r = await svc.attach({ edu_plan_id: 1, exam_id: 10 });
       expect(r).toEqual({ id: 7 });
     });
@@ -95,7 +95,7 @@ describe('LmsEduPlanExamService', () => {
         selectResults: [[{ m: null }]],
         insertReturning: [{ id: 1 }],
       });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       await svc.attach({
         edu_plan_id: 2,
         exam_id: 20,
@@ -115,7 +115,7 @@ describe('LmsEduPlanExamService', () => {
       const { db, recorded } = buildMockDb({
         deleteReturning: [{ id: 5 }],
       });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       const r = await svc.detach(5);
       expect(r).toEqual({ success: true });
       expect(recorded.deletes).toBe(1);
@@ -123,7 +123,7 @@ describe('LmsEduPlanExamService', () => {
 
     it('Topilmagan examId — throw 404', async () => {
       const { db } = buildMockDb({ deleteReturning: [] });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       await expect(svc.detach(999)).rejects.toThrow();
     });
   });
@@ -138,7 +138,7 @@ describe('LmsEduPlanExamService', () => {
           [{ id: 5, name: 'Final' }],
         ],
       });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       const r = await svc.list({ page: 1, per_page: 10 });
       expect(r).toMatchObject({ current_page: 1, total: 1 });
       expect(r).not.toHaveProperty('per_page');
@@ -153,7 +153,7 @@ describe('LmsEduPlanExamService', () => {
       const { db } = buildMockDb({
         selectResults: [[{ total: 0 }], []],
       });
-      const svc = new LmsEduPlanExamService(db);
+      const svc = new LmsEduPlanExamService(db, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       const r = await svc.list({ edu_plan_id: 42 });
       expect(r.total).toBe(0);
       expect(r.data).toEqual([]);
@@ -162,7 +162,7 @@ describe('LmsEduPlanExamService', () => {
 
   describe('results (stub)', () => {
     it('Bo`sh paginatsiya qaytaradi (no per_page)', async () => {
-      const svc = new LmsEduPlanExamService({} as DataSource);
+      const svc = new LmsEduPlanExamService({} as DataSource, {} as any, { t: (k:string)=>k } as any, { ids: async () => [1] } as any);
       const r = await svc.results({ page: 2, per_page: 5 });
       expect(r).toEqual({
         current_page: 2,

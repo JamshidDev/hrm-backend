@@ -32,7 +32,7 @@ function buildMockDb(selectResult: unknown[] = []) {
 describe('LmsMainService', () => {
   describe('enums (Laravel parity)', () => {
     it('edu_plan_types, exam_types, serials, lesson_exam_types', () => {
-      const svc = new LmsMainService({} as DataSource);
+      const svc = new LmsMainService({} as DataSource, {} as any);
       const r = svc.enums();
 
       expect(r.edu_plan_types).toHaveLength(2);
@@ -53,7 +53,7 @@ describe('LmsMainService', () => {
 
   describe('learningCenters (stub)', () => {
     it('bo`sh array qaytaradi', async () => {
-      const svc = new LmsMainService({} as DataSource);
+      const svc = new LmsMainService({} as DataSource, {} as any);
       const r = await svc.learningCenters();
       expect(r).toEqual([]);
     });
@@ -62,7 +62,7 @@ describe('LmsMainService', () => {
   describe('listDirections / listSpecializations / listEduPlans', () => {
     it('listDirections — DB select chain chaqiradi', async () => {
       const { db, calls } = buildMockDb([{ id: 1, name: 'IT' }]);
-      const svc = new LmsMainService(db);
+      const svc = new LmsMainService(db, {} as any);
       const r = await svc.listDirections();
       expect(calls.select).toBe(true);
       expect(calls.from).toBe(true);
@@ -75,14 +75,14 @@ describe('LmsMainService', () => {
         { id: 1, name: 'Backend' },
         { id: 2, name: 'Frontend' },
       ]);
-      const svc = new LmsMainService(db);
+      const svc = new LmsMainService(db, {} as any);
       const r = await svc.listSpecializations();
       expect(r).toHaveLength(2);
     });
 
     it('listEduPlans — bo`sh natija ham bo`la oladi', async () => {
       const { db } = buildMockDb([]);
-      const svc = new LmsMainService(db);
+      const svc = new LmsMainService(db, {} as any);
       const r = await svc.listEduPlans();
       expect(r).toEqual([]);
     });
@@ -91,7 +91,7 @@ describe('LmsMainService', () => {
   describe('listGroups', () => {
     it('DB select chain chaqiradi, mock natija qaytaradi', async () => {
       const { db } = buildMockDb([]);
-      const svc = new LmsMainService(db);
+      const svc = new LmsMainService(db, {} as any);
       const r = await svc.listGroups();
       expect(r).toEqual([]);
     });

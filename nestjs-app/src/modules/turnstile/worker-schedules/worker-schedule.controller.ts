@@ -88,7 +88,8 @@ export class WorkerScheduleController {
   @Post('schedule-workers-replacement') async replacementWorkers(
     @Body() body: any,
   ) {
-    return buildSuccess(true, await this.service.replacementWorkers(body));
+    await this.service.replacementWorkers(body);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
   @Post('generate-turnstile-schedule') async generateTurnstileSchedule(
     @Body() body: any,

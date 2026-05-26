@@ -1,6 +1,6 @@
-// Specialization mapper. Laravel parity:
-//   List: {id, name, name_ru, name_en, direction: {id, name}, positions_count}
-//   Detail: {id, name, name_ru, name_en, direction: {id, name}, positions: [{id, name}]}
+// Specialization mapper. Laravel parity (field order matters):
+//   List   (SpecializationListResource): {id, name, direction, name_ru, name_en, positions_count}
+//   Detail (SpecializationShowResource): {id, name, direction, name_ru, name_en, positions}
 
 import type { specializations } from '@/db/schema';
 
@@ -34,6 +34,7 @@ export interface SpecDetail {
 }
 
 export const SpecializationMapper = {
+  // Laravel `SpecializationListResource`: id, name, direction, name_ru, name_en, positions_count.
   toListItem(
     r: SpecRow,
     dirMap: Record<number, DirectionBrief>,
@@ -42,13 +43,14 @@ export const SpecializationMapper = {
     return {
       id: r.id,
       name: r.name,
+      direction: dirMap[r.direction_id] ?? null,
       name_ru: r.name_ru,
       name_en: r.name_en,
-      direction: dirMap[r.direction_id] ?? null,
       positions_count: posCountMap[r.id] ?? 0,
     };
   },
 
+  // Laravel `SpecializationShowResource`: id, name, direction, name_ru, name_en, positions.
   toDetail(
     r: SpecRow,
     direction: DirectionBrief | null,
@@ -57,9 +59,9 @@ export const SpecializationMapper = {
     return {
       id: r.id,
       name: r.name,
+      direction,
       name_ru: r.name_ru,
       name_en: r.name_en,
-      direction,
       positions,
     };
   },

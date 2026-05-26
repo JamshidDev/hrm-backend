@@ -12,7 +12,7 @@ import {
   edu_plan_subjects,
   edu_plan_workers,
   edu_plans,
-  organizations,
+  learning_centers,
   specializations,
   subjects as subjectsTable,
 } from '@/db/schema';
@@ -74,9 +74,9 @@ export class LmsEduPlanService {
         const [lcRows, specRows, subjLinks, workersC, examsC] =
           await Promise.all([
             this.db
-              .select({ id: organizations.id, name: organizations.name })
-              .from(organizations)
-              .where(inArray(organizations.id, lcIds)),
+              .select({ id: learning_centers.id, name: learning_centers.name })
+              .from(learning_centers)
+              .where(inArray(learning_centers.id, lcIds)),
             this.db
               .select({ id: specializations.id, name: specializations.name })
               .from(specializations)
@@ -161,7 +161,7 @@ export class LmsEduPlanService {
     });
   }
 
-  /** GET /lms/edu-plan/:id — bitta reja (brief). */
+  /** GET /lms/edu-plan/:id — Laravel show (raw model + serial). */
   async show(id: number) {
     const [row] = await this.db
       .select()
@@ -180,9 +180,11 @@ export class LmsEduPlanService {
       hours: row.hours,
       count_groups: row.count_groups,
       count_workers: row.count_workers,
+      serial: row.serial,
     };
   }
 
+  // Laravel: EduPlanController::store — create + if($request->subjects) sync.
   async create(dto: UpsertEduPlanDto) {
     const id = await this.nextId();
     await this.db.insert(edu_plans).values({
@@ -196,12 +198,16 @@ export class LmsEduPlanService {
       hours: dto.hours ?? null,
       count_groups: dto.count_groups ?? 1,
       count_workers: dto.count_workers ?? 30,
+      serial: dto.serial ?? 1,
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
     });
+    // Pivot sync (Laravel `$eduPlan->subjects()->sync($request->subjects)`).
+    if (dto.subjects?.length) await this.syncSubjects(id, dto.subjects);
     return { id };
   }
 
+  // Laravel: EduPlanController::update — Eloquent partial update + subjects sync (if present).
   async update(id: number, dto: UpsertEduPlanDto) {
     const data: Record<string, unknown> = { updated_at: sql`NOW()` };
     if (dto.name !== undefined) data.name = dto.name;
@@ -215,6 +221,7 @@ export class LmsEduPlanService {
     if (dto.hours !== undefined) data.hours = dto.hours;
     if (dto.count_groups !== undefined) data.count_groups = dto.count_groups;
     if (dto.count_workers !== undefined) data.count_workers = dto.count_workers;
+    if (dto.serial !== undefined) data.serial = dto.serial;
 
     const [row] = await this.db
       .update(edu_plans)
@@ -222,9 +229,12 @@ export class LmsEduPlanService {
       .where(eq(edu_plans.id, id))
       .returning({ id: edu_plans.id });
     if (!row) throw new BusinessException(404, 'not_found');
+    // Pivot sync — faqat subjects[] payload'da bo'lsa (Laravel `if ($request->subjects)`).
+    if (dto.subjects !== undefined) await this.syncSubjects(id, dto.subjects);
     return { id };
   }
 
+  // Laravel: destroy — soft-delete + detach subjects.
   async remove(id: number) {
     const [row] = await this.db
       .update(edu_plans)
@@ -232,6 +242,31 @@ export class LmsEduPlanService {
       .where(eq(edu_plans.id, id))
       .returning({ id: edu_plans.id });
     if (!row) throw new BusinessException(404, 'not_found');
+    // Pivot clear (Laravel `$eduPlan->subjects()->detach()`).
+    await this.db
+      .delete(edu_plan_subjects)
+      .where(eq(edu_plan_subjects.edu_plan_id, id));
+  }
+
+  // BelongsToMany::sync — delete-then-insert (Laravel parity).
+  private async syncSubjects(
+    eduPlanId: number,
+    subjectIds: number[] | undefined,
+  ): Promise<void> {
+    await this.db
+      .delete(edu_plan_subjects)
+      .where(eq(edu_plan_subjects.edu_plan_id, eduPlanId));
+    const ids = [
+      ...new Set(
+        (subjectIds ?? [])
+          .map((n) => Number(n))
+          .filter((n) => Number.isInteger(n) && n > 0),
+      ),
+    ];
+    if (!ids.length) return;
+    await this.db
+      .insert(edu_plan_subjects)
+      .values(ids.map((sid) => ({ edu_plan_id: eduPlanId, subject_id: sid })));
   }
 
   /** GET /lms/edu-plans/:eduPlanId/attached-workers — paginatsiya. */

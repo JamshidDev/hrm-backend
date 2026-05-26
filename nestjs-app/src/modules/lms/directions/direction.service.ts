@@ -1,7 +1,7 @@
 // Directions service. Laravel: DirectionController + DirectionService.
 
 import { Injectable } from '@nestjs/common';
-import { desc, eq, max, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, max, or, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -29,10 +29,20 @@ export class LmsDirectionService {
     return Number(m ?? 0) + 1;
   }
 
-  /** GET /lms/directions — paginatsiyalangan ro'yxat (Laravel-parity). */
+  /** GET /lms/directions — paginated. Laravel: Direction::scopeSearch
+   *  → name|name_ru|name_en ILIKE %search%. Order: id DESC.
+   */
   async list(q: DirectionListQueryDto) {
     const { page, perPage } = readPaging(q);
-    const where = notDeleted(directions);
+    const term = q.search?.trim();
+    const searchCond = term
+      ? or(
+          ilike(directions.name, `%${term}%`),
+          ilike(directions.name_ru, `%${term}%`),
+          ilike(directions.name_en, `%${term}%`),
+        )
+      : undefined;
+    const where = and(notDeleted(directions), searchCond);
     return lmsPaginate({
       db: this.db,
       countTable: directions,

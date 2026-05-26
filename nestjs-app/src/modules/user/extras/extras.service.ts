@@ -2,12 +2,12 @@
 // Asosan stub — real implementatsiya keyin.
 
 import { Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
-import { users, workers } from '@/db/schema';
+import { notifications, users, workers } from '@/db/schema';
 import type {
   AccessForAdminDto,
   ChangeCurrentOrganizationDto,
@@ -65,16 +65,115 @@ export class UserExtrasService {
     };
   }
 
-  /** GET /user/notifications (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async notifications(_q: NotificationsQueryDto) {
-    return { data: [], total: 0, stub: true };
+  // Laravel: UserController::notifications (UserService::notifications).
+  //
+  // Behavior:
+  //   - `?count`  parametri MAVJUDLIGI yetarli → faqat COUNT qaytariladi (number).
+  //   - `?read_at` mavjudligi → faqat o'qilmaganlar (`read_at IS NULL`).
+  //   - `?search=...` → data->>'title' yoki data->>'message' ILIKE.
+  //   - Aks holda paginatsiyalangan list (NotificationsResource shape):
+  //       { id, data, read_at, created_at (Y-m-d H:i:s) }
+  //
+  // Notifications jadvali Laravel notify pattern: notifiable_type='App\Models\User',
+  // notifiable_id=user.id.
+  async notifications(q: NotificationsQueryDto) {
+    const userId = this.ctx.user?.id;
+    if (!userId) throw new BusinessException(401, 'unauthorized');
+
+    const NOTIFIABLE_USER = 'App\\Models\\User';
+    const conds: any[] = [
+      eq(notifications.notifiable_type, NOTIFIABLE_USER),
+      eq(notifications.notifiable_id, userId),
+    ];
+
+    // `?read_at` parameter mavjudligi → faqat o'qilmaganlar.
+    if (q.read_at !== undefined) {
+      conds.push(isNull(notifications.read_at));
+    }
+
+    // `?search` → JSON `data->>'title'` yoki `data->>'message'` ILIKE.
+    if (q.search?.trim()) {
+      const s = `%${q.search.trim()}%`;
+      conds.push(
+        sql`(COALESCE(${notifications.data}->>'title', '') ILIKE ${s}
+          OR COALESCE(${notifications.data}->>'message', '') ILIKE ${s})`,
+      );
+    }
+
+    const where = and(...conds);
+
+    // `?count` mavjudligi → faqat son qaytariladi (number sifatida).
+    if (q.count !== undefined) {
+      const [{ total }] = await this.db
+        .select({ total: count() })
+        .from(notifications)
+        .where(where);
+      return Number(total);
+    }
+
+    // Paginated list.
+    const page = Math.max(1, Number(q.page ?? 1));
+    const perPage = Math.max(1, Math.min(1000, Number(q.per_page ?? 10)));
+    const offset = (page - 1) * perPage;
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.db
+        .select({
+          id: notifications.id,
+          data: notifications.data,
+          read_at: notifications.read_at,
+          created_at: notifications.created_at,
+        })
+        .from(notifications)
+        .where(where)
+        .orderBy(desc(notifications.created_at))
+        .limit(perPage)
+        .offset(offset),
+      this.db.select({ total: count() }).from(notifications).where(where),
+    ]);
+
+    return {
+      current_page: page,
+      total: Number(total),
+      data: rows.map((r) => ({
+        id: r.id,
+        data: r.data,
+        read_at: r.read_at,
+        created_at: laravelTs(r.created_at),
+      })),
+    };
   }
 
-  /** POST /user/notifications/mark-read (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  // Laravel: UserController::markAsReadNotifications.
+  //   - `all=true` → barcha unread notifications uchun `read_at=NOW()`.
+  //   - Aks holda `ids: string[]` → faqat shu id'lar uchun.
   async markRead(dto: MarkNotificationsDto) {
-    return { success: true, marked: dto.ids.length };
+    const userId = this.ctx.user?.id;
+    if (!userId) throw new BusinessException(401, 'unauthorized');
+
+    const NOTIFIABLE_USER = 'App\\Models\\User';
+    const baseCond = and(
+      eq(notifications.notifiable_type, NOTIFIABLE_USER),
+      eq(notifications.notifiable_id, userId),
+      isNull(notifications.read_at),
+    );
+
+    if (dto.all) {
+      const res = await this.db
+        .update(notifications)
+        .set({ read_at: sql`NOW()` })
+        .where(baseCond);
+      return { success: true, marked: (res as any).rowCount ?? 0 };
+    }
+
+    const ids = (dto.ids ?? []).filter((s) => typeof s === 'string' && s.length);
+    if (!ids.length) return { success: true, marked: 0 };
+
+    const res = await this.db
+      .update(notifications)
+      .set({ read_at: sql`NOW()` })
+      .where(and(baseCond, inArray(notifications.id, ids)));
+    return { success: true, marked: (res as any).rowCount ?? 0 };
   }
 
   /** GET /user/roles — joriy user'ning rollari (stub). */
@@ -123,4 +222,12 @@ export class UserExtrasService {
   async accessForAdmin(_dto: AccessForAdminDto) {
     return { success: true, stub: true };
   }
+}
+
+// Carbon ::toDateTimeString() parity → "Y-m-d H:i:s".
+function laravelTs(value: string | Date | null): string | null {
+  if (value == null) return null;
+  const s = typeof value === 'string' ? value : value.toISOString();
+  // 'YYYY-MM-DDTHH:MM:SS...' → 'YYYY-MM-DD HH:MM:SS'
+  return s.slice(0, 19).replace('T', ' ');
 }

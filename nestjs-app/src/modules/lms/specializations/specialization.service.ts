@@ -3,7 +3,7 @@
 // Detail: positions array (specialization_positions + positions).
 
 import { Injectable } from '@nestjs/common';
-import { count, desc, eq, inArray, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, max, or, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -39,10 +39,26 @@ export class LmsSpecializationService {
    * GET /lms/specializations — list, har spec uchun:
    *   - direction nested (batch select)
    *   - positions_count (batch group-by)
+   *
+   * Filters:
+   *   - search → name|name_ru|name_en ILIKE (Laravel: Specialization::scopeSearch)
+   *   - direction_id → faqat shu yo'nalish (extension — Laravel'da yo'q)
    */
   async list(q: SpecializationListQueryDto) {
     const { page, perPage } = readPaging(q);
-    const where = notDeleted(specializations);
+    const term = q.search?.trim();
+    const searchCond = term
+      ? or(
+          ilike(specializations.name, `%${term}%`),
+          ilike(specializations.name_ru, `%${term}%`),
+          ilike(specializations.name_en, `%${term}%`),
+        )
+      : undefined;
+    const dirCond =
+      q.direction_id != null
+        ? eq(specializations.direction_id, Number(q.direction_id))
+        : undefined;
+    const where = and(notDeleted(specializations), searchCond, dirCond);
 
     return lmsPaginate({
       db: this.db,
@@ -139,6 +155,8 @@ export class LmsSpecializationService {
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
     });
+    // Laravel: `$specialization->positions()->sync($request->positions)`.
+    await this.syncPositions(id, dto.positions);
     return this.show(id);
   }
 
@@ -156,10 +174,15 @@ export class LmsSpecializationService {
       .where(eq(specializations.id, id))
       .returning({ id: specializations.id });
     if (!row) throw new BusinessException(404, 'not_found');
+    // Laravel: `if ($request->positions) $specialization->positions()->sync(...)`.
+    // Faqat array berilgan bo'lsa sync — undefined bo'lsa hech narsa o'zgartirmaymiz.
+    if (dto.positions !== undefined) {
+      await this.syncPositions(id, dto.positions);
+    }
     return this.show(id);
   }
 
-  /** DELETE /lms/specializations/:id. */
+  /** DELETE /lms/specializations/:id — soft-delete + detach all positions. */
   async remove(id: number) {
     const [row] = await this.db
       .update(specializations)
@@ -167,5 +190,30 @@ export class LmsSpecializationService {
       .where(eq(specializations.id, id))
       .returning({ id: specializations.id });
     if (!row) throw new BusinessException(404, 'not_found');
+    // Laravel: `$specialization->positions()->detach()` — clear pivot.
+    await this.db
+      .delete(specialization_positions)
+      .where(eq(specialization_positions.specialization_id, id));
+  }
+
+  // Pivot sync (Laravel BelongsToMany::sync): delete then insert.
+  private async syncPositions(
+    specId: number,
+    positionIds: number[] | undefined,
+  ): Promise<void> {
+    await this.db
+      .delete(specialization_positions)
+      .where(eq(specialization_positions.specialization_id, specId));
+    const ids = [
+      ...new Set(
+        (positionIds ?? [])
+          .map((n) => Number(n))
+          .filter((n) => Number.isInteger(n) && n > 0),
+      ),
+    ];
+    if (!ids.length) return;
+    await this.db
+      .insert(specialization_positions)
+      .values(ids.map((pid) => ({ specialization_id: specId, position_id: pid })));
   }
 }

@@ -3,7 +3,13 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class TeacherListQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1 })
@@ -13,12 +19,11 @@ export class TeacherListQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   per_page?: number;
 
   @ApiPropertyOptional({ example: 'Akmal' })
@@ -43,4 +48,12 @@ export class UpsertTeacherDto {
   @Type(() => Number)
   @IsInt()
   worker_id!: number;
+
+  // Laravel: `$teacher->subjects()->sync($syncData)` — pivot bilan learning_center_id ham.
+  @ApiPropertyOptional({ example: [35, 34, 32], type: [Number] })
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  subjects?: number[];
 }

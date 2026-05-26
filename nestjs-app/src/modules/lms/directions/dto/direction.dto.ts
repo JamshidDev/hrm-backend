@@ -7,7 +7,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Max,
+
   Min,
 } from 'class-validator';
 
@@ -19,12 +19,11 @@ export class DirectionListQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   per_page?: number;
 
   @ApiPropertyOptional({ example: 'IT' })

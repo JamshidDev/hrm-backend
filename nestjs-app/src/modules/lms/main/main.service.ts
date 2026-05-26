@@ -2,14 +2,26 @@
 // Frontend dropdownlar uchun brief endpointlar.
 
 import { Injectable } from '@nestjs/common';
+import { and, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
-import { directions, specializations, edu_plans, groups } from '@/db/schema';
+import { RequestContext } from '@/common/context/request.context';
+import {
+  directions,
+  edu_plans,
+  groups,
+  learning_center_users,
+  learning_centers,
+  specializations,
+} from '@/db/schema';
 
 @Injectable()
 export class LmsMainService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly ctx: RequestContext,
+  ) {}
 
   /**
    * GET /lms/enums — Laravel parity:
@@ -39,12 +51,47 @@ export class LmsMainService {
   }
 
   /**
-   * GET /lms/learning-centers — Laravel: organizationsdagi is_learning_center=true.
-   * Stub: bo'sh array.
+   * GET /lms/learning-centers — Laravel: LMSController::learningCenters.
+   *
+   *   LearningCenterUser::where('user_id', auth()->id())
+   *     ->with('learning_center')->get()
+   *     ->map(fn $u => ['id' => $u->learning_center->id, 'name' => $u->learning_center->name])
+   *
+   * Returns FLAT array `[{id, name}, ...]` — pagination YO'Q (frontend uchun dropdown).
+   * Faqat joriy user biriktirilgan markazlar qaytariladi.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async learningCenters() {
-    return [];
+  async learningCenters(): Promise<Array<{ id: number; name: string }>> {
+    const userId = this.ctx.user?.id;
+    if (!userId) return [];
+
+    // Pivot orqali ulanish IDlari (soft-delete YO'Q rows).
+    const links = await this.db
+      .select({
+        learning_center_id: learning_center_users.learning_center_id,
+      })
+      .from(learning_center_users)
+      .where(
+        and(
+          eq(learning_center_users.user_id, userId),
+          notDeleted(learning_center_users),
+        ),
+      );
+    const lcIds = [...new Set(links.map((l) => Number(l.learning_center_id)))];
+    if (!lcIds.length) return [];
+
+    const rows = await this.db
+      .select({
+        id: learning_centers.id,
+        name: learning_centers.name,
+      })
+      .from(learning_centers)
+      .where(
+        and(
+          inArray(learning_centers.id, lcIds),
+          notDeleted(learning_centers),
+        ),
+      );
+    return rows.map((r) => ({ id: Number(r.id), name: r.name }));
   }
 
   /** GET /lms/list/directions — yo'nalishlar (id, name). */

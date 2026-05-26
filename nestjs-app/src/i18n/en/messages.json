@@ -556,10 +556,24 @@
     },
     "device_not_active": "Device is Offline!",
     "max_access_level_5": "You can select up to 5 groups at most!",
+    "end_date_must_be_greater": "New end date must not exceed the current end date!",
+    "group_has_workers": "There are already workers with logged hours after this date!",
+    "unique_workers_count": "Don't re-select the same employees!",
+    "receiver_organization_is_you": "The selected organization is your organization.",
+    "approved_dont_edit": "Approved, no further edits possible",
+    "approved_dont_delete": "Approved, cannot be deleted",
     "sync_type": {
       "one": "System",
       "two": "User"
     }
   },
-  "missing_photo": "Photo is missing"
+  "missing_photo": "Photo is missing",
+  "lms": {
+    "edu_plan_not_found": "Education plan not found!",
+    "edu_plan_or_lesson_is_required": "Edu plan or lesson is required!",
+    "exam_already_attached": "Exam is already attached!"
+  },
+  "does_not_delete_related_item": "This item is linked to other data, Cannot be deleted...",
+  "does_not_delete_approved_document": "Cannot delete an approved document.",
+  "director_not_found": "Director not found."
 }

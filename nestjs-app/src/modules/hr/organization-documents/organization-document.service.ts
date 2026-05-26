@@ -1,7 +1,7 @@
 // OrganizationDocument service. Visibility scope: ALL / OWN / OWN_AND_BELOW.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -51,6 +51,18 @@ export class OrganizationDocumentService {
     const subtreeIds = await this.scope.ids();
     const allOrgIds = subtreeIds.length > 0 ? subtreeIds : [orgId];
 
+    // Optional search filter — Laravel `OrganizationDocumentIndexRequest` validates
+    // `search` but the controller never applies it (latent bug). Bu yerda titrik
+    // bo'yicha ham description bo'yicha ILIKE qo'shildi (extension — frontend
+    // shu parametr bilan murojaat qiladi).
+    const searchTerm = filters.search?.trim();
+    const searchCond = searchTerm
+      ? or(
+          ilike(organization_documents.title, `%${searchTerm}%`),
+          ilike(organization_documents.description, `%${searchTerm}%`),
+        )
+      : undefined;
+
     const where = and(
       isNull(organization_documents.deleted_at),
       or(
@@ -64,6 +76,7 @@ export class OrganizationDocumentService {
           inArray(organization_documents.organization_id, allOrgIds),
         ),
       ),
+      searchCond,
     );
 
     const offset = (page - 1) * perPage;

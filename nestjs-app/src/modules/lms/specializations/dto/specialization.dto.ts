@@ -4,11 +4,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  Max,
+
   Min,
 } from 'class-validator';
 
@@ -20,12 +21,11 @@ export class SpecializationListQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   per_page?: number;
 
   @ApiPropertyOptional({ example: 'Backend' })
@@ -60,4 +60,13 @@ export class UpsertSpecializationDto {
   @Type(() => Number)
   @IsInt()
   direction_id!: number;
+
+  // Laravel: $specialization->positions()->sync($request->positions).
+  // Pivot table `specialization_positions` — IDs to attach (delete-then-insert).
+  @ApiPropertyOptional({ example: [1, 2, 3], type: [Number] })
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  positions?: number[];
 }

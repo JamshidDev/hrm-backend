@@ -1,7 +1,7 @@
 // Subjects service. Laravel: SubjectController.
 
 import { Injectable } from '@nestjs/common';
-import { desc, eq, max, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, max, or, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -28,10 +28,20 @@ export class LmsSubjectService {
     return Number(m ?? 0) + 1;
   }
 
-  /** GET /lms/subjects — paginatsiya. */
+  /** GET /lms/subjects — paginated. Laravel: Subject::scopeSearch →
+   *  name|name_ru|name_en ILIKE %search%.
+   */
   async list(q: SubjectListQueryDto) {
     const { page, perPage } = readPaging(q);
-    const where = notDeleted(subjects);
+    const term = q.search?.trim();
+    const searchCond = term
+      ? or(
+          ilike(subjects.name, `%${term}%`),
+          ilike(subjects.name_ru, `%${term}%`),
+          ilike(subjects.name_en, `%${term}%`),
+        )
+      : undefined;
+    const where = and(notDeleted(subjects), searchCond);
     return lmsPaginate({
       db: this.db,
       countTable: subjects,

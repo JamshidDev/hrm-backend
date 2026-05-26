@@ -556,10 +556,24 @@
     },
     "device_not_active": "Qurilma holati onlayn emas!",
     "max_access_level_5": "Ko'pi bilan 5-tagacha guruh tanlashingiz mumkin!",
+    "end_date_must_be_greater": "Yangi tugash sanasi joriy tugash sanasidan oshmasligi kerak!",
+    "group_has_workers": "Bu sanadan keyin allaqachon ish vaqti qayd qilingan xodimlar bor!",
+    "unique_workers_count": "Bir xil xodimlarni qayta tanlamang!",
+    "receiver_organization_is_you": "Tanlangan tashkilot sizning tashkilotingiz",
+    "approved_dont_edit": "Tasdiqlangan, boshqa tahrirlash mumkin emas",
+    "approved_dont_delete": "Tasdiqlangan, o'chirib bo'lmaydi",
     "sync_type": {
       "one": "Tizim",
       "two": "Foydalanuvchi"
     }
   },
-  "missing_photo": "Rasm topilmadi"
+  "missing_photo": "Rasm topilmadi",
+  "lms": {
+    "edu_plan_not_found": "O'quv rejasi topilmadi!",
+    "edu_plan_or_lesson_is_required": "Edu plan yoki lesson ko'rsatilishi shart!",
+    "exam_already_attached": "Imtihon allaqachon biriktirilgan!"
+  },
+  "does_not_delete_related_item": "Bu element boshqa maʼlumotlar bilan bogʻlangan, O'chirish mumkin emas...",
+  "does_not_delete_approved_document": "Tasdiqlangan hujjatni o'chirib bo'lmaydi.",
+  "director_not_found": "Direktor topilmadi."
 }

@@ -7,7 +7,6 @@ import {
   IsArray,
   IsInt,
   IsOptional,
-  Max,
   Min,
 } from 'class-validator';
 
@@ -19,12 +18,12 @@ export class GroupListQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
+  // Laravel'da `per_page` cheklov yo'q — frontend katta limit (500, 1000) yuborishi mumkin.
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   per_page?: number;
 
   @ApiPropertyOptional({ example: 1 })
@@ -59,10 +58,11 @@ export class DetachGroupWorkersDto {
   @IsInt()
   group_id!: number;
 
-  @ApiProperty({ example: [10, 11, 12], type: [Number] })
+  // Laravel: 'worker_position_ids' => 'required|array' (NOT worker_ids!)
+  @ApiProperty({ example: [23014], type: [Number] })
   @IsArray()
   @ArrayNotEmpty()
   @Type(() => Number)
   @IsInt({ each: true })
-  worker_ids!: number[];
+  worker_position_ids!: number[];
 }

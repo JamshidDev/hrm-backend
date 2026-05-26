@@ -602,30 +602,61 @@ export class TelegramService {
   }
 
   // Laravel: UserDeviceNotifyController::users — users with telegram + worker.
+  //
+  //   User::query()
+  //     ->whereHas('telegram')
+  //     ->whereHas('worker')
+  //     ->with(['worker:id,last_name,first_name,middle_name'])
+  //     ->when(search, whereHas worker SearchByFullName)
+  //     ->paginate(per_page=50)
+  //
+  // Response (Turnstile/UserWorkerResource — FLAT shape, not nested):
+  //   { id, last_name, first_name, middle_name }
   async telegramUsers(q: {
     page?: number;
     per_page?: number;
     search?: string;
   }) {
-    const { page, perPage, offset } = pageOf(q);
-    const where = and(notDeleted(users), sql`${users.worker_id} IS NOT NULL`);
+    const { page, perPage, offset } = pageOf({ page: q.page, per_page: q.per_page ?? 50 });
+
+    // search filter — Worker::searchByFullName via worker_id subquery.
+    let searchWorkerIds: number[] | null = null;
+    if (q.search?.trim()) {
+      const cond = buildWorkerSearchCond(q.search);
+      if (cond) {
+        const rows = await this.db
+          .select({ id: workers.id })
+          .from(workers)
+          .where(cond);
+        searchWorkerIds = rows.map((r) => Number(r.id));
+        if (!searchWorkerIds.length) {
+          return { current_page: page, total: 0, data: [] };
+        }
+      }
+    }
+
+    const conds: any[] = [
+      notDeleted(users),
+      sql`${users.worker_id} IS NOT NULL`,
+      sql`EXISTS (SELECT 1 FROM user_telegrams ut WHERE ut.user_id = ${users.id} AND ut.deleted_at IS NULL)`,
+      sql`EXISTS (SELECT 1 FROM workers w WHERE w.id = ${users.worker_id} AND w.deleted_at IS NULL)`,
+    ];
+    if (searchWorkerIds) {
+      conds.push(inArray(users.worker_id, searchWorkerIds));
+    }
+    const where = and(...conds);
+
     const [uRows, [{ total }]] = await Promise.all([
       this.db
         .select({
           id: users.id,
-          phone: users.phone,
           worker_id: users.worker_id,
         })
         .from(users)
-        .innerJoin(user_telegrams, eq(user_telegrams.user_id, users.id))
         .where(where)
         .limit(perPage)
         .offset(offset),
-      this.db
-        .select({ total: count() })
-        .from(users)
-        .innerJoin(user_telegrams, eq(user_telegrams.user_id, users.id))
-        .where(where),
+      this.db.select({ total: count() }).from(users).where(where),
     ]);
     const workerIds = uRows.map((u) => u.worker_id!).filter(Boolean);
     const wRows = workerIds.length
@@ -640,28 +671,41 @@ export class TelegramService {
           .where(inArray(workers.id, workerIds))
       : [];
     const wMap = new Map<number, (typeof wRows)[number]>(
-      wRows.map((w) => [w.id, w] as const),
+      wRows.map((w) => [Number(w.id), w] as const),
     );
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: uRows.map((u) => ({
-        id: u.id,
-        phone: u.phone,
-        worker: u.worker_id ? (wMap.get(u.worker_id) ?? null) : null,
-      })),
+      data: uRows.map((u) => {
+        const w = u.worker_id ? wMap.get(Number(u.worker_id)) : null;
+        return {
+          id: Number(u.id),
+          last_name: w?.last_name ?? null,
+          first_name: w?.first_name ?? null,
+          middle_name: w?.middle_name ?? null,
+        };
+      }),
     };
   }
 
-  // Laravel: UserDeviceNotifyController::index — distinct users from
-  // user_turnstile_devices with device count.
+  // Laravel: UserDeviceNotifyController::index — distinct users with HCP devices.
+  //
+  //   User::select('users.*')
+  //     ->join('user_turnstile_devices as utd', 'utd.user_id', '=', 'users.id')
+  //     ->withCount('hcp_devices')
+  //     ->groupBy('users.id')
+  //     ->with(['worker:id,last_name,first_name,middle_name,photo'])
+  //     ->paginate(per_page)
+  //
+  // Response (UserDevicesResource):
+  //   { id, worker: {id,photo,last,first,middle}, devices_count }
   async telegramList(q: { page?: number; per_page?: number }) {
     const { page, perPage, offset } = pageOf(q);
     const [uRows, [{ total }]] = await Promise.all([
       this.db
         .selectDistinct({ user_id: user_turnstile_devices.user_id })
         .from(user_turnstile_devices)
+        .orderBy(user_turnstile_devices.user_id)
         .limit(perPage)
         .offset(offset),
       this.db
@@ -671,35 +715,76 @@ export class TelegramService {
         .from(user_turnstile_devices),
     ]);
     if (!uRows.length) {
-      return {
-        current_page: page,
-        per_page: perPage,
-        total: Number(total),
-        data: [],
-      };
+      return { current_page: page, total: Number(total), data: [] };
     }
     const userIds = uRows.map((u) => u.user_id);
+
+    // Users + worker eager-load.
     const uList = await this.db
-      .select()
+      .select({
+        id: users.id,
+        worker_id: users.worker_id,
+      })
       .from(users)
       .where(inArray(users.id, userIds));
+    const workerIds = uList.map((u) => u.worker_id).filter(Boolean) as number[];
+    const wRows = workerIds.length
+      ? await this.db
+          .select({
+            id: workers.id,
+            last_name: workers.last_name,
+            first_name: workers.first_name,
+            middle_name: workers.middle_name,
+            photo: workers.photo,
+          })
+          .from(workers)
+          .where(inArray(workers.id, workerIds))
+      : [];
+    const wPhotoUrls = await Promise.all(
+      wRows.map((w) => this.minio.fileUrl(w.photo)),
+    );
+    const wMap = new Map(
+      wRows.map(
+        (w, i) =>
+          [
+            Number(w.id),
+            {
+              id: Number(w.id),
+              photo: wPhotoUrls[i],
+              last_name: w.last_name,
+              first_name: w.first_name,
+              middle_name: w.middle_name,
+            },
+          ] as const,
+      ),
+    );
+    const uMap = new Map<number, (typeof uList)[number]>(
+      uList.map((u) => [Number(u.id), u] as const),
+    );
+
+    // hcp_devices count per user.
     const counts = await this.db
       .select({ user_id: user_turnstile_devices.user_id, total: count() })
       .from(user_turnstile_devices)
       .where(inArray(user_turnstile_devices.user_id, userIds))
       .groupBy(user_turnstile_devices.user_id);
     const cMap = new Map<number, number>(
-      counts.map((c) => [c.user_id, Number(c.total)] as const),
+      counts.map((c) => [Number(c.user_id), Number(c.total)] as const),
     );
+
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: uList.map((u) => ({
-        id: u.id,
-        phone: u.phone,
-        hcp_devices_count: cMap.get(u.id) ?? 0,
-      })),
+      // Order preserved by the initial selectDistinct.
+      data: userIds.map((uid) => {
+        const u = uMap.get(Number(uid));
+        const w = u?.worker_id ? wMap.get(Number(u.worker_id)) ?? null : null;
+        return {
+          id: Number(uid),
+          worker: w,
+          devices_count: cMap.get(Number(uid)) ?? 0,
+        };
+      }),
     };
   }
 
