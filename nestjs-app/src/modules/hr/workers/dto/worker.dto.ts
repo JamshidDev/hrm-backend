@@ -211,8 +211,8 @@ export class WorkerInfoDto {
   @ApiProperty({ example: '1990-01-15' })
   birthday!: string;
 
-  @ApiProperty({ example: 12345678901234, nullable: true })
-  pin!: number | null;
+  @ApiProperty({ example: '12345678901234', nullable: true })
+  pin!: string | null;
 }
 
 // WorkerWithPositionResource — id, uuid, photo, names, birthday, positions[].

@@ -68,13 +68,17 @@ export class HcpWorkerController {
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
-  @Post('workers/refresh') async refreshAccessLevel(@Body() _body: any) {
-    await this.service.refreshAccessLevel();
+  @Post('workers/refresh') async refreshAccessLevel(
+    @Body() body: { access_level_id?: number },
+  ) {
+    await this.service.refreshAccessLevel(body);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
-  @Get('workers/access-levels') async accessLevels() {
-    return buildSuccess(true, await this.service.accessLevels());
+  @Get('workers/access-levels') async accessLevels(
+    @Query() q: { organization_id?: number },
+  ) {
+    return buildSuccess(true, await this.service.accessLevels(q));
   }
 
   @Post('workers/sync-to-server') async syncToServer(

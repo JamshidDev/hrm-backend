@@ -35,17 +35,14 @@ export class WorkerExamController {
 
   @Get('statistics')
   @ApiOperation({ summary: 'Worker exam dashboard statistics' })
-  async statistics() {
-    return buildSuccess(true, await this.service.statistics());
+  async statistics(@Query() q: { from?: string; to?: string }) {
+    return buildSuccess(true, await this.service.statistics(q));
   }
 
   @Post(':examId/start')
   @ApiOperation({ summary: 'Start a worker exam (allocate token + questions)' })
-  async start(
-    @Param('examId', ParseIntPipe) examId: number,
-    @Body() body: any,
-  ) {
-    return buildSuccess(true, await this.service.start(examId, body));
+  async start(@Param('examId', ParseIntPipe) examId: number) {
+    return buildSuccess(true, await this.service.start(examId));
   }
 
   @Get(':examId/continue')

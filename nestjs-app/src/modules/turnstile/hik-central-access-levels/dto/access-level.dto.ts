@@ -10,12 +10,15 @@ export class QueryAccessLevelDto {
   @ApiPropertyOptional() @IsOptional() @IsInt() organization_id?: number;
 }
 
+// Laravel HikCentralAccessLevelUpdateRequest — ikkalasi ham required.
 export class UpdateAccessLevelDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
-  @ApiPropertyOptional({ type: [Number] })
-  @IsOptional()
+  @ApiProperty({ example: 24 })
+  @IsInt()
+  hik_central_department_id!: number;
+
+  @ApiProperty({ type: [Number], example: [1841, 1840] })
   @IsArray()
-  devices?: number[];
+  devices!: number[];
 }
 
 export class AttachAccessLevelToOrgDto {

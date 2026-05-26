@@ -5,6 +5,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import {
   ScheduleStatsService,
@@ -33,7 +34,9 @@ export class ScheduleStatsController {
   }
 
   // Laravel returns shape `{ success, data }` directly (no Helper wrapper).
+  // @RawResponse() — ResponseInterceptor o'ramaydi.
   @Get('stats-three')
+  @RawResponse()
   @ApiOperation({ summary: 'Current in/out workers + top 3 in/out (today)' })
   async statsThree(@Query() q: StatsQuery) {
     return { success: true, data: await this.service.statsCurrentEvents(q) };
@@ -67,8 +70,8 @@ export class ScheduleStatsController {
   }
 
   @Get('stats-preview')
-  @ApiOperation({ summary: 'Dashboard preview (combined sections)' })
-  async statsPreview() {
-    return buildSuccess(true, await this.service.preview());
+  @ApiOperation({ summary: 'Dashboard preview — dispatched by `type` param' })
+  async statsPreview(@Query() q: Record<string, string>) {
+    return buildSuccess(true, await this.service.preview(q));
   }
 }

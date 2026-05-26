@@ -243,16 +243,18 @@ export class TopicService {
   }
 
   // Mavjud topic'ni yangilash.
+  // Laravel: TopicService::update — `$topic->update($data)` faqat validated
+  // fieldlarni (name, type) yangilaydi, `organization_id`'ga tegmaydi.
   async update(id: number, dto: UpdateTopicDto) {
-    await this.db
-      .update(topics)
-      .set({
-        name: dto.name,
-        type: dto.type ?? 1,
-        organization_id: dto.organization_id ?? null,
-        updated_at: sql`NOW()`,
-      })
-      .where(eq(topics.id, id));
+    const set: Record<string, unknown> = {
+      name: dto.name,
+      type: dto.type ?? 1,
+      updated_at: sql`NOW()`,
+    };
+    if (dto.organization_id !== undefined) {
+      set.organization_id = dto.organization_id;
+    }
+    await this.db.update(topics).set(set).where(eq(topics.id, id));
   }
 
   // Topic'ni soft-delete qilish (deleted_at = NOW()).

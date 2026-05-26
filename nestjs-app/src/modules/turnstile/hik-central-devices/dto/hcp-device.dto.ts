@@ -11,6 +11,10 @@ export class QueryHcpDeviceDto {
   @ApiPropertyOptional() @IsOptional() @IsString() status?: string; // 'on' | 'off'
   @ApiPropertyOptional() @IsOptional() @IsString() org_status?: string; // 'yes' | 'no'
   @ApiPropertyOptional() @IsOptional() @IsString() attached?: string; // 'yes' | 'no'
+  // Laravel kebab-case variant — frontend ba'zan 'org-status' bilan yuboradi.
+  @ApiPropertyOptional() @IsOptional() @IsString() 'org-status'?: string;
+  // Laravel: when request->has('download') → Excel::download.
+  @ApiPropertyOptional() @IsOptional() download?: string | boolean;
 }
 
 export class CreateHcpDeviceDto {
@@ -29,6 +33,8 @@ export class CreateHcpDeviceDto {
 }
 
 export class UpdateHcpDeviceDto {
+  // Laravel updateDevice $request->all() passes organization_id through — accept it.
+  @ApiPropertyOptional() @IsOptional() @IsInt() organization_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() device_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() device_code?: string;

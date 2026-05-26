@@ -32,8 +32,8 @@ export class TelegramController {
     return buildSuccess(true, await this.service.listPhotos(q));
   }
 
-  @Post('telegram/photos/update') async updatePhotos(@Body() _body: any) {
-    await this.service.updatePhotos();
+  @Post('telegram/photos/update') async updatePhotos(@Body() body: any) {
+    await this.service.updatePhotos(body);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

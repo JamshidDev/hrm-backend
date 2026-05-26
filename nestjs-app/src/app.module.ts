@@ -5,6 +5,7 @@ import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 import * as path from 'path';
 
 import { DrizzleModule } from '@/db/drizzle.module';
+import { HikCentralModule } from '@/shared/hik-central/hik-central.module';
 import { MinioModule } from '@/shared/minio/minio.module';
 import { ExcelModule } from '@/shared/excel/excel.module';
 import { ExportTaskRunnerModule } from '@/shared/export-task/export-task-runner.module';
@@ -60,6 +61,7 @@ class RequestContextModule {}
     }),
 
     DrizzleModule,
+    HikCentralModule,
     MinioModule,
     ExcelModule,
     ExportTaskRunnerModule,

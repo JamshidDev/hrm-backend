@@ -43,7 +43,8 @@ export const WorkerMapper = {
       first_name: w.first_name,
       middle_name: w.middle_name,
       birthday: w.birthday,
-      pin: w.pin,
+      // Laravel PG bigint pin → JSON string (Laravel default behaviour).
+      pin: w.pin != null ? String(w.pin) : null,
     };
   },
 

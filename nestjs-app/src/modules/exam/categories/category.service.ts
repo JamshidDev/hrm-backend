@@ -123,14 +123,21 @@ export class CategoryService {
     });
   }
 
+  // Laravel: ExamCategoryController::update — `$request->validated()` faqat
+  // ruxsat etilgan field'larni o'tkazadi (UpdateExamCategoryRequest'da `name`
+  // bor xolos), shu sababli `organization_id`'ni jo'natilmagan paytda
+  // tegmaymiz. Aks holda update list scope'idan tushib qoladi.
   async update(id: number, dto: UpdateCategoryDto) {
+    const set: Record<string, unknown> = {
+      name: dto.name,
+      updated_at: sql`NOW()`,
+    };
+    if (dto.organization_id !== undefined) {
+      set.organization_id = dto.organization_id;
+    }
     await this.db
       .update(exam_categories)
-      .set({
-        name: dto.name,
-        organization_id: dto.organization_id ?? null,
-        updated_at: sql`NOW()`,
-      })
+      .set(set)
       .where(eq(exam_categories.id, id));
   }
 

@@ -37,4 +37,14 @@ export class PermissionService {
     const perms = await this.getUserPermissions(userId);
     return perms.has(permissionName);
   }
+
+  // Spatie hasRole — user.roles relation orqali nomli rol tekshiruvi.
+  async hasRole(userId: number, roleName: string): Promise<boolean> {
+    const user = await this.db.query.users.findFirst({
+      where: { id: userId },
+      with: { roles: { columns: { name: true } } },
+    });
+    if (!user) return false;
+    return (user.roles ?? []).some((r) => r.name === roleName);
+  }
 }

@@ -408,25 +408,87 @@ export class TopicExamService {
       .where(eq(exams.id, examId));
   }
 
-  // Laravel: filter/exams — PaginateResource bilan o'ralgan dropdown ro'yxati.
+  // GET /api/v1/exam/filter/exams
+  //
+  // Laravel: TopicExamService::exams
+  //   Exam::query()->with('topic:id,name,type')
+  //     ->when($topicIds, fn → $q->whereIn('topic_id', $topicIds))
+  //     ->orderByDesc('id')->paginate($perPage)
+  //   → ExamWithTopicResource{id, name, topic:{id, name, type:{id, name}}}.
   async filter(q: QueryTopicExamDto) {
     const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(exams);
+    const lang = this.ctx.lang;
+
+    // Laravel: array_filter(explode(',', request('topics'))) — non-empty CSV.
+    const topicIds = q.topics
+      ? q.topics
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isInteger(n) && n > 0)
+      : [];
+
+    const where = and(
+      notDeleted(exams),
+      topicIds.length > 0 ? inArray(exams.topic_id, topicIds) : undefined,
+    );
+
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select({ id: exams.id, name: exams.name, topic_id: exams.topic_id })
         .from(exams)
         .where(where)
+        .orderBy(desc(exams.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(exams).where(where),
     ]);
+
+    // Batch-load topics (Laravel: with('topic:id,name,type')).
+    const tIds = [
+      ...new Set(rows.map((r) => r.topic_id).filter((v): v is number => v != null)),
+    ];
+    const topicRows = tIds.length
+      ? await this.db
+          .select({ id: topics.id, name: topics.name, type: topics.type })
+          .from(topics)
+          .where(inArray(topics.id, tIds))
+      : [];
+    const topicMap = new Map(topicRows.map((t) => [t.id, t]));
+
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: rows,
+      data: rows.map((r) => {
+        const t = r.topic_id != null ? topicMap.get(r.topic_id) : undefined;
+        return {
+          id: r.id,
+          name: r.name,
+          topic: t
+            ? {
+                id: t.id,
+                name: t.name,
+                type: {
+                  id: t.type,
+                  name: this.translateTopicType(t.type, lang),
+                },
+              }
+            : null,
+        };
+      }),
     };
+  }
+
+  private translateTopicType(type: number, lang: string): string {
+    const keys: Record<number, string> = {
+      1: 'messages.exam.exam_types.one',
+      2: 'messages.exam.exam_types.two',
+      3: 'messages.exam.exam_types.three',
+      4: 'messages.exam.exam_types.four',
+    };
+    const key = keys[type];
+    if (!key) return '';
+    const v = this.i18n.t(key, { lang });
+    return typeof v === 'string' && v !== key ? v : '';
   }
 
   // Imtihonni topshirgan xodimlar ro'yxati (worker_exams jadvalidan).

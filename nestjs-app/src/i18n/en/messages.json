@@ -505,7 +505,7 @@
   },
   "does_not_delete_current_photo": "Unable to delete main image",
   "already_exists": "This entry already exists",
-  "successfully_exported": "Export queued",
+  "successfully_exported": "Upload successfully sent",
   "signature": {
     "success": "Signature successfully recorded"
   },
@@ -524,17 +524,42 @@
   "user_all_ready": "Such user already exists in the system",
   "exam": {
     "finished": "Finished",
+    "created": "You have already started this exam...",
+    "exam_not_ended": "The exam is not yet over.",
     "result_updated_successfully": "Answer updated successfully",
     "exam_types": {
       "one": "Certification (Industrial Safety)",
       "two": "Certification (Job Suitability)",
       "three": "Qualification Test (For Rank Promotion)",
       "four": "Knowledge Test (Occupational Safety)"
+    },
+    "exam_whom": {
+      "one": "To all",
+      "two": "To relevant positions",
+      "three": "To specified workers",
+      "four": "For advanced training exams",
+      "five": "To designated employees (Not working)"
     }
   },
   "chat": {
     "notifications": {
       "send_success": "Your message was sent successfully!"
     }
-  }
+  },
+  "turnstile": {
+    "hcp_error_codes": {
+      "one": "An error occurred while uploading the image to the device!",
+      "two": "An error occurred while connecting to the device!",
+      "three": "The timeout for receiving data from the device has expired!",
+      "four": "Waiting for the employee to be added...",
+      "five": "An error occurred while retrieving the face image library from the device!"
+    },
+    "device_not_active": "Device is Offline!",
+    "max_access_level_5": "You can select up to 5 groups at most!",
+    "sync_type": {
+      "one": "System",
+      "two": "User"
+    }
+  },
+  "missing_photo": "Photo is missing"
 }

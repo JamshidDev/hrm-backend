@@ -14,6 +14,12 @@ export class QueryTopicExamDto {
   @ApiPropertyOptional() @IsOptional() page?: number;
   @ApiPropertyOptional() @IsOptional() per_page?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
+
+  // Laravel: `filter/exams`'da `topics` CSV bilan filtrlash (Exam.topic_id IN).
+  @ApiPropertyOptional({ example: '3,5,4' })
+  @IsOptional()
+  @IsString()
+  topics?: string;
 }
 
 export class CreateExamDto {

@@ -2,53 +2,603 @@
 // Laravel: TelegramPhotoController + UserDeviceNotifyController.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
+import { and, count, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
+import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
+import { HikCentralClient } from '@/shared/hik-central/hik-central.client';
 import {
   h_c_p_devices,
+  hik_central_access_levels,
+  hik_central_departments,
   turnstile_telegram_photos,
   user_telegrams,
   user_turnstile_devices,
   users,
+  worker_access_levels,
+  worker_hik_centrals,
+  worker_photos,
   workers,
 } from '@/db/schema';
-import { pageOf } from '@/modules/turnstile/_shared/helpers';
+import { nextId, pageOf } from '@/modules/turnstile/_shared/helpers';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
+
+interface ListPhotosQuery {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: number | string;
+  departments?: string;
+  organizations?: string;
+  organization_id?: number;
+}
+
+interface UpdatePhotosBody {
+  ids: number[];
+  status: number;
+  comment?: string | null;
+  access_level_ids?: number[];
+  to?: string | null;
+}
 
 @Injectable()
 export class TelegramService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly scope: OrgScopeService,
+    private readonly minio: MinioService,
+    private readonly hcp: HikCentralClient,
+    private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
+  ) {}
 
   // Laravel: TelegramPhotoController::index — paginated turnstile_telegram_photos.
-  async listPhotos(q: { page?: number; per_page?: number; search?: string }) {
+  //
+  // Worker scope: worker_positions.filter($user) JOIN with status=ACTIVE +
+  //   organization_id NOT IN [1, 19] + departments filter (Laravel custom).
+  // Photo filter:
+  //   - search → workers.searchByFullName
+  //   - status → where status=$status
+  //   - status===2 → where status=2 (redundant)
+  //   - status!=2 → where status != 2 (DEFAULT: exclude status=2 rows!)
+  //
+  // Response: TurnstileTelegramPhotoResource
+  //   { id, worker:{id,photo,last,first,middle}, photo (file_url),
+  //     person_id (hcp_person_id if status===2 else null), error, status, created_at }
+  async listPhotos(q: ListPhotosQuery) {
     const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(turnstile_telegram_photos);
+
+    // 1) Worker scope subquery — active position, organization NOT IN [1,19], scope + departments.
+    const ids = await this.scope.ids();
+    if (ids.length === 0) {
+      return { current_page: page, total: 0, data: [] };
+    }
+    const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+    let extraOrgs: number[] | null = null;
+    if (q.organizations) {
+      extraOrgs = q.organizations
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0);
+    }
+    const extraOrgCond =
+      extraOrgs && extraOrgs.length > 0
+        ? sql` AND wp.organization_id IN (${sql.join(extraOrgs.map((n) => sql`${n}`), sql`, `)})`
+        : sql``;
+    const orgIdCond =
+      q.organization_id != null && Number(q.organization_id) > 0
+        ? sql` AND wp.organization_id = ${Number(q.organization_id)}`
+        : sql``;
+    let depIds: number[] | null = null;
+    if (q.departments) {
+      depIds = q.departments
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0);
+    }
+    const depCond =
+      depIds && depIds.length > 0
+        ? sql` AND wp.department_id IN (${sql.join(depIds.map((n) => sql`${n}`), sql`, `)})`
+        : sql``;
+
+    const workerIdsSubq = sql`
+      SELECT DISTINCT wp.worker_id FROM worker_positions wp
+      WHERE wp.deleted_at IS NULL
+        AND wp.status = 2
+        AND wp.organization_id NOT IN (1, 19)
+        AND wp.organization_id IN (${orgList})${extraOrgCond}${orgIdCond}${depCond}
+    `;
+
+    // 2) Status filter logic (Laravel quirky):
+    //   - status param explicitly === 2 → only status=2
+    //   - any other status param → where status=$status (one filter)
+    //   - PLUS: final `when(status===2, ..., status!=2)` — DEFAULT excludes status=2
+    const statusNum =
+      q.status !== undefined && q.status !== null && q.status !== ''
+        ? Number(q.status)
+        : null;
+    const statusConds: any[] = [];
+    if (statusNum !== null) {
+      statusConds.push(eq(turnstile_telegram_photos.status, statusNum));
+    }
+    // Final status === 2 check
+    if (statusNum === 2) {
+      statusConds.push(eq(turnstile_telegram_photos.status, 2));
+    } else {
+      statusConds.push(ne(turnstile_telegram_photos.status, 2));
+    }
+
+    // 3) Search filter (Laravel: whereHas worker searchByFullName)
+    const searchCond = buildWorkerSearchCond(q.search);
+    let searchWorkerIds: number[] | null = null;
+    if (searchCond) {
+      const rows = await this.db
+        .select({ id: workers.id })
+        .from(workers)
+        .where(searchCond);
+      searchWorkerIds = rows.map((r) => Number(r.id));
+      if (!searchWorkerIds.length) {
+        return { current_page: page, total: 0, data: [] };
+      }
+    }
+
+    const conds: any[] = [
+      notDeleted(turnstile_telegram_photos),
+      sql`${turnstile_telegram_photos.worker_id} IN (${workerIdsSubq})`,
+      ...statusConds,
+    ];
+    if (searchWorkerIds) {
+      conds.push(inArray(turnstile_telegram_photos.worker_id, searchWorkerIds));
+    }
+    const whereExpr = and(...conds);
+
+    // 4) List + total in parallel
     const [rows, [{ total }]] = await Promise.all([
       this.db
-        .select()
+        .select({
+          id: turnstile_telegram_photos.id,
+          worker_id: turnstile_telegram_photos.worker_id,
+          hcp_person_id: turnstile_telegram_photos.hcp_person_id,
+          photo: turnstile_telegram_photos.photo,
+          status: turnstile_telegram_photos.status,
+          error: turnstile_telegram_photos.error,
+          created_at: turnstile_telegram_photos.created_at,
+        })
         .from(turnstile_telegram_photos)
-        .where(where)
+        .where(whereExpr)
         .orderBy(desc(turnstile_telegram_photos.id))
         .limit(perPage)
         .offset(offset),
       this.db
         .select({ total: count() })
         .from(turnstile_telegram_photos)
-        .where(where),
+        .where(whereExpr),
     ]);
+
+    if (rows.length === 0) {
+      return { current_page: page, total: Number(total), data: [] };
+    }
+
+    // 5) Eager-load worker + photo URLs
+    const wIds = [...new Set(rows.map((r) => Number(r.worker_id)))];
+    const wRows = await this.db
+      .select({
+        id: workers.id,
+        photo: workers.photo,
+        last_name: workers.last_name,
+        first_name: workers.first_name,
+        middle_name: workers.middle_name,
+      })
+      .from(workers)
+      .where(inArray(workers.id, wIds));
+    const wPhotoUrls = await Promise.all(
+      wRows.map((w) => this.minio.fileUrl(w.photo)),
+    );
+    const wMap = new Map(
+      wRows.map(
+        (w, i) =>
+          [
+            Number(w.id),
+            {
+              id: Number(w.id),
+              photo: wPhotoUrls[i],
+              last_name: w.last_name,
+              first_name: w.first_name,
+              middle_name: w.middle_name,
+            },
+          ] as const,
+      ),
+    );
+
+    // 6) Photo file URLs (turnstile/telegram/photos/*.jpg)
+    const photoUrls = await Promise.all(rows.map((r) => this.minio.fileUrl(r.photo)));
+
+    // 7) Build response (TurnstileTelegramPhotoResource shape)
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: rows,
+      data: rows.map((r, i) => ({
+        id: Number(r.id),
+        worker: wMap.get(Number(r.worker_id)) ?? null,
+        photo: photoUrls[i],
+        person_id: r.status === 2 ? Number(r.hcp_person_id) : null,
+        error: r.error,
+        status: r.status,
+        created_at: r.created_at,
+      })),
     };
   }
 
-  // Laravel: updatePhotos — re-sync workers' photos via HCP. Stub.
-  async updatePhotos() {
-    return { synced: true };
+  // Laravel: TelegramPhotoController::updatePhotos.
+  //
+  //  status=3 (reject): bulk update photos with status=3 + error=comment, return.
+  //  status=2 (accept):
+  //   - validate <= 5 access_level_ids (unless user.id === 1)
+  //   - load TurnstileTelegramPhoto + worker
+  //   - if count(photos) < 4 → applyPhotoUpdates (HCP calls per photo).
+  async updatePhotos(body: UpdatePhotosBody): Promise<void> {
+    if (!Array.isArray(body.ids) || body.ids.length === 0) {
+      throw new BusinessException(422, 'ids array required');
+    }
+    if (body.status === undefined || body.status === null) {
+      throw new BusinessException(422, 'status required');
+    }
+    const ids = body.ids.map(Number).filter(Number.isFinite);
+
+    // Branch: status=3 → bulk reject + comment.
+    if (Number(body.status) === 3) {
+      await this.db
+        .update(turnstile_telegram_photos)
+        .set({
+          status: 3,
+          error: body.comment ?? null,
+          updated_at: sql`NOW()`,
+        })
+        .where(inArray(turnstile_telegram_photos.id, ids));
+      return;
+    }
+
+    // status === 2 (accept): validate access_level_ids size.
+    const userId = this.ctx.user_or_fail.id;
+    const accessLevelIds = (body.access_level_ids ?? []).map(Number).filter(
+      Number.isFinite,
+    );
+    if (accessLevelIds.length > 5 && Number(userId) !== 1) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.turnstile.max_access_level_5', {
+          lang: this.ctx.lang,
+        }),
+      );
+    }
+
+    // Load photos + worker fields needed for HCP.
+    const photos = await this.db
+      .select({
+        id: turnstile_telegram_photos.id,
+        worker_id: turnstile_telegram_photos.worker_id,
+        hcp_person_id: turnstile_telegram_photos.hcp_person_id,
+        photo: turnstile_telegram_photos.photo,
+        w_id: workers.id,
+        w_last_name: workers.last_name,
+        w_first_name: workers.first_name,
+        w_middle_name: workers.middle_name,
+        w_sex: workers.sex,
+        w_card: workers.card,
+      })
+      .from(turnstile_telegram_photos)
+      .leftJoin(workers, eq(workers.id, turnstile_telegram_photos.worker_id))
+      .where(inArray(turnstile_telegram_photos.id, ids));
+
+    // Laravel guard: only proceed if < 4 photos selected (mass-update safety).
+    if (photos.length >= 4) return;
+
+    await this.applyPhotoUpdates(photos, accessLevelIds, body.to ?? null);
+  }
+
+  // For each photo: download from MinIO → base64 (compress if >200KB) → call HCP.
+  private async applyPhotoUpdates(
+    photos: Array<{
+      id: number;
+      worker_id: number;
+      hcp_person_id: number | null;
+      photo: string;
+      w_id: number | null;
+      w_last_name: string | null;
+      w_first_name: string | null;
+      w_middle_name: string | null;
+      w_sex: boolean | null;
+      w_card: number | null;
+    }>,
+    accessLevelIds: number[],
+    to: string | null,
+  ): Promise<void> {
+    // Pre-load HCP access_levels + department info (used in both branches).
+    let accessLevels: Array<{
+      id: number;
+      hik_central_access_level_id: number | null;
+      hik_central_department_id: number | null;
+    }> = [];
+    if (accessLevelIds.length) {
+      accessLevels = await this.db
+        .select({
+          id: hik_central_access_levels.id,
+          hik_central_access_level_id:
+            hik_central_access_levels.hik_central_access_level_id,
+          hik_central_department_id:
+            hik_central_access_levels.hik_central_department_id,
+        })
+        .from(hik_central_access_levels)
+        .where(inArray(hik_central_access_levels.id, accessLevelIds));
+    }
+
+    const nowDb = sql`NOW()`;
+
+    for (const ph of photos) {
+      // Download photo → base64.
+      const photoUrl = await this.minio.fileUrl(ph.photo);
+      if (!photoUrl) {
+        await this.db
+          .update(turnstile_telegram_photos)
+          .set({ status: 4, error: 'photo url missing', updated_at: nowDb })
+          .where(eq(turnstile_telegram_photos.id, ph.id));
+        continue;
+      }
+      let base64: string;
+      try {
+        const fetched = await fetch(photoUrl);
+        if (!fetched.ok) throw new Error(`status ${fetched.status}`);
+        const buf = Buffer.from(await fetched.arrayBuffer());
+        base64 = buf.toString('base64');
+      } catch (e) {
+        await this.db
+          .update(turnstile_telegram_photos)
+          .set({
+            status: 4,
+            error: (e as Error).message?.slice(0, 255) ?? 'fetch failed',
+            updated_at: nowDb,
+          })
+          .where(eq(turnstile_telegram_photos.id, ph.id));
+        continue;
+      }
+
+      // Create WorkerPhoto record (mirror of telegram photo path).
+      const newPhotoId = await nextId(this.db, worker_photos);
+      await this.db.insert(worker_photos).values({
+        id: newPhotoId,
+        worker_id: ph.worker_id,
+        photo: ph.photo,
+      } as any);
+
+      // Branch A: no existing HCP person → addWorkerToServer + attach.
+      if (!ph.hcp_person_id) {
+        let departmentHcpId = '1';
+        const firstAl = accessLevels[0];
+        if (firstAl?.hik_central_department_id) {
+          const [dep] = await this.db
+            .select({
+              hik_central_department_id:
+                hik_central_departments.hik_central_department_id,
+            })
+            .from(hik_central_departments)
+            .where(
+              eq(
+                hik_central_departments.id,
+                Number(firstAl.hik_central_department_id),
+              ),
+            )
+            .limit(1);
+          if (dep?.hik_central_department_id) {
+            departmentHcpId = String(dep.hik_central_department_id);
+          }
+        }
+
+        const res = await this.hcp.addWorkerToServer(
+          {
+            id: ph.worker_id,
+            last_name: ph.w_last_name,
+            first_name: ph.w_first_name,
+            middle_name: ph.w_middle_name,
+            sex: ph.w_sex,
+            card: ph.w_card,
+          },
+          base64,
+          to,
+          departmentHcpId,
+        );
+        if (!res.status) {
+          await this.db
+            .update(turnstile_telegram_photos)
+            .set({
+              status: 4,
+              error: (res.msg ?? 'Error').slice(0, 255),
+              updated_at: nowDb,
+            })
+            .where(eq(turnstile_telegram_photos.id, ph.id));
+          continue;
+        }
+        const newPersonId = res.personId;
+        const toStr =
+          to ??
+          new Date(
+            new Date().getFullYear() + 2,
+            new Date().getMonth(),
+            new Date().getDate(),
+          )
+            .toISOString()
+            .replace('T', ' ')
+            .slice(0, 19);
+
+        // Upsert WorkerHikCentral.
+        const [existing] = await this.db
+          .select({ id: worker_hik_centrals.id })
+          .from(worker_hik_centrals)
+          .where(
+            and(
+              eq(worker_hik_centrals.worker_id, ph.worker_id),
+              eq(worker_hik_centrals.hik_central_key, 1),
+              eq(
+                worker_hik_centrals.hik_central_person_id,
+                Number(newPersonId),
+              ),
+            ),
+          )
+          .limit(1);
+        let whId: number;
+        if (existing) {
+          whId = Number(existing.id);
+          await this.db
+            .update(worker_hik_centrals)
+            .set({
+              worker_photo_id: newPhotoId,
+              to: toStr,
+              updated_at: nowDb,
+            })
+            .where(eq(worker_hik_centrals.id, whId));
+        } else {
+          whId = await nextId(this.db, worker_hik_centrals);
+          await this.db.insert(worker_hik_centrals).values({
+            id: whId,
+            worker_id: ph.worker_id,
+            hik_central_key: 1,
+            hik_central_person_id: Number(newPersonId),
+            worker_photo_id: newPhotoId,
+            to: toStr,
+            created_at: nowDb,
+            updated_at: nowDb,
+          } as any);
+        }
+
+        // Attach each access_level via HCP.
+        await this.attachWorkersToAccessLevels(
+          accessLevels,
+          String(newPersonId),
+          whId,
+          ph.worker_id,
+        );
+
+        await this.db
+          .update(turnstile_telegram_photos)
+          .set({
+            status: 2,
+            error: null,
+            hcp_person_id: Number(newPersonId),
+            updated_at: nowDb,
+          })
+          .where(eq(turnstile_telegram_photos.id, ph.id));
+        continue;
+      }
+
+      // Branch B: existing HCP person → updatePersonFace + (optionally) attach.
+      const res = await this.hcp.updatePersonFace(ph.hcp_person_id, base64);
+      if (Number(res.code) !== 0) {
+        await this.db
+          .update(turnstile_telegram_photos)
+          .set({
+            status: 4,
+            error: (res.msg ?? 'Error').slice(0, 255),
+            updated_at: nowDb,
+          })
+          .where(eq(turnstile_telegram_photos.id, ph.id));
+        continue;
+      }
+      await this.db
+        .update(turnstile_telegram_photos)
+        .set({ status: 2, error: null, updated_at: nowDb })
+        .where(eq(turnstile_telegram_photos.id, ph.id));
+
+      if (accessLevelIds.length) {
+        // Find existing WorkerHikCentral by hik_central_person_id.
+        const [wh] = await this.db
+          .select({ id: worker_hik_centrals.id })
+          .from(worker_hik_centrals)
+          .where(
+            eq(worker_hik_centrals.hik_central_person_id, ph.hcp_person_id),
+          )
+          .limit(1);
+        if (wh) {
+          await this.db
+            .update(worker_hik_centrals)
+            .set({ worker_photo_id: newPhotoId, updated_at: nowDb })
+            .where(eq(worker_hik_centrals.id, Number(wh.id)));
+          await this.attachWorkersToAccessLevels(
+            accessLevels,
+            String(ph.hcp_person_id),
+            Number(wh.id),
+            ph.worker_id,
+          );
+        }
+      }
+    }
+  }
+
+  // Laravel: HikCentralWorkerService::attachWorkersToAccessLevels (status='attach' branch).
+  // Per access_level: call HCP attachWorkerToAccessLevel → upsert worker_access_levels row.
+  private async attachWorkersToAccessLevels(
+    accessLevels: Array<{
+      id: number;
+      hik_central_access_level_id: number | null;
+    }>,
+    hcpPersonId: string,
+    workerHikCentralId: number,
+    workerId: number,
+  ): Promise<void> {
+    for (const al of accessLevels) {
+      if (!al.hik_central_access_level_id) continue;
+      const res = await this.hcp.attachWorkerToAccessLevel(
+        [hcpPersonId],
+        al.hik_central_access_level_id,
+      );
+      if (!res.status) {
+        await this.db
+          .delete(worker_access_levels)
+          .where(
+            and(
+              eq(worker_access_levels.worker_id, workerId),
+              eq(worker_access_levels.hik_central_access_level_id, al.id),
+            ),
+          );
+        continue;
+      }
+      const [existing] = await this.db
+        .select({ id: worker_access_levels.id })
+        .from(worker_access_levels)
+        .where(
+          and(
+            eq(worker_access_levels.worker_id, workerId),
+            eq(worker_access_levels.hik_central_access_level_id, al.id),
+          ),
+        )
+        .limit(1);
+      if (existing) {
+        await this.db
+          .update(worker_access_levels)
+          .set({
+            worker_hik_central_id: workerHikCentralId,
+            hik_central_key: 1,
+            hik_central_person_id: Number(hcpPersonId),
+            status: 1,
+            updated_at: sql`NOW()`,
+          })
+          .where(eq(worker_access_levels.id, Number(existing.id)));
+      } else {
+        const walId = await nextId(this.db, worker_access_levels);
+        await this.db.insert(worker_access_levels).values({
+          id: walId,
+          worker_id: workerId,
+          hik_central_access_level_id: al.id,
+          worker_hik_central_id: workerHikCentralId,
+          hik_central_key: 1,
+          hik_central_person_id: Number(hcpPersonId),
+          status: 1,
+        } as any);
+      }
+    }
   }
 
   // Laravel: UserDeviceNotifyController::users — users with telegram + worker.

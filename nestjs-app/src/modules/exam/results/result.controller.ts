@@ -13,7 +13,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { buildSuccess } from '@/common/utils/response.util';
 import { ResultService } from '@/modules/exam/results/result.service';
 
@@ -22,7 +24,10 @@ import { ResultService } from '@/modules/exam/results/result.service';
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/exam')
 export class ResultController {
-  constructor(private readonly service: ResultService) {}
+  constructor(
+    private readonly service: ResultService,
+    private readonly i18n: I18nService,
+  ) {}
 
   @Get('results')
   @ApiOperation({ summary: 'List exam results' })
@@ -54,27 +59,44 @@ export class ResultController {
   }
 
   @Get('results/export')
-  @ApiOperation({ summary: 'Export all results to Excel' })
-  async exportAll() {
-    return buildSuccess(true, await this.service.downloadAll());
+  @ApiOperation({ summary: 'Export all results to Excel (background)' })
+  async exportAll(@Query() q: Record<string, string>) {
+    await this.service.downloadAll(q);
+    // Laravel: Helper::response(trans('messages.successfully_exported'))
+    //   → {message: <translated>, error: false, data: []}.
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   @Get('not-passed-workers')
-  @ApiOperation({ summary: 'Export workers who did not pass' })
-  async notPassed() {
-    return buildSuccess(true, await this.service.downloadNotPassed());
+  @ApiOperation({ summary: 'Export workers who did not pass (background)' })
+  async notPassed(@Query() q: Record<string, string>) {
+    await this.service.downloadNotPassed(q);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   @Get('check-ended-results')
   @ApiOperation({ summary: 'Run end-of-exam check (cron job)' })
   async checkEnded() {
-    return buildSuccess(true, await this.service.checkEnded());
+    // Laravel: Helper::response(trans('messages.successfully_updated'))
+    //   → {message: <translated>, error: false, data: []}.
+    await this.service.checkEnded();
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('worker-exams-download/:workerExamId')
   @ApiOperation({ summary: 'Download a single result PDF/Excel' })
-  async download(@Param('workerExamId', ParseIntPipe) workerExamId: number) {
-    return buildSuccess(true, await this.service.downloadResult(workerExamId));
+  async download(
+    @Param('workerExamId', ParseIntPipe) workerExamId: number,
+    @Query('type') typeRaw?: string,
+  ) {
+    // Laravel: DownloadResultRequest 'type' required.
+    if (typeRaw === undefined || typeRaw === '') {
+      throw new BusinessException(422, 'type is required', {
+        type: ['type field is required'],
+      });
+    }
+    const type = Number(typeRaw);
+    return buildSuccess(true, await this.service.downloadResult(workerExamId, type));
   }
 
   // UUID bo'yicha natija — ichki link uchun.

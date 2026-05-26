@@ -33,7 +33,11 @@ import {
             CLS_KEYS.DEVICE_ID,
             (req.headers['x-device-id'] as string) ?? null,
           );
-          cls.set(CLS_KEYS.IP, req.ip ?? req.socket?.remoteAddress ?? null);
+          // Laravel `$request->ip()` parity:
+          //   - IPv6 localhost `::1` → IPv4 `127.0.0.1`
+          //   - IPv4-mapped IPv6 `::ffff:1.2.3.4` → `1.2.3.4`
+          const rawIp = req.ip ?? req.socket?.remoteAddress ?? null;
+          cls.set(CLS_KEYS.IP, normalizeIp(rawIp));
           cls.set(CLS_KEYS.USER_AGENT, req.headers['user-agent'] ?? null);
         },
       },
@@ -42,3 +46,10 @@ import {
   exports: [NestClsModule],
 })
 export class HrmClsModule {}
+
+function normalizeIp(ip: string | null): string | null {
+  if (!ip) return ip;
+  if (ip === '::1') return '127.0.0.1';
+  if (ip.startsWith('::ffff:')) return ip.slice(7);
+  return ip;
+}

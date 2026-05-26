@@ -176,6 +176,10 @@ export class PensionerService {
   }
 
   // PUT /api/v1/hr/pensioners/{id}
+  // Laravel: PensionerUpdateRequest barcha field'lar `sometimes` — faqat
+  // jo'natilganini validate qiladi. PensionerService::update'da
+  // `$pensioner->update($data)` faqat shu validated field'larni yangilaydi.
+  // `worker_id` Laravel rules'da yo'q — umuman tegmaymiz.
   async update(id: number, dto: UpdatePensionerDto): Promise<void> {
     const [row] = await this.db
       .select({ id: pensioners.id })
@@ -185,27 +189,25 @@ export class PensionerService {
     if (!row) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
+    const set: Record<string, unknown> = { updated_at: sql`NOW()` };
+    if (dto.last_name !== undefined) set.last_name = dto.last_name;
+    if (dto.first_name !== undefined) set.first_name = dto.first_name;
+    if (dto.middle_name !== undefined) set.middle_name = dto.middle_name;
+    if (dto.sex !== undefined) set.sex = dto.sex;
+    if (dto.position !== undefined) set.position = dto.position;
+    if (dto.pin !== undefined) set.pin = dto.pin;
+    if (dto.passport !== undefined) set.passport = dto.passport;
+    if (dto.address !== undefined) set.address = dto.address;
+    if (dto.experience !== undefined) set.experience = dto.experience;
+    if (dto.year !== undefined) set.year = dto.year;
+    if (dto.phone !== undefined) set.phone = dto.phone;
+    if (dto.afghan !== undefined) set.afghan = dto.afghan;
+    if (dto.invalid !== undefined) set.invalid = dto.invalid;
+    if (dto.chernobyl !== undefined) set.chernobyl = dto.chernobyl;
+    if (dto.railway_title !== undefined) set.railway_title = dto.railway_title;
     await this.db
       .update(pensioners)
-      .set({
-        worker_id: dto.worker_id ?? null,
-        last_name: dto.last_name,
-        first_name: dto.first_name,
-        middle_name: dto.middle_name ?? null,
-        sex: dto.sex,
-        position: dto.position ?? null,
-        pin: dto.pin ?? null,
-        passport: dto.passport ?? null,
-        address: dto.address ?? null,
-        experience: dto.experience ?? 0,
-        year: dto.year ?? null,
-        phone: dto.phone ?? null,
-        afghan: dto.afghan ?? false,
-        invalid: dto.invalid ?? false,
-        chernobyl: dto.chernobyl ?? false,
-        railway_title: dto.railway_title ?? false,
-        updated_at: sql`NOW()`,
-      })
+      .set(set)
       .where(eq(pensioners.id, id));
   }
 

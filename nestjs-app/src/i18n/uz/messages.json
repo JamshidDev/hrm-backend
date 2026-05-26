@@ -505,7 +505,7 @@
   },
   "does_not_delete_current_photo": "Asosiy rasmni o'chirish mumkin emas",
   "already_exists": "Bunday yozuv allaqachon mavjud",
-  "successfully_exported": "Eksport navbatga qo'shildi",
+  "successfully_exported": "Yuklashga muvaffaqqiyatli yuborildi",
   "signature": {
     "success": "Imzo muvaffaqqiyatli qo'yildi"
   },
@@ -524,17 +524,42 @@
   "user_all_ready": "Bunday foydalanuvchi tizimda allaqachon mavjud",
   "exam": {
     "finished": "Yakunlangan",
+    "created": "Bu imtihonni allaqachon boshlagansiz...",
+    "exam_not_ended": "Imtihon hali yakunlanmagan",
     "result_updated_successfully": "Javob muvaffaqqiyatli yangilandi",
     "exam_types": {
       "one": "Attestatsiya (Sanoat xavfsizligi)",
       "two": "Attestatsiya (Lavozimga loyiqligi)",
       "three": "Malaka sinovi (Razryadni oshirish uchun)",
       "four": "Bilim sinovi (Mehnat muhofazasi)"
+    },
+    "exam_whom": {
+      "one": "Barchaga",
+      "two": "Tegishli lavozimlarga",
+      "three": "Belgilangan xodimlarga (Ishlab turgan)",
+      "four": "Malaka oshirish imtihonlari uchun",
+      "five": "Belgilangan xodimlarga (Ishlamayotgan)"
     }
   },
   "chat": {
     "notifications": {
       "send_success": "Sizning xabaringiz muvaffaqqiyatli yuborildi!"
     }
-  }
+  },
+  "turnstile": {
+    "hcp_error_codes": {
+      "one": "Qurilmaga rasm yuklashda xatolik yuzaga keldi!",
+      "two": "Qurilmaga ulanishda xatolik yuzaga keldi!",
+      "three": "Qurilmadan ma'lumotlarni qabul qilish vaqti tugadi!",
+      "four": "Xodimning qo'shilishi kutilmoqda ...",
+      "five": "Qurilmada yuz rasmlari kutubxonasini olishda xatolik yuz berdi!"
+    },
+    "device_not_active": "Qurilma holati onlayn emas!",
+    "max_access_level_5": "Ko'pi bilan 5-tagacha guruh tanlashingiz mumkin!",
+    "sync_type": {
+      "one": "Tizim",
+      "two": "Foydalanuvchi"
+    }
+  },
+  "missing_photo": "Rasm topilmadi"
 }
