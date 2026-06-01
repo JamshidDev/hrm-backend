@@ -9,29 +9,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Min } from 'class-validator';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { LmsListenerService } from '@/modules/lms/listeners/listener.service';
-
-class ListenerListQueryDto {
-  @ApiPropertyOptional({ example: 1, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  // Laravel'da `per_page` cheklov yo'q.
-  @ApiPropertyOptional({ example: 10, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  per_page?: number;
-}
+import { ListenerCalendarQueryDto } from '@/modules/lms/listeners/dto/listener.dto';
 
 @ApiTags('LMS / Listeners')
 @ApiBearerAuth('access-token')
@@ -40,20 +21,25 @@ class ListenerListQueryDto {
 export class LmsListenerController {
   constructor(private readonly service: LmsListenerService) {}
 
+  // Laravel: GET /lms/listener → ListenerController::index (dashboard, stub).
   @Get()
-  @ApiOperation({ summary: 'Listener edu plans (stub)' })
-  async index(@Query() q: ListenerListQueryDto) {
-    return buildSuccess(true, await this.service.index(q));
+  @ApiOperation({ summary: 'Listener dashboard (edu_plans + lessons + user)' })
+  async index() {
+    return buildSuccess(true, await this.service.index());
   }
 
+  // Laravel: GET /lms/listener/lessons → ListenerLessonController::index (calendar).
   @Get('lessons')
-  @ApiOperation({ summary: 'Listener lessons (stub)' })
-  async lessons(@Query() q: ListenerListQueryDto) {
+  @ApiOperation({
+    summary: 'Listener lessons calendar (grouped by lesson_date)',
+  })
+  async lessons(@Query() q: ListenerCalendarQueryDto) {
     return buildSuccess(true, await this.service.lessons(q));
   }
 
+  // Laravel: GET /lms/listener/lessons/{lessonId} → ListenerLessonController::startLesson.
   @Get('lessons/:lessonId')
-  @ApiOperation({ summary: 'Start a listener lesson (stub)' })
+  @ApiOperation({ summary: 'Start a listener lesson (LessonStartResource)' })
   async startLesson(@Param('lessonId', ParseIntPipe) lessonId: number) {
     return buildSuccess(true, await this.service.startLesson(lessonId));
   }

@@ -106,9 +106,14 @@ export class StatementController {
   }
 
   @Get('statements-multiple-workers')
-  @ApiOperation({ summary: 'Workers with multiple statements (multi-org)' })
+  @ApiOperation({
+    summary: 'Trigger multi-org statement workers export (background task)',
+  })
   async multiWorkers(@Query() q: MultiWorkersQueryDto) {
-    return buildSuccess(true, await this.service.multiWorkers(q));
+    // Laravel: exportMultipleStatementWorkers — UserExportTask yaratadi + fonda
+    // Excel quradi, javob faqat success xabari (Helper::response(trans(...))).
+    await this.service.multiWorkers(q);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   @Get('statements-by-positions')

@@ -18,7 +18,7 @@ import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { LmsLessonService } from '@/modules/lms/lessons/lesson.service';
 import {
-  LessonListQueryDto,
+  LessonCalendarQueryDto,
   UpsertLessonDto,
 } from '@/modules/lms/lessons/dto/lesson.dto';
 
@@ -32,10 +32,11 @@ export class LmsLessonController {
     private readonly i18n: I18nService,
   ) {}
 
+  // Laravel: LessonController::index — lesson_date bo'yicha guruhlangan calendar.
   @Get()
-  @ApiOperation({ summary: 'List lessons (paginated)' })
-  async list(@Query() q: LessonListQueryDto) {
-    return buildSuccess(true, await this.service.list(q));
+  @ApiOperation({ summary: 'Lessons calendar (grouped by lesson_date)' })
+  async index(@Query() q: LessonCalendarQueryDto) {
+    return buildSuccess(true, await this.service.calendar(q));
   }
 
   @Get(':id')

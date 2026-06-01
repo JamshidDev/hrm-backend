@@ -19,6 +19,7 @@ import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { LmsTeacherService } from '@/modules/lms/teachers/teacher.service';
 import {
+  TeacherLessonsQueryDto,
   TeacherListQueryDto,
   UpsertTeacherDto,
 } from '@/modules/lms/teachers/dto/teacher.dto';
@@ -67,13 +68,15 @@ export class LmsTeacherController {
   @ApiOperation({ summary: 'Soft-delete teacher' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.remove(id);
-    return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
+    // Laravel: Helper::response(true, trans('messages.successfully_deleted'))
+    //   → { message: true, data: 'Muvaffaqqiyatli o`chirildi' }
+    return buildSuccess(true, this.i18n.t('messages.successfully_deleted'));
   }
 
   // ---------- /lms/teacher/lessons ----------
   @Get('teacher/lessons')
-  @ApiOperation({ summary: 'Lessons assigned to current teacher' })
-  async teacherLessons(@Query() q: TeacherListQueryDto) {
+  @ApiOperation({ summary: 'Lessons calendar for current teacher' })
+  async teacherLessons(@Query() q: TeacherLessonsQueryDto) {
     return buildSuccess(true, await this.service.teacherLessons(q));
   }
 }

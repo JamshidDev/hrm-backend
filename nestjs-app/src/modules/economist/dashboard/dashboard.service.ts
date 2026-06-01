@@ -1,11 +1,15 @@
-// Economist dashboard service. Laravel: Economist/DashboardController.
+// Economist dashboard service. Laravel: Economist/DashboardController::index.
 // Oxirgi 8 oy uchun pre-aggregate jadval (statement_aggregates va h.k.) bo'yicha
-// daromad/soliq/pension hisobotlari.
+// daromad/soliq/pension hisobotlari. Har aggregate `->filter($user)` = org-scope.
 
 import { Injectable } from '@nestjs/common';
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
+import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
+import { OrgScopeService } from '@/common/database/org-scope.service';
+import { RequestContext } from '@/common/context/request.context';
 import {
   statement_aggregates,
   tax_four_aggregates,
@@ -33,16 +37,33 @@ export interface StatementAmount {
   total_five: number;
 }
 
+interface OrgFilters {
+  organizations?: string;
+  organization_id?: number;
+}
+
 @Injectable()
 export class DashboardService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly scope: OrgScopeService,
+    private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
+  ) {}
 
-  // GET /api/v1/economist/dashboard — keyingi 8 oy uchun statistika.
-  async index(q?: { year?: string | number; month?: string | number }) {
-    const baseYear = Number(q?.year ?? new Date().getFullYear());
-    const baseMonth = Number(q?.month ?? new Date().getMonth() + 1);
+  // GET /api/v1/economist/dashboard — Laravel: DashboardController::index.
+  async index(
+    q?: { year?: string | number; month?: string | number } & OrgFilters,
+  ) {
+    const now = new Date();
+    const baseYear = Number(q?.year ?? now.getFullYear());
+    const baseMonth = Number(q?.month ?? now.getMonth() + 1);
+    const orgFilters: OrgFilters = {
+      organizations: q?.organizations,
+      organization_id: q?.organization_id,
+    };
 
-    // 1. 8 oy oraliqni qurish (oxiridan boshigacha)
+    // 8 oy oraliq (joriy oydan ortga).
     const periods: Period[] = [];
     let y = baseYear;
     let m = baseMonth;
@@ -50,7 +71,7 @@ export class DashboardService {
       periods.push({
         year: y,
         month: m,
-        label: `${y}-${String(m).padStart(2, '0')}`,
+        label: `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`,
       });
       m--;
       if (m < 1) {
@@ -59,81 +80,108 @@ export class DashboardService {
       }
     }
 
-    // 2. Barcha aggregatsiyalarni parallel olib kelamiz
     const [statements, taxFour, taxFive, pensionPayments] = await Promise.all([
-      this.fetchStatements(periods),
-      this.fetchTaxFour(periods),
-      this.fetchTaxFive(periods),
-      this.fetchPensionPayments(periods),
+      this.fetchStatements(periods, orgFilters),
+      this.fetchTaxLike(
+        tax_four_aggregates,
+        periods,
+        ['reported_salary_income', 'reported_tax'],
+        orgFilters,
+      ),
+      this.fetchTaxLike(
+        tax_five_aggregates,
+        periods,
+        // Laravel TaxFiveAggregate $columns tartibi (amount kalit tartibi shunga bog'liq).
+        ['total_income', 'reported_income', 'total_tax', 'reported_tax'],
+        orgFilters,
+      ),
+      this.fetchTaxLike(
+        pension_payment_aggregates,
+        periods,
+        ['income_tax_paid', 'total_contributions'],
+        orgFilters,
+      ),
     ]);
 
-    // 3. Eng yangi oy (so'nggi yozuv) — KPI tile'lar uchun
-    const lastStatement = statements[0]?.amount ?? this.emptyStatementAmount();
-    const lastTaxFour = taxFour[0]?.amount ?? {};
-    const lastTaxFive = taxFive[0]?.amount ?? {};
-    const lastPension = pensionPayments[0]?.amount ?? {};
+    // periods[0] — eng yangi oy, KPI tile'lar uchun.
+    const lastStatement = statements[0]?.amount ?? null;
+    const lastTaxFour = taxFour[0]?.amount ?? null;
+    const lastTaxFive = taxFive[0]?.amount ?? null;
+    const lastPension = pensionPayments[0]?.amount ?? null;
+    const lang = this.ctx.lang;
+    const t = (key: string): string =>
+      this.i18n.t(`messages.economist.${key}`, { lang });
 
+    // Laravel: top-level'da pension_payments YO'Q (faqat last_month uchun ishlatiladi).
+    // last_month tartibi: statement, tax_five, tax_four, pension_payment.
     return {
       statements,
       tax_four: taxFour,
       tax_five: taxFive,
-      pension_payments: pensionPayments,
       last_month: {
-        statement: [
-          { name: 'total_one', value: lastStatement.total_one },
-          { name: 'total_two', value: lastStatement.total_two },
-          { name: 'total_three', value: lastStatement.total_three },
-          { name: 'total_four', value: lastStatement.total_four },
-          { name: 'total_five', value: lastStatement.total_five },
-        ],
-        tax_four: [
-          {
-            name: 'reported_salary_income',
-            value: lastTaxFour.reported_salary_income ?? 0,
-          },
-          { name: 'reported_tax', value: lastTaxFour.reported_tax ?? 0 },
-        ],
-        tax_five: [
-          { name: 'reported_income', value: lastTaxFive.reported_income ?? 0 },
-          { name: 'reported_tax', value: lastTaxFive.reported_tax ?? 0 },
-        ],
-        pension_payment: [
-          { name: 'income_tax_paid', value: lastPension.income_tax_paid ?? 0 },
-          {
-            name: 'total_contributions',
-            value: lastPension.total_contributions ?? 0,
-          },
-        ],
+        statement: (
+          [
+            'total_one',
+            'total_two',
+            'total_three',
+            'total_four',
+            'total_five',
+          ] as const
+        ).map((key) => ({
+          key,
+          name: t(`statement.${key}`),
+          value: lastStatement?.[key] ?? 0,
+        })),
+        tax_five: (['reported_income', 'reported_tax'] as const).map((key) => ({
+          key,
+          value: Math.trunc(Number(lastTaxFive?.[key] ?? 0)),
+          name: t(`tax_five.${key}`),
+        })),
+        tax_four: (['reported_salary_income', 'reported_tax'] as const).map(
+          (key) => ({
+            key,
+            value: Math.trunc(Number(lastTaxFour?.[key] ?? 0)),
+            name: t(`tax_four.${key}`),
+          }),
+        ),
+        pension_payment: (
+          ['income_tax_paid', 'total_contributions'] as const
+        ).map((key) => ({
+          key,
+          value: Math.trunc(Number(lastPension?.[key] ?? 0)),
+          name: t(`pension_payment.${key}`),
+        })),
       },
     };
   }
 
-  // ============================================================
-  // PRIVAT AGGREGATSIYA METODLAR
-  // ============================================================
+  private periodFilter(
+    yearCol: AnyPgColumn,
+    monthCol: AnyPgColumn,
+    periods: Period[],
+  ): SQL | undefined {
+    return or(
+      ...periods.map((p) => and(eq(yearCol, p.year), eq(monthCol, p.month))),
+    );
+  }
 
-  /**
-   * Statement aggregates: har period uchun total_one..five summa.
-   * SQL: SELECT year, month,
-   *        SUM(CASE WHEN code IN (...one) THEN total_sum ELSE 0 END) AS total_one,
-   *        ... (two, three, five)
-   *      FROM statement_aggregates
-   *      WHERE (year, month) IN periods
-   *      GROUP BY year, month
-   */
+  // StatementAggregate::lastMonthsTotal — code-guruhlar bo'yicha SUM, org-scope.
+  //   amount: int (Laravel (int) cast); total_four = (int)one + (int)three.
+  //   period uchun row yo'q → amount: null.
   private async fetchStatements(
     periods: Period[],
-  ): Promise<Array<{ label: string; amount: StatementAmount }>> {
+    orgFilters: OrgFilters,
+  ): Promise<Array<{ label: string; amount: StatementAmount | null }>> {
     if (!periods.length) return [];
 
-    // (year, month) tuple OR condition
-    const periodFilter = or(
-      ...periods.map((p) =>
-        and(
-          eq(statement_aggregates.year, p.year),
-          eq(statement_aggregates.month, p.month),
-        ),
-      ),
+    const inScope = await this.scope.whereOrg(
+      statement_aggregates.organization_id,
+      orgFilters,
+    );
+    const pf = this.periodFilter(
+      statement_aggregates.year,
+      statement_aggregates.month,
+      periods,
     );
 
     const oneCodes = [...TOTAL_ONE_COLUMNS].map((c) => Number(c));
@@ -151,75 +199,39 @@ export class DashboardService {
         total_five: sql<number>`SUM(CASE WHEN ${statement_aggregates.code} IN ${fiveCodes} THEN ${statement_aggregates.total_sum} ELSE 0 END)`,
       })
       .from(statement_aggregates)
-      .where(periodFilter)
+      .where(and(pf, inScope))
       .groupBy(statement_aggregates.year, statement_aggregates.month);
 
-    // Year-month → row mapping
-    const map = new Map<string, (typeof rows)[0]>();
+    const map = new Map<string, (typeof rows)[number]>();
     for (const r of rows) {
-      map.set(`${r.year}-${String(r.month).padStart(2, '0')}`, r);
+      map.set(
+        `${String(r.year).padStart(4, '0')}-${String(r.month).padStart(2, '0')}`,
+        r,
+      );
     }
 
     return periods.map((p) => {
       const r = map.get(p.label);
-      const one = Number(r?.total_one ?? 0);
-      const two = Number(r?.total_two ?? 0);
-      const three = Number(r?.total_three ?? 0);
-      const five = Number(r?.total_five ?? 0);
+      if (!r) return { label: p.label, amount: null };
+      const one = Math.trunc(Number(r.total_one ?? 0));
+      const two = Math.trunc(Number(r.total_two ?? 0));
+      const three = Math.trunc(Number(r.total_three ?? 0));
+      const five = Math.trunc(Number(r.total_five ?? 0));
       return {
         label: p.label,
         amount: {
           total_one: one,
           total_two: two,
           total_three: three,
-          total_four: one + three, // Laravel parity
+          total_four: one + three, // Laravel: (int)one + (int)three
           total_five: five,
         },
       };
     });
   }
 
-  /**
-   * Tax-four aggregates: column nomi bo'yicha aggregatsiya.
-   * Faqat `reported_salary_income` va `reported_tax` ustunlari.
-   */
-  private async fetchTaxFour(periods: Period[]) {
-    return this.fetchTaxLike(tax_four_aggregates, periods, [
-      'reported_salary_income',
-      'reported_tax',
-    ]);
-  }
-
-  /** Tax-five aggregates: reported_income + reported_tax. */
-  private async fetchTaxFive(periods: Period[]) {
-    return this.fetchTaxLike(tax_five_aggregates, periods, [
-      'reported_income',
-      'reported_tax',
-    ]);
-  }
-
-  /** Pension aggregates: income_tax_paid + total_contributions. */
-  private async fetchPensionPayments(periods: Period[]) {
-    return this.fetchTaxLike(pension_payment_aggregates, periods, [
-      'income_tax_paid',
-      'total_contributions',
-    ]);
-  }
-
-  /**
-   * Tax/pension aggregate'lar uchun umumiy SQL pattern:
-   * SELECT year, month, column, SUM(total_sum) FROM <table>
-   * WHERE column IN (...) AND (year, month) IN periods
-   * GROUP BY year, month, column
-   *
-   * Natija period bo'yicha guruhlangan: `{label, amount: {column: float}}`.
-   */
-  /**
-   * 3 ta aggregate jadvalning umumiy shakli — bir xil ustun nomlari va tiplari.
-   * Drizzle har jadvalga noyob `PgTableWithColumns` tipi beradi, ammo ustunlar
-   * bir xil. Shuning uchun caller union berib, ichida 1 ta aniq tipga cast'lab
-   * ishlatamiz (runtime bir xil — runtime'da nomlar bir xil).
-   */
+  // TaxFour/TaxFive/PensionPayment Aggregate::lastMonthsTotal — column bo'yicha SUM,
+  //   org-scope. amount: float (cast YO'Q); period uchun row yo'q → amount: null.
   private async fetchTaxLike(
     table:
       | typeof tax_four_aggregates
@@ -227,17 +239,13 @@ export class DashboardService {
       | typeof pension_payment_aggregates,
     periods: Period[],
     columns: string[],
-  ): Promise<Array<{ label: string; amount: Record<string, number> }>> {
+    orgFilters: OrgFilters,
+  ): Promise<Array<{ label: string; amount: Record<string, number> | null }>> {
     if (!periods.length) return [];
 
-    // Drizzle generic union'ni boy o'tkazmasdan, bitta aniq jadval tipiga
-    // cast qilamiz — har 3 jadvalning ustun shakli identik bo'lgani sababli
-    // bu xavfsiz (xato qilsak, runtime'da darhol DB exception bo'lardi).
     const t = table as typeof tax_four_aggregates;
-
-    const periodFilter = or(
-      ...periods.map((p) => and(eq(t.year, p.year), eq(t.month, p.month))),
-    );
+    const inScope = await this.scope.whereOrg(t.organization_id, orgFilters);
+    const pf = this.periodFilter(t.year, t.month, periods);
 
     const rows = await this.db
       .select({
@@ -247,36 +255,22 @@ export class DashboardService {
         total_sum: sql<number>`SUM(${t.total_sum})`,
       })
       .from(t)
-      .where(and(periodFilter, inArray(t.column, columns)))
+      .where(and(pf, inArray(t.column, columns), inScope))
       .groupBy(t.year, t.month, t.column);
 
-    // Year-month bo'yicha guruhlash, keyin column nomi bo'yicha ichki map.
     const map = new Map<string, Record<string, number>>();
     for (const r of rows) {
-      const key = `${r.year}-${String(r.month).padStart(2, '0')}`;
+      const key = `${String(r.year).padStart(4, '0')}-${String(r.month).padStart(2, '0')}`;
       if (!map.has(key)) map.set(key, {});
       map.get(key)![r.column] = Number(r.total_sum ?? 0);
     }
 
-    return periods.map((p) => ({
-      label: p.label,
-      amount: map.get(p.label) ?? this.emptyTaxAmount(columns),
-    }));
-  }
-
-  private emptyStatementAmount(): StatementAmount {
-    return {
-      total_one: 0,
-      total_two: 0,
-      total_three: 0,
-      total_four: 0,
-      total_five: 0,
-    };
-  }
-
-  private emptyTaxAmount(columns: string[]): Record<string, number> {
-    const obj: Record<string, number> = {};
-    for (const c of columns) obj[c] = 0;
-    return obj;
+    return periods.map((p) => {
+      const found = map.get(p.label);
+      if (!found) return { label: p.label, amount: null };
+      const amount: Record<string, number> = {};
+      for (const c of columns) amount[c] = found[c] ?? 0;
+      return { label: p.label, amount };
+    });
   }
 }

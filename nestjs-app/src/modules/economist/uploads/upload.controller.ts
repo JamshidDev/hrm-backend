@@ -5,6 +5,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Post,
   Query,
   UploadedFile,
@@ -49,6 +50,7 @@ export class UploadController {
    * File: `file` (xlsx/csv)
    */
   @Post('upload')
+  @HttpCode(200) // Laravel Helper::response — doim 200 (NestJS POST default 201 emas)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -89,6 +91,7 @@ export class UploadController {
   }
 
   @Post('upload-statuses')
+  @HttpCode(200) // Laravel Helper::response — doim 200
   @ApiOperation({
     summary: 'Toggle deadline override status for an org/period',
   })
@@ -98,6 +101,7 @@ export class UploadController {
   }
 
   @Post('upload-histories/confirm')
+  @HttpCode(200) // Laravel Helper::response — doim 200
   @ApiOperation({
     summary: 'Confirm (approve) the latest upload for that period',
   })

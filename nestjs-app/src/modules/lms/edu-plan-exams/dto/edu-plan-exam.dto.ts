@@ -3,7 +3,40 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+
+// GET /lms/exams/result — Laravel: EduPlanExamController::results.
+//   search (worker fullname CONCAT ILIKE), topics (csv), exams (csv).
+export class ExamResultQueryDto {
+  @ApiPropertyOptional({ example: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ example: 10, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  per_page?: number;
+
+  @ApiPropertyOptional({ example: 'Abidjanova' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ example: '1,2', description: 'CSV topic ids' })
+  @IsOptional()
+  @IsString()
+  topics?: string;
+
+  @ApiPropertyOptional({ example: '5,6', description: 'CSV exam ids' })
+  @IsOptional()
+  @IsString()
+  exams?: string;
+}
 
 export class EduPlanExamListQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1 })

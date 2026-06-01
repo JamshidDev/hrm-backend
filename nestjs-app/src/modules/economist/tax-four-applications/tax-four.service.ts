@@ -8,6 +8,7 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { tax_four_applications } from '@/db/schema';
 import {
   paginateByYearMonth,
+  economistAssetUrl,
   type PageQueryLike,
 } from '@/modules/economist/_shared/helpers';
 
@@ -48,6 +49,6 @@ export class TaxFourService {
 
   // GET /api/v1/economist/tax-four-example — namuna Excel URL.
   example() {
-    return { url: '/resumes/economist/tax_four_example.xlsx' };
+    return { url: economistAssetUrl('tax-four.xlsx') };
   }
 }

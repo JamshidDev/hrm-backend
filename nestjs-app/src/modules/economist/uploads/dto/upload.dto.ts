@@ -119,12 +119,14 @@ export class UpdateUploadStatusDto {
   @Max(12)
   month!: number;
 
-  @ApiProperty({
+  // Laravel: 'status' => ['nullable', 'boolean'] — ixtiyoriy.
+  @ApiPropertyOptional({
     example: true,
-    description: 'true → override yaratiladi, false → o`chiriladi',
+    description: 'true → override yaratiladi, false/yo`q → o`chiriladi',
   })
+  @IsOptional()
   @IsBoolean()
-  status!: boolean;
+  status?: boolean;
 }
 
 /**

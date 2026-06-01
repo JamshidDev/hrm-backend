@@ -13,17 +13,28 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { OrgScopeService } from '@/common/database/org-scope.service';
+import { MinioService } from '@/shared/minio/minio.service';
 import {
   edu_plan_exams,
   exams,
   lessons,
   topics,
+  worker_exams,
+  workers,
 } from '@/db/schema';
+import {
+  lmsPaginate,
+  readPaging,
+} from '@/modules/lms/_shared/lms-paginate.util';
 import { ExamMapper } from '@/modules/lms/edu-plan-exams/edu-plan-exam.mapper';
 import type {
   AttachEduPlanExamDto,
   EduPlanExamListQueryDto,
+  ExamResultQueryDto,
 } from '@/modules/lms/edu-plan-exams/dto/edu-plan-exam.dto';
+
+// Laravel TopicTypeEnum int → i18n kalit so'zi (messages.exam.exam_types.*).
+const TOPIC_TYPE_WORDS = ['', 'one', 'two', 'three', 'four'] as const;
 
 @Injectable()
 export class LmsEduPlanExamService {
@@ -32,6 +43,7 @@ export class LmsEduPlanExamService {
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
     private readonly scope: OrgScopeService,
+    private readonly minio: MinioService,
   ) {}
 
   private async nextId(): Promise<number> {
@@ -63,7 +75,10 @@ export class LmsEduPlanExamService {
     // ko'rmaydi — Laravel'da bu real bug edi).
     const scopeIds = await this.scope.ids();
     const orgIn = scopeIds.length
-      ? sql`AND topics.organization_id IN (${sql.join(scopeIds.map((n) => sql`${n}`), sql`, `)})`
+      ? sql`AND topics.organization_id IN (${sql.join(
+          scopeIds.map((n) => sql`${n}`),
+          sql`, `,
+        )})`
       : sql`AND FALSE`;
     const topicOrgExists = sql`EXISTS (
       SELECT 1 FROM topics
@@ -135,7 +150,12 @@ export class LmsEduPlanExamService {
   async attach(dto: AttachEduPlanExamDto) {
     const type = Number(dto.exam_type);
     const examId = Number(dto.exam_id);
-    if (!Number.isInteger(type) || type <= 0 || !Number.isInteger(examId) || examId <= 0) {
+    if (
+      !Number.isInteger(type) ||
+      type <= 0 ||
+      !Number.isInteger(examId) ||
+      examId <= 0
+    ) {
       throw new BusinessException(422, 'type and exam_id are required');
     }
 
@@ -154,7 +174,8 @@ export class LmsEduPlanExamService {
         .from(lessons)
         .where(eq(lessons.id, lessonId))
         .limit(1);
-      if (!l) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+      if (!l)
+        throw new BusinessException(404, this.i18n.t('messages.not_found'));
       eduPlanId = Number(l.edu_plan_id);
     }
 
@@ -186,7 +207,7 @@ export class LmsEduPlanExamService {
       lesson_id: lessonId,
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
-    } as any);
+    });
     return { id };
   }
 
@@ -199,7 +220,8 @@ export class LmsEduPlanExamService {
       .from(edu_plan_exams)
       .where(eq(edu_plan_exams.id, examId))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     await this.db
       .update(edu_plan_exams)
       .set({ deleted_at: sql`NOW()` })
@@ -207,10 +229,182 @@ export class LmsEduPlanExamService {
     return { success: true };
   }
 
-  /** GET /lms/exams/result — stub (Laravel: complex joins). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async results(q: EduPlanExamListQueryDto) {
-    const page = Math.max(1, Number(q.page ?? 1));
-    return { current_page: page, total: 0, data: [] };
+  // GET /lms/exams/result — Laravel: EduPlanExamController::results.
+  //   WorkerExam::with(['worker','exam','topic'])->join(workers)->join(topics)
+  //     ->when(search → CONCAT fullname ILIKE)
+  //     ->when(topics → topic_id IN csv)->when(exams → exam_id IN csv)
+  //     ->orderByDesc('id')->paginate() → ExamResultResource.
+  async results(q: ExamResultQueryDto) {
+    const { page, perPage } = readPaging(q);
+    const lang = this.ctx.lang;
+    const conditions = [notDeleted(worker_exams)];
+
+    const search = q.search?.trim();
+    if (search) {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM workers w
+        WHERE w.id = ${worker_exams.worker_id}
+          AND CONCAT(w.last_name, ' ', w.first_name, ' ', w.middle_name) ILIKE ${`%${search}%`}
+      )`);
+    }
+    const topicIds = this.csvInts(q.topics);
+    if (topicIds.length) {
+      conditions.push(inArray(worker_exams.topic_id, topicIds));
+    }
+    const examIds = this.csvInts(q.exams);
+    if (examIds.length) {
+      conditions.push(inArray(worker_exams.exam_id, examIds));
+    }
+
+    const where = and(...conditions);
+
+    return lmsPaginate({
+      db: this.db,
+      countTable: worker_exams,
+      countWhere: where,
+      page,
+      perPage,
+      query: ({ limit, offset }) =>
+        this.db
+          .select({
+            id: worker_exams.id,
+            worker_id: worker_exams.worker_id,
+            exam_id: worker_exams.exam_id,
+            topic_id: worker_exams.topic_id,
+            created: worker_exams.created,
+            ended: worker_exams.ended,
+            result: worker_exams.result,
+            deleted_at: worker_exams.deleted_at,
+          })
+          .from(worker_exams)
+          .where(where)
+          .orderBy(desc(worker_exams.id))
+          .limit(limit)
+          .offset(offset),
+      mapper: () => ({}) as never,
+      mapList: async (rows) => {
+        if (!rows.length) return [];
+        const workerIds = [
+          ...new Set(
+            rows.map((r) => r.worker_id).filter((x): x is number => x != null),
+          ),
+        ];
+        const examIdSet = [
+          ...new Set(
+            rows.map((r) => r.exam_id).filter((x): x is number => x != null),
+          ),
+        ];
+        const topicIdSet = [
+          ...new Set(
+            rows.map((r) => r.topic_id).filter((x): x is number => x != null),
+          ),
+        ];
+
+        const [workerRows, examRows, topicRows] = await Promise.all([
+          this.db
+            .select({
+              id: workers.id,
+              last_name: workers.last_name,
+              first_name: workers.first_name,
+              middle_name: workers.middle_name,
+              photo: workers.photo,
+            })
+            .from(workers)
+            .where(inArray(workers.id, workerIds.length ? workerIds : [-1])),
+          this.db
+            .select({
+              id: exams.id,
+              name: exams.name,
+              deadline: exams.deadline,
+              variant: exams.variant,
+              minute: exams.minute,
+              tests_count: exams.tests_count,
+              chances: exams.chances,
+              active: exams.active,
+              description: exams.description,
+              camera: exams.camera,
+            })
+            .from(exams)
+            .where(inArray(exams.id, examIdSet.length ? examIdSet : [-1])),
+          this.db
+            .select({ id: topics.id, name: topics.name, type: topics.type })
+            .from(topics)
+            .where(inArray(topics.id, topicIdSet.length ? topicIdSet : [-1])),
+        ]);
+
+        const workerMap = new Map(workerRows.map((w) => [w.id, w]));
+        const examMap = new Map(examRows.map((e) => [e.id, e]));
+        const topicMap = new Map(topicRows.map((t) => [t.id, t]));
+
+        const photoMap = new Map<number, string | null>();
+        await Promise.all(
+          workerRows.map(async (w) => {
+            photoMap.set(w.id, await this.minio.fileUrl(w.photo));
+          }),
+        );
+
+        const topicTypeName = (type: number | null): string => {
+          const word = TOPIC_TYPE_WORDS[Number(type)];
+          return word
+            ? this.i18n.t(`messages.exam.exam_types.${word}`, { lang })
+            : '';
+        };
+
+        return rows.map((r) => {
+          const w = r.worker_id ? workerMap.get(r.worker_id) : undefined;
+          const ex = r.exam_id ? examMap.get(r.exam_id) : undefined;
+          const tp = r.topic_id ? topicMap.get(r.topic_id) : undefined;
+          return {
+            id: r.id,
+            // Laravel WorkerMinimalResource (whenLoaded → null bo'lsa null).
+            worker: w
+              ? {
+                  id: w.id,
+                  photo: photoMap.get(w.id) ?? null,
+                  last_name: w.last_name,
+                  first_name: w.first_name,
+                  middle_name: w.middle_name,
+                }
+              : null,
+            created: r.created,
+            ended: r.ended,
+            result: r.result,
+            // ExamInfoResource (exam null bo'lsa null-wrapped — bizda exam doim bor).
+            exam: ex
+              ? {
+                  id: ex.id,
+                  name: ex.name,
+                  deadline: ex.deadline,
+                  variant: ex.variant,
+                  minute: ex.minute,
+                  tests_count: ex.tests_count,
+                  chances: ex.chances,
+                  active: ex.active,
+                  description: ex.description,
+                  camera: ex.camera,
+                }
+              : null,
+            // TopicMinResource {id, name, type:{id, name}}.
+            topic: tp
+              ? {
+                  id: tp.id,
+                  name: tp.name,
+                  type: { id: tp.type, name: topicTypeName(tp.type) },
+                }
+              : null,
+            deleted_at: r.deleted_at,
+          };
+        });
+      },
+    });
+  }
+
+  // CSV "1,2,3" → [1,2,3] (bo'sh/invalid → bo'sh massiv).
+  private csvInts(csv: string | undefined): number[] {
+    if (!csv) return [];
+    return csv
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isInteger(n) && n > 0);
   }
 }

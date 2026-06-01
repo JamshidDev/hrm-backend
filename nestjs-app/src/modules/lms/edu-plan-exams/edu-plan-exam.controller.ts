@@ -17,6 +17,7 @@ import { LmsEduPlanExamService } from '@/modules/lms/edu-plan-exams/edu-plan-exa
 import {
   AttachEduPlanExamDto,
   EduPlanExamListQueryDto,
+  ExamResultQueryDto,
 } from '@/modules/lms/edu-plan-exams/dto/edu-plan-exam.dto';
 
 @ApiTags('LMS / Edu Plan Exams')
@@ -39,8 +40,8 @@ export class LmsEduPlanExamController {
   }
 
   @Get('result')
-  @ApiOperation({ summary: 'Exam results (stub)' })
-  async results(@Query() q: EduPlanExamListQueryDto) {
+  @ApiOperation({ summary: 'Worker exam results (paginated)' })
+  async results(@Query() q: ExamResultQueryDto) {
     return buildSuccess(true, await this.service.results(q));
   }
 

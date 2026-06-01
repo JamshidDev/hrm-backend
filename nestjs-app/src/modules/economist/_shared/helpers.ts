@@ -12,6 +12,39 @@ export interface PageQueryLike {
   month?: number | string;
 }
 
+/**
+ * Laravel `asset('resumes/economist/<file>')` ekvivalenti — example .xlsx
+ * fayllari uchun to'liq (absolute) URL. APP_URL bazasidan quriladi
+ * (Laravel APP_URL=http://localhost:8002, NestJS=http://localhost:8001 —
+ * host/port tabiiy ravishda farq qiladi, shakl/path bir xil).
+ */
+export function economistAssetUrl(file: string): string {
+  const base = (process.env.APP_URL ?? 'http://localhost:8001').replace(
+    /\/+$/,
+    '',
+  );
+  return `${base}/resumes/economist/${file}`;
+}
+
+/**
+ * PHP `number_format($v, $decimals, '.', $sep)` ekvivalenti.
+ *   number_format(16024162, 2, '.', ' ') → "16 024 162.00"
+ *   number_format(16024162)               → "16,024,162"  (0 kasr, vergul)
+ */
+export function numberFormat(
+  value: unknown,
+  decimals = 0,
+  thousandsSep: ',' | ' ' = ',',
+): string {
+  const n = Number(value) || 0;
+  const s = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(n);
+  // en-US ',' ming ajratgich — kerakli ajratgichga almashtiramiz.
+  return thousandsSep === ',' ? s : s.replace(/,/g, thousandsSep);
+}
+
 // Pagination uchun standart hisob: page, perPage, offset qaytaradi.
 export function pageOf(q?: PageQueryLike) {
   const page = Number(q?.page ?? 1);

@@ -1,14 +1,16 @@
 // Teachers service. Laravel: TeacherController + TeacherLessonController.
 
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, inArray, max, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, max, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import {
-  learning_center_users,
+  edu_plan_exams,
+  exams,
+  groups,
   learning_centers,
   lessons,
   subjects,
@@ -21,7 +23,9 @@ import {
   readPaging,
 } from '@/modules/lms/_shared/lms-paginate.util';
 import { TeacherMapper } from '@/modules/lms/teachers/teacher.mapper';
+import type { LessonExam } from '@/modules/lms/lessons/lesson.mapper';
 import type {
+  TeacherLessonsQueryDto,
   TeacherListQueryDto,
   UpsertTeacherDto,
 } from '@/modules/lms/teachers/dto/teacher.dto';
@@ -208,13 +212,21 @@ export class LmsTeacherService {
   }
 
   // DELETE /lms/teachers/:id — soft-delete (Laravel uses SoftDeletes; pivot stays).
+  // Laravel Route Model Binding `(Teacher $teacher)` SoftDeletes bilan: deleted_at
+  // IS NOT NULL bo'lgan rowlarni topmaydi → 404. NestJS'da ham aynan shu xulq.
+  //
+  // Note: raw SQL ishlatamiz chunki Drizzle bigserial (mode: 'number')
+  // .returning()'da ba'zan UPDATE bajarilsa ham 0 row qaytaradi (param coercion).
   async remove(id: number) {
-    const [row] = await this.db
-      .update(teachers)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(teachers.id, id))
-      .returning({ id: teachers.id });
-    if (!row) throw new BusinessException(404, 'not_found');
+    const res = await this.db.execute(sql`
+      UPDATE teachers
+      SET deleted_at = NOW()
+      WHERE id = ${id}
+        AND deleted_at IS NULL
+      RETURNING id
+    `);
+    const rows = ((res as any).rows ?? res) as Array<{ id: number | string }>;
+    if (!rows.length) throw new BusinessException(404, 'not_found');
   }
 
   // Laravel `updateOrCreate({learning_center_id, worker_id})`:
@@ -233,7 +245,9 @@ export class LmsTeacherService {
         AND worker_id = ${workerId}
       LIMIT 1
     `);
-    const existingRows = ((res as any).rows ?? res) as Array<{ id: number | string }>;
+    const existingRows = ((res as any).rows ?? res) as Array<{
+      id: number | string;
+    }>;
     if (existingRows.length) {
       const existingId = Number(existingRows[0].id);
       await this.db.execute(sql`
@@ -250,7 +264,7 @@ export class LmsTeacherService {
       worker_id: workerId,
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
-    } as any);
+    });
     return id;
   }
 
@@ -281,10 +295,146 @@ export class LmsTeacherService {
     );
   }
 
-  /** GET /lms/teacher/lessons — stub (Laravel: complex). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async teacherLessons(_q: TeacherListQueryDto) {
-    void lessons;
-    return [];
+  // GET /lms/teacher/lessons — Laravel: TeacherLessonController::index (calendar).
+  //
+  //   Lesson::with(['group','subject','teacher.worker','exam.exam'])
+  //     ->whereHas('teacher', fn($q) => $q->where('worker_id', $user->id))
+  //     ->whereBetween('lesson_date', [$start, $end])
+  //     ->orderBy('lesson_date')->orderBy('start_time')->get()
+  //     ->groupBy('lesson_date')->map(...);
+  //
+  // Item tartibi: {id, group, name, subject, start_time, end_time, exam} — teacher YO'Q.
+  // Filter: teacher (lessons.teacher_id → teachers.id) ning worker_id = $user->id.
+  async teacherLessons(q: TeacherLessonsQueryDto) {
+    const userId = Number(this.ctx.user?.id ?? 0);
+
+    // whereHas('teacher', worker_id = user.id) — Teacher SoftDeletes.
+    const teacherExists = sql`EXISTS (
+      SELECT 1 FROM teachers t
+      WHERE t.id = ${lessons.teacher_id}
+        AND t.worker_id = ${userId}
+        AND t.deleted_at IS NULL
+    )`;
+
+    const where = and(
+      gte(lessons.lesson_date, q.start_date),
+      lte(lessons.lesson_date, q.end_date),
+      notDeleted(lessons),
+      teacherExists,
+    );
+
+    const rows = await this.db
+      .select({
+        id: lessons.id,
+        name: lessons.name,
+        group_id: lessons.group_id,
+        subject_id: lessons.subject_id,
+        lesson_date: lessons.lesson_date,
+        start_time: lessons.start_time,
+        end_time: lessons.end_time,
+      })
+      .from(lessons)
+      .where(where)
+      .orderBy(asc(lessons.lesson_date), asc(lessons.start_time));
+
+    if (!rows.length) return [];
+
+    const groupIds = [...new Set(rows.map((r) => r.group_id))];
+    const subjectIds = [...new Set(rows.map((r) => r.subject_id))];
+    const lessonIds = rows.map((r) => r.id);
+
+    const [groupRows, subjectRows, examLinks] = await Promise.all([
+      this.db
+        .select({ id: groups.id, code: groups.code })
+        .from(groups)
+        .where(inArray(groups.id, groupIds)),
+      this.db
+        .select({ id: subjects.id, name: subjects.name })
+        .from(subjects)
+        .where(inArray(subjects.id, subjectIds)),
+      this.db
+        .select({
+          id: edu_plan_exams.id,
+          lesson_id: edu_plan_exams.lesson_id,
+          exam_id: edu_plan_exams.exam_id,
+        })
+        .from(edu_plan_exams)
+        .where(
+          and(
+            inArray(edu_plan_exams.lesson_id, lessonIds),
+            notDeleted(edu_plan_exams),
+          ),
+        )
+        .orderBy(asc(edu_plan_exams.id)),
+    ]);
+
+    const examIds = [
+      ...new Set(
+        examLinks.map((e) => e.exam_id).filter((x): x is number => !!x),
+      ),
+    ];
+    const examRows = examIds.length
+      ? await this.db
+          .select({ id: exams.id, name: exams.name })
+          .from(exams)
+          .where(inArray(exams.id, examIds))
+      : [];
+
+    const groupCode = new Map(groupRows.map((g) => [g.id, g.code]));
+    const subjectName = new Map(subjectRows.map((s) => [s.id, s.name]));
+    const examNameMap = new Map(examRows.map((e) => [e.id, e.name]));
+    const examByLesson = new Map<number, (typeof examLinks)[number]>();
+    for (const link of examLinks) {
+      if (link.lesson_id == null) continue;
+      if (!examByLesson.has(link.lesson_id)) {
+        examByLesson.set(link.lesson_id, link);
+      }
+    }
+
+    const buildExam = (lessonId: number): LessonExam | null => {
+      const link = examByLesson.get(lessonId);
+      if (!link) return null;
+      return {
+        id: link.id,
+        exam: {
+          id: link.exam_id ?? null,
+          name: link.exam_id ? (examNameMap.get(link.exam_id) ?? null) : null,
+        },
+      };
+    };
+
+    // groupBy('lesson_date') — item tartibi: id, group, name, subject, start, end, exam.
+    const calendar: Array<{
+      lesson_date: string;
+      lessons: Array<{
+        id: number;
+        group: number | null;
+        name: string | null;
+        subject: string | null;
+        start_time: string;
+        end_time: string;
+        exam: LessonExam | null;
+      }>;
+    }> = [];
+    const dateIndex = new Map<string, number>();
+    for (const r of rows) {
+      const item = {
+        id: r.id,
+        group: groupCode.get(r.group_id) ?? null,
+        name: r.name,
+        subject: subjectName.get(r.subject_id) ?? null,
+        start_time: r.start_time,
+        end_time: r.end_time,
+        exam: buildExam(r.id),
+      };
+      let idx = dateIndex.get(r.lesson_date);
+      if (idx === undefined) {
+        idx = calendar.length;
+        dateIndex.set(r.lesson_date, idx);
+        calendar.push({ lesson_date: r.lesson_date, lessons: [] });
+      }
+      calendar[idx].lessons.push(item);
+    }
+    return calendar;
   }
 }

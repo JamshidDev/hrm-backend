@@ -362,6 +362,37 @@
         "updated": "Yangilandi",
         "deleted": "O'chirildi"
       }
+    },
+    "statement": {
+      "total_one": "Ish haqi fondiga kiruvchi to'lov turlari",
+      "total_two": "Daromad tarkibiga kiritilmaydigan to‘lovlar",
+      "total_three": "Ish haqi fondiga kirmaydigan to'lov turlari",
+      "total_four": "Jami ish haqi",
+      "total_five": "Ish haqidan ushlamalar"
+    },
+    "tax_four": {
+      "reported_salary_income": "Hisobot davridagi mehnatga haq to‘lash tarzidagi daromadlar",
+      "reported_tax": "Hisobot davridagi soliq summasi"
+    },
+    "tax_five": {
+      "reported_income": "Hisobot davridagi daromadlar",
+      "reported_tax": "Hisobot davridagi soliq summasi"
+    },
+    "pension_payment": {
+      "income_tax_paid": "Daromad solig‘i to‘langan daromad miqdori",
+      "total_contributions": "Jami badallar"
+    },
+    "upload_types": {
+      "one": "Oylik hisobot",
+      "two": "INPS 4-ilova",
+      "three": "INPS 5-ilova",
+      "four": "INPS to'lovlar"
+    },
+    "upload_statuses": {
+      "one": "Jarayonda",
+      "two": "Qayta yuklandi",
+      "three": "Tasdiqlandi",
+      "four": "Xatolik"
     }
   },
   "political_party": {
@@ -571,7 +602,26 @@
   "lms": {
     "edu_plan_not_found": "O'quv rejasi topilmadi!",
     "edu_plan_or_lesson_is_required": "Edu plan yoki lesson ko'rsatilishi shart!",
-    "exam_already_attached": "Imtihon allaqachon biriktirilgan!"
+    "exam_already_attached": "Imtihon allaqachon biriktirilgan!",
+    "lesson": {
+      "edu_plan_hours_exceeded": "O'quv rejasi umumiy soatdan oshmasligi kerak!",
+      "already_teacher": "Ushbu Ustoz boshqa darsga biriktirilgan!",
+      "already_group": "Ushbu Guruh boshqa darsga biriktirilgan!"
+    },
+    "edu_plan": {
+      "types": {
+        "one": "Malaka oshirish",
+        "two": "Qayta tayyorlash"
+      },
+      "listener": {
+        "status": {
+          "one": "Jarayonda",
+          "two": "Malaka oshirish davrida",
+          "three": "Tugatilgan",
+          "four": "Chetlatilgan"
+        }
+      }
+    }
   },
   "does_not_delete_related_item": "Bu element boshqa maʼlumotlar bilan bogʻlangan, O'chirish mumkin emas...",
   "does_not_delete_approved_document": "Tasdiqlangan hujjatni o'chirib bo'lmaydi.",
