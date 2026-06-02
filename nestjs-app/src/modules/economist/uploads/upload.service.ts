@@ -13,11 +13,14 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { economist_uploads, organization_economist_uploads } from '@/db/schema';
 import { ExcelService } from '@/shared/excel/excel.service';
 import { MinioService } from '@/shared/minio/minio.service';
+import { PermissionService } from '@/shared/permission/permission.service';
+import { RequestContext } from '@/common/context/request.context';
+import { I18nService } from 'nestjs-i18n';
+import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import type { Express } from 'express';
 import {
   UploadStatus,
   UploadType,
-  uploadTypesList,
   resolveRefreshTable,
 } from '@/modules/economist/_shared/upload-enums';
 import { getUploadDeadline } from '@/modules/economist/_shared/code-groups';
@@ -26,6 +29,15 @@ import { parseStatement } from '@/modules/economist/uploads/parsers/statement.pa
 import { parseTaxFour } from '@/modules/economist/uploads/parsers/tax-four.parser';
 import { parseTaxFive } from '@/modules/economist/uploads/parsers/tax-five.parser';
 import { parsePension } from '@/modules/economist/uploads/parsers/pension.parser';
+
+// UploadTypeEnum / UploadStatusEnum id (1..4) → i18n kalit so'zi (one..four).
+const UPLOAD_TYPE_IDS = [1, 2, 3, 4] as const;
+const ENUM_WORD: Record<number, string> = {
+  1: 'one',
+  2: 'two',
+  3: 'three',
+  4: 'four',
+};
 
 interface UploadDto {
   organization_id: number;
@@ -48,6 +60,9 @@ export class UploadService {
     @InjectDb() private readonly db: DataSource,
     private readonly excel: ExcelService,
     private readonly minio: MinioService,
+    private readonly perms: PermissionService,
+    private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
   ) {}
 
   // ============================================================
@@ -297,18 +312,52 @@ export class UploadService {
       grouped.get(r.type)!.push(r);
     }
 
-    const labels = uploadTypesList();
-    return labels.map((label) => {
-      const list = grouped.get(label.id) ?? [];
-      return {
-        id: label.id,
-        name: label.name,
-        // status: at least 1 success
-        status: list.some((u) => u.status === UploadStatus.SUCCESS),
-        count: list.length,
-        data: list,
-      };
-    });
+    // Laravel: collect(UploadTypeEnum::list())->map(...) — 4 tur (1..4 tartibda).
+    // Har tur uchun UploadHistoryResource ko'rinishidagi item'lar.
+    const lang = this.ctx.lang;
+    return Promise.all(
+      UPLOAD_TYPE_IDS.map(async (typeId) => {
+        const list = grouped.get(typeId) ?? [];
+        const data = await Promise.all(
+          list.map(async (u) => {
+            const sWord = u.status != null ? ENUM_WORD[u.status] : undefined;
+            return {
+              id: u.id,
+              type: u.type,
+              file: await this.minio.fileUrl(u.file),
+              year: u.year,
+              month: u.month,
+              // Laravel: ['id' => status, 'name' => UploadStatusEnum::get(status)]
+              status: {
+                id: u.status,
+                name: sWord
+                  ? this.i18n.t(`messages.economist.upload_statuses.${sWord}`, {
+                      lang,
+                    })
+                  : '',
+              },
+              created_at: toLaravelTimestamp(u.created_at),
+              done: u.done,
+              comment: u.comment,
+            };
+          }),
+        );
+        return {
+          id: typeId,
+          // Laravel: UploadTypeEnum label (i18n, til bo'yicha).
+          name: this.i18n.t(
+            `messages.economist.upload_types.${ENUM_WORD[typeId]}`,
+            {
+              lang,
+            },
+          ),
+          // status: kamida 1 ta SUCCESS bo'lsa true.
+          status: list.some((u) => u.status === UploadStatus.SUCCESS),
+          count: list.length,
+          data,
+        };
+      }),
+    );
   }
 
   // ============================================================
@@ -319,12 +368,21 @@ export class UploadService {
     organization_id: number;
     year: number;
     month: number;
-    status: boolean;
+    status?: boolean;
   }) {
-    const { organization_id, year, month, status } = body;
-    if (!organization_id || !year || !month) {
-      throw new BusinessException(422, 'validation_failed');
+    // Laravel: $user->hasPermissionTo('economist-uploads-status') — yo'q bo'lsa 403.
+    const allowed = await this.perms.hasPermission(
+      this.ctx.user_id,
+      'economist-uploads-status',
+    );
+    if (!allowed) {
+      // Laravel trans('messages.permission_denied') — bu kalit lang faylida
+      // mavjud emas, shuning uchun literal "messages.permission_denied"
+      // qaytaradi. Byte-parity uchun aynan shu stringni qaytaramiz.
+      throw new BusinessException(403, 'messages.permission_denied');
     }
+
+    const { organization_id, year, month, status } = body;
 
     if (status) {
       // upsert: agar bor bo'lsa, yangilash, aks holda yaratish

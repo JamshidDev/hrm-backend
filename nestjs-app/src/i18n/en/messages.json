@@ -364,6 +364,37 @@
         "updated": "Updated",
         "deleted": "Deleted"
       }
+    },
+    "statement": {
+      "total_one": "Types of payments included in the wage fund",
+      "total_two": "Payments not included in income structure",
+      "total_three": "Types of payments not included in the wage fund",
+      "total_four": "Total wage",
+      "total_five": "Deductions from wages"
+    },
+    "tax_four": {
+      "reported_salary_income": "Wage-type income during the reporting period",
+      "reported_tax": "Tax amount during the reporting period"
+    },
+    "tax_five": {
+      "reported_income": "Income during the reporting period",
+      "reported_tax": "Tax amount during the reporting period"
+    },
+    "pension_payment": {
+      "income_tax_paid": "Amount of income tax paid",
+      "total_contributions": "Total contributions"
+    },
+    "upload_types": {
+      "one": "Monthly report",
+      "two": "INPS Appendix 4",
+      "three": "INPS Appendix 5",
+      "four": "INPS Payments"
+    },
+    "upload_statuses": {
+      "one": "In progress",
+      "two": "Reloaded",
+      "three": "Approved",
+      "four": "Error"
     }
   },
   "political_party": {
@@ -571,7 +602,26 @@
   "lms": {
     "edu_plan_not_found": "Education plan not found!",
     "edu_plan_or_lesson_is_required": "Edu plan or lesson is required!",
-    "exam_already_attached": "Exam is already attached!"
+    "exam_already_attached": "Exam is already attached!",
+    "lesson": {
+      "edu_plan_hours_exceeded": "The total hours of the education plan must not be exceeded!",
+      "already_teacher": "This teacher is already assigned to another lesson!",
+      "already_group": "This group is already assigned to another lesson!"
+    },
+    "edu_plan": {
+      "types": {
+        "one": "Professional Development",
+        "two": "Retraining"
+      },
+      "listener": {
+        "status": {
+          "one": "In Progress",
+          "two": "During Professional Development",
+          "three": "Completed",
+          "four": "Dismissed"
+        }
+      }
+    }
   },
   "does_not_delete_related_item": "This item is linked to other data, Cannot be deleted...",
   "does_not_delete_approved_document": "Cannot delete an approved document.",

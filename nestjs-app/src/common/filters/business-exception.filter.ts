@@ -8,10 +8,14 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RawHttpException } from '@/common/exceptions/raw-http.exception';
+import { LaravelValidationException } from '@/common/exceptions/validation.exception';
 import { buildError } from '@/common/utils/response.util';
+import { buildLaravelValidation } from '@/common/validation/laravel-validation';
+import type { ValLang } from '@/common/validation/laravel-validation.messages';
+import { DEFAULT_LANG, SUPPORTED_LANGS } from '@/common/context/cls.types';
 
 @Catch()
 export class BusinessExceptionFilter implements ExceptionFilter {
@@ -20,6 +24,19 @@ export class BusinessExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+
+    // Laravel ValidationException parity — 422 { message, errors }.
+    // Til: Accept-Language (cls.module bilan bir xil rezolyutsiya).
+    if (exception instanceof LaravelValidationException) {
+      const request = ctx.getRequest<Request>();
+      const raw = (request.headers['accept-language'] as string) ?? '';
+      const lang: ValLang = SUPPORTED_LANGS.includes(raw as ValLang)
+        ? (raw as ValLang)
+        : DEFAULT_LANG;
+      const body = buildLaravelValidation(exception.errors, lang);
+      response.status(exception.status).json(body);
+      return;
+    }
 
     // Laravel response()->json([...]) — flat format (auth middleware kabi).
     if (exception instanceof RawHttpException) {

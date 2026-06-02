@@ -1,11 +1,12 @@
 // LMS main controller — Laravel: LMSController.
 // GET /api/v1/lms/enums, /learning-centers, /list/{directions,specializations,edu-plans,groups}.
 
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { LmsMainService } from '@/modules/lms/main/main.service';
+import { LmsListQueryDto } from '@/modules/lms/main/dto/list.dto';
 
 @ApiTags('LMS / Main')
 @ApiBearerAuth('access-token')
@@ -27,26 +28,30 @@ export class LmsMainController {
   }
 
   @Get('list/directions')
-  @ApiOperation({ summary: 'List directions (brief: id, name)' })
-  async listDirections() {
-    return buildSuccess(true, await this.service.listDirections());
+  @ApiOperation({
+    summary: 'List directions (paginated: id, name, name_ru, name_en)',
+  })
+  async listDirections(@Query() q: LmsListQueryDto) {
+    return buildSuccess(true, await this.service.listDirections(q));
   }
 
   @Get('list/specializations')
-  @ApiOperation({ summary: 'List specializations (brief: id, name)' })
-  async listSpecializations() {
-    return buildSuccess(true, await this.service.listSpecializations());
+  @ApiOperation({ summary: 'List specializations (paginated + direction)' })
+  async listSpecializations(@Query() q: LmsListQueryDto) {
+    return buildSuccess(true, await this.service.listSpecializations(q));
   }
 
   @Get('list/edu-plans')
-  @ApiOperation({ summary: 'List edu plans (brief: id, name)' })
-  async listEduPlans() {
-    return buildSuccess(true, await this.service.listEduPlans());
+  @ApiOperation({
+    summary: 'List edu plans (paginated, learning-center filtered)',
+  })
+  async listEduPlans(@Query() q: LmsListQueryDto) {
+    return buildSuccess(true, await this.service.listEduPlans(q));
   }
 
   @Get('list/groups')
-  @ApiOperation({ summary: 'List groups (stub)' })
-  async listGroups() {
-    return buildSuccess(true, await this.service.listGroups());
+  @ApiOperation({ summary: 'List groups (paginated: id, code, workers)' })
+  async listGroups(@Query() q: LmsListQueryDto) {
+    return buildSuccess(true, await this.service.listGroups(q));
   }
 }

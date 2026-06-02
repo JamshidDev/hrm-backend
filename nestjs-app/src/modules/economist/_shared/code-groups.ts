@@ -270,9 +270,8 @@ export function getUploadDeadline(year: number, month: number): Date {
   // Joriy yilga 1 oy qo'shamiz (deadline keyingi oyning 19-i)
   const d = new Date(year, month - 1 + 1, 19, 23, 59, 59, 999);
   const day = d.getDay(); // 0 = Yakshanba, 6 = Shanba
-  if (day === 6)
-    d.setDate(d.getDate() + 2); // Shanba → dushanba
-  else if (day === 0) d.setDate(d.getDate() + 1); // Yakshanba → dushanba
+  // Laravel: if (isSaturday || isSunday) addDays(2) — ikkalasi ham +2 kun.
+  if (day === 6 || day === 0) d.setDate(d.getDate() + 2);
   return d;
 }
 

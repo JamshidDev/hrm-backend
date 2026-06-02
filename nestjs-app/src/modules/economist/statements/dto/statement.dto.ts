@@ -22,15 +22,32 @@ import {
  * year/month filtri bilan paginatsiya + ixtiyoriy search/code/status.
  */
 export class StatementListQueryDto extends YearMonthPaginationDto {
+  @ApiPropertyOptional({
+    example: '151,154',
+    description: 'CSV organization ids',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
   @ApiPropertyOptional({ description: 'F.I.SH yoki PIN bo`yicha qidiruv' })
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Faqat shu kodga ega yozuvlar' })
+  @ApiPropertyOptional({
+    description: 'Faqat shu kodga ega yozuvlar (3 raqam)',
+  })
   @IsOptional()
   @IsString()
   code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Mavjud bo`lsa — worker_id biriktirilmagan (NULL) yozuvlar',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
 
   @ApiPropertyOptional({ description: 'sort_by ustun nomi' })
   @IsOptional()

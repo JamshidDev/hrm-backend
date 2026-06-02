@@ -8,23 +8,27 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
+import { RequestContext } from '@/common/context/request.context';
 import { worker_categories, organizations } from '@/db/schema';
 import type { PageQueryLike } from '@/modules/economist/_shared/helpers';
+import { WorkerCategoryMapper } from '@/modules/economist/worker-categories/worker-category.mapper';
 
 // O'zbek tilidagi oylar ro'yxati — list() index endpoint uchun.
+// Laravel Helper::getMonth — kichik harf bilan (sentyabr/oktyabr — y bilan).
 const MONTHS_UZ = [
-  'Yanvar',
-  'Fevral',
-  'Mart',
-  'Aprel',
-  'May',
-  'Iyun',
-  'Iyul',
-  'Avgust',
-  'Sentabr',
-  'Oktabr',
-  'Noyabr',
-  'Dekabr',
+  'yanvar',
+  'fevral',
+  'mart',
+  'aprel',
+  'may',
+  'iyun',
+  'iyul',
+  'avgust',
+  'sentyabr',
+  'oktyabr',
+  'noyabr',
+  'dekabr',
 ];
 
 // Faqat yangilanishi mumkin bo'lgan ustunlar (id, year, month, organization_id, audit'siz).
@@ -95,38 +99,59 @@ interface WorkerCategoryDto {
 
 @Injectable()
 export class WorkerCategoryService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly scope: OrgScopeService,
+    private readonly ctx: RequestContext,
+  ) {}
 
   /**
    * GET /api/v1/economist/worker-categories — yil bo'yicha 12 oylik ko'rinish.
    * Laravel: filter($user)->where(year)->get()->keyBy('month') → har oy uchun
    * bitta yozuv yoki null.
    */
-  async list(q: PageQueryLike & { organization_id?: number | string }) {
+  async list(
+    q: PageQueryLike & {
+      organization_id?: number | string;
+      organizations?: string;
+    },
+  ) {
     const year =
       q.year !== undefined ? Number(q.year) : new Date().getFullYear();
-    const conds: SQL[] = [eq(worker_categories.year, year)];
-    if (q.organization_id !== undefined) {
-      conds.push(
-        eq(worker_categories.organization_id, Number(q.organization_id)),
-      );
-    }
 
+    // Laravel: ->filter($user, $filters). MUHIM — WorkerCategoryIndexRequest FAQAT
+    // `year` validatsiya qiladi, shuning uchun $filters'da organizations/organization_id
+    // YO'Q (strip qilinadi). filterByOrganizations faqat ROL childIds qo'llaydi.
+    // Demak org-scope rol asosida — query param organization_id E'TIBORGA OLINMAYDI.
+    const inScope = await this.scope.whereOrg(
+      worker_categories.organization_id,
+      {},
+    );
+    const conds: SQL[] = [eq(worker_categories.year, year)];
+    if (inScope) conds.push(inScope);
+
+    // Laravel `get()` orderBy YO'Q → PG seq-scan = fizik (heap/ctid) tartib;
+    // keyBy('month') dublikat oylarda OXIRGISINI (= eng katta ctid) saqlaydi.
+    // Shuni `ORDER BY ctid` (fizik tartib) + last bilan AYNAN takrorlaymiz
+    // (id tartibi MOS EMAS — heap order id'dan farq qiladi).
     const rows = await this.db
       .select()
       .from(worker_categories)
       .where(and(...conds))
-      .orderBy(worker_categories.month);
+      .orderBy(sql`ctid`);
 
-    // Har oy uchun bitta yozuv (kelajakda multi-org bo'lsa, oxirgisi qoladi)
+    // keyBy('month') — oxirgi (eng katta ctid) yozuv qoladi.
     const byMonth = new Map<number, (typeof rows)[0]>();
     for (const r of rows) byMonth.set(r.month, r);
 
-    // 12 ta yozuvni qaytarish (oylar nomi + data yoki null)
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: MONTHS_UZ[i],
-      data: byMonth.get(i + 1) ?? null,
-    }));
+    // 12 ta yozuvni qaytarish — Laravel: WorkerCategoryResource yoki null.
+    return Array.from({ length: 12 }, (_, i) => {
+      const row = byMonth.get(i + 1);
+      return {
+        month: MONTHS_UZ[i],
+        data: row ? WorkerCategoryMapper.toResource(row) : null,
+      };
+    });
   }
 
   async show(id: number) {
@@ -145,12 +170,10 @@ export class WorkerCategoryService {
    * Foydalanuvchi user.organization_id'sini ishlatadi (biz body'dan olamiz, RequestContext yo'q).
    */
   async create(body: WorkerCategoryDto) {
-    const orgId = Number(body.organization_id);
+    // Laravel: 'organization_id' => $user->organization_id (payload'dan EMAS).
+    const orgId = Number(this.ctx.user?.organization_id ?? 0);
     const year = Number(body.year);
     const month = Number(body.month);
-    if (!orgId || !year || !month) {
-      throw new BusinessException(422, 'validation_failed');
-    }
 
     // Avval mavjudni o'chiramiz (Laravel `delete` — hard delete)
     await this.db
@@ -163,7 +186,8 @@ export class WorkerCategoryService {
         ),
       );
 
-    // Yangi yozuv: faqat ruxsat etilgan ustunlar
+    // Yangi yozuv. Laravel normalizePayload: stringdan bo'sh joy olib tashlanadi,
+    // null → 0. Payload'da bor field'lar (null bo'lsa ham 0) insert qilinadi.
     const insertData: Record<string, unknown> = {
       organization_id: orgId,
       year,
@@ -172,10 +196,9 @@ export class WorkerCategoryService {
       updated_at: sql`NOW()`,
     };
     for (const f of UPDATABLE_FIELDS) {
-      // 26 ta numeric field, har biri optional — type-safe lookup.
       const v = (body as Record<string, number | undefined>)[f];
-      if (v !== undefined && v !== null) {
-        insertData[f] = Number(v) || 0;
+      if (v !== undefined) {
+        insertData[f] = Number(v) || 0; // null/NaN → 0 (Laravel `?? 0`)
       }
     }
 
@@ -234,7 +257,13 @@ export class WorkerCategoryService {
       .from(organizations)
       .where(notDeleted(organizations));
 
-    // 2. Shu yil/oy uchun worker_categories — organization_id bo'yicha indekslangan
+    // 2. Shu yil/oy uchun worker_categories — Laravel `filter($user)` org-scope
+    //    (rol childIds; reportByOrganizations request faqat year/month validatsiya
+    //    qiladi). keyBy('organization_id') — PG fizik (ctid) tartibida OXIRGISI.
+    const inScope = await this.scope.whereOrg(
+      worker_categories.organization_id,
+      {},
+    );
     const categoryRows = await this.db
       .select()
       .from(worker_categories)
@@ -242,8 +271,10 @@ export class WorkerCategoryService {
         and(
           eq(worker_categories.year, year),
           eq(worker_categories.month, month),
+          inScope,
         ),
-      );
+      )
+      .orderBy(sql`ctid`);
     const catMap = new Map<number, (typeof categoryRows)[0]>();
     for (const c of categoryRows) {
       if (c.organization_id) catMap.set(c.organization_id, c);
@@ -259,12 +290,16 @@ export class WorkerCategoryService {
 
     // 4. Rekursiv tree quramiz (root = parent_id IS NULL)
     const build = (parentId: number | null): OrgTreeNode[] =>
-      (childrenMap.get(parentId) ?? []).map((o) => ({
-        id: o.id,
-        name: o.name,
-        data: catMap.get(o.id) ?? null,
-        children: build(o.id),
-      }));
+      (childrenMap.get(parentId) ?? []).map((o) => {
+        const cat = catMap.get(o.id);
+        return {
+          id: o.id,
+          name: o.name,
+          // Laravel: WorkerCategoryResource (formatlangan) yoki null.
+          data: cat ? WorkerCategoryMapper.toResource(cat) : null,
+          children: build(o.id),
+        };
+      });
 
     return build(null);
   }

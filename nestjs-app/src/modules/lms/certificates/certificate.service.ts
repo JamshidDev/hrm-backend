@@ -14,13 +14,17 @@ import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
+  departments,
   edu_plans,
   exams,
   groups,
   learning_centers,
   lms_certificates,
   lms_protocols,
+  organizations,
+  positions,
   worker_exams,
+  worker_positions,
   workers,
 } from '@/db/schema';
 import {
@@ -36,6 +40,15 @@ import type {
 // Laravel ConfirmationStatusEnum::SUCCESS = 2.
 const CONFIRMATION_SUCCESS = 2;
 
+// Laravel ConfirmationStatusEnum int → i18n kalit so'zi (messages.confirmation.status.*).
+const CONFIRMATION_WORDS: Record<number, string> = {
+  1: 'process',
+  2: 'read',
+  3: 'success',
+  4: 'rejected',
+  5: 'deleted',
+};
+
 @Injectable()
 export class LmsCertificateService {
   private readonly logger = new Logger(LmsCertificateService.name);
@@ -47,13 +60,74 @@ export class LmsCertificateService {
     private readonly minio: MinioService,
   ) {}
 
+  // GET /lms/certificates — Laravel: LmsCertificateController::certificates.
+  //   Filtrlar: edu_plan_id, group_id, organization_id(wp), search(worker fullname OR
+  //   number), year/month(cert_from), direction_id(edu_plan→spec→direction),
+  //   specialization_id(edu_plan→spec). with: worker_position(+org,dept,position),
+  //   worker. orderByDesc('number'). → CertificateResource.
   async list(q: CertificateListQueryDto) {
     const { page, perPage } = readPaging(q);
     const conditions = [notDeleted(lms_certificates)];
+
     if (q.edu_plan_id)
       conditions.push(eq(lms_certificates.edu_plan_id, q.edu_plan_id));
     if (q.group_id) conditions.push(eq(lms_certificates.group_id, q.group_id));
+
+    if (q.organization_id) {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM worker_positions wp
+        WHERE wp.id = ${lms_certificates.worker_position_id}
+          AND wp.organization_id = ${q.organization_id}
+      )`);
+    }
+
+    const search = q.search?.trim();
+    if (search) {
+      // worker.searchByFullName: termlar bo'sh joy bilan, har term last/first/middle
+      //   ILIKE %term%, terms o'rtasida AND. OR number ILIKE search.
+      const esc = (s: string) => s.replace(/[\\%_]/g, '\\$&');
+      const terms = search.split(/\s+/).filter(Boolean);
+      const termConds = terms.map((t) => {
+        const p = `%${esc(t)}%`;
+        return sql`(workers.last_name ILIKE ${p} OR workers.first_name ILIKE ${p} OR workers.middle_name ILIKE ${p})`;
+      });
+      const nameExists = sql`EXISTS (
+        SELECT 1 FROM workers
+        WHERE workers.id = ${lms_certificates.worker_id}
+          AND ${sql.join(termConds, sql` AND `)}
+      )`;
+      const numberLike = sql`${lms_certificates.number}::text ILIKE ${search}`;
+      conditions.push(sql`(${nameExists} OR ${numberLike})`);
+    }
+
+    if (q.year) {
+      conditions.push(
+        sql`EXTRACT(YEAR FROM ${lms_certificates.cert_from}) = ${q.year}`,
+      );
+    }
+    if (q.month) {
+      conditions.push(
+        sql`EXTRACT(MONTH FROM ${lms_certificates.cert_from}) = ${q.month}`,
+      );
+    }
+    if (q.direction_id) {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM edu_plans ep
+        JOIN specializations s ON s.id = ep.specialization_id
+        WHERE ep.id = ${lms_certificates.edu_plan_id}
+          AND s.direction_id = ${q.direction_id}
+      )`);
+    }
+    if (q.specialization_id) {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM edu_plans ep
+        WHERE ep.id = ${lms_certificates.edu_plan_id}
+          AND ep.specialization_id = ${q.specialization_id}
+      )`);
+    }
+
     const where = and(...conditions);
+    const lang = this.ctx.lang;
 
     return lmsPaginate({
       db: this.db,
@@ -66,7 +140,7 @@ export class LmsCertificateService {
           .select()
           .from(lms_certificates)
           .where(where)
-          .orderBy(desc(lms_certificates.id))
+          .orderBy(desc(lms_certificates.number))
           .limit(limit)
           .offset(offset),
       mapper: () => ({}) as never,
@@ -77,49 +151,121 @@ export class LmsCertificateService {
             rows.map((r) => r.worker_id).filter((x): x is number => x != null),
           ),
         ];
-        const planIds = [
+        const wpIds = [
           ...new Set(
             rows
-              .map((r) => r.edu_plan_id)
+              .map((r) => r.worker_position_id)
               .filter((x): x is number => x != null),
           ),
         ];
 
-        const [workerRows, planRows] = await Promise.all([
-          workerIds.length
-            ? this.db
-                .select({
-                  id: workers.id,
-                  last_name: workers.last_name,
-                  first_name: workers.first_name,
-                  middle_name: workers.middle_name,
-                  photo: workers.photo,
-                })
-                .from(workers)
-                .where(inArray(workers.id, workerIds))
-            : Promise.resolve(
-                [] as Array<{
-                  id: number;
-                  last_name: string | null;
-                  first_name: string | null;
-                  middle_name: string | null;
-                  photo: string | null;
-                }>,
-              ),
-          planIds.length
-            ? this.db
-                .select({ id: edu_plans.id, name: edu_plans.name })
-                .from(edu_plans)
-                .where(inArray(edu_plans.id, planIds))
-            : Promise.resolve([] as Array<{ id: number; name: string | null }>),
+        const [workerRows, wpRows] = await Promise.all([
+          this.db
+            .select({
+              id: workers.id,
+              last_name: workers.last_name,
+              first_name: workers.first_name,
+              middle_name: workers.middle_name,
+              photo: workers.photo,
+            })
+            .from(workers)
+            .where(inArray(workers.id, workerIds.length ? workerIds : [-1])),
+          this.db
+            .select({
+              id: worker_positions.id,
+              organization_id: worker_positions.organization_id,
+              department_id: worker_positions.department_id,
+              position_id: worker_positions.position_id,
+            })
+            .from(worker_positions)
+            .where(inArray(worker_positions.id, wpIds.length ? wpIds : [-1])),
         ]);
 
-        const workerMap: Record<number, (typeof workerRows)[number]> = {};
-        for (const w of workerRows) workerMap[w.id] = w;
-        const planMap: Record<number, { id: number; name: string | null }> = {};
-        for (const p of planRows) planMap[p.id] = p;
+        const orgIds = [
+          ...new Set(
+            wpRows
+              .map((w) => w.organization_id)
+              .filter((x): x is number => !!x),
+          ),
+        ];
+        const deptIds = [
+          ...new Set(
+            wpRows.map((w) => w.department_id).filter((x): x is number => !!x),
+          ),
+        ];
+        const posIds = [
+          ...new Set(
+            wpRows.map((w) => w.position_id).filter((x): x is number => !!x),
+          ),
+        ];
 
-        return rows.map((r) => CertificateMapper.toItem(r, workerMap, planMap));
+        const [orgRows, deptRows, posRows] = await Promise.all([
+          this.db
+            .select({
+              id: organizations.id,
+              name: organizations.name,
+              name_ru: organizations.name_ru,
+              name_en: organizations.name_en,
+              group: organizations.group,
+            })
+            .from(organizations)
+            .where(inArray(organizations.id, orgIds.length ? orgIds : [-1])),
+          this.db
+            .select({
+              id: departments.id,
+              name: departments.name,
+              level: departments.level,
+            })
+            .from(departments)
+            .where(inArray(departments.id, deptIds.length ? deptIds : [-1])),
+          this.db
+            .select({
+              id: positions.id,
+              name: positions.name,
+              name_ru: positions.name_ru,
+              name_en: positions.name_en,
+            })
+            .from(positions)
+            .where(inArray(positions.id, posIds.length ? posIds : [-1])),
+        ]);
+
+        const workerMap = new Map(workerRows.map((w) => [w.id, w]));
+        const wpMap = new Map(wpRows.map((w) => [w.id, w]));
+        const orgMap = new Map(orgRows.map((o) => [o.id, o]));
+        const deptMap = new Map(deptRows.map((d) => [d.id, d]));
+        const posMap = new Map(posRows.map((p) => [p.id, p]));
+
+        // Photo + confirmation_file presigned URL (batch, parallel).
+        const photoMap = new Map<number, string | null>();
+        await Promise.all(
+          workerRows.map(async (w) => {
+            photoMap.set(w.id, await this.minio.fileUrl(w.photo));
+          }),
+        );
+        const confFileUrls = await Promise.all(
+          rows.map((r) => this.minio.fileUrl(r.confirmation_file)),
+        );
+
+        return rows.map((r, i) => {
+          const word = CONFIRMATION_WORDS[r.confirmation];
+          const confirmationName = word
+            ? this.i18n.t(`messages.confirmation.status.${word}`, { lang })
+            : null;
+          return CertificateMapper.toItem({
+            row: r,
+            worker: r.worker_id ? (workerMap.get(r.worker_id) ?? null) : null,
+            photo: r.worker_id ? (photoMap.get(r.worker_id) ?? null) : null,
+            wp: r.worker_position_id
+              ? (wpMap.get(r.worker_position_id) ?? null)
+              : null,
+            orgMap,
+            deptMap,
+            posMap,
+            confirmationFileUrl: confFileUrls[i],
+            confirmationName,
+            lang,
+          });
+        });
       },
     });
   }
@@ -134,7 +280,8 @@ export class LmsCertificateService {
       .from(lms_certificates)
       .where(eq(lms_certificates.id, id))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     if (Number(row.confirmation) === CONFIRMATION_SUCCESS) {
       throw new BusinessException(
         400,
@@ -227,25 +374,27 @@ export class LmsCertificateService {
           ...protocolData,
           created_at: sql`NOW()`,
           updated_at: sql`NOW()`,
-        } as any);
+        });
       }
     } else {
       const [{ next_id }] = (await this.db.execute(sql`
         SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM lms_protocols
-      `)) as unknown as Array<{ next_id: number | string }> &
-        { rows?: Array<{ next_id: number | string }> };
+      `)) as unknown as Array<{ next_id: number | string }> & {
+        rows?: Array<{ next_id: number | string }>;
+      };
       const id = Number(
-        Array.isArray(next_id) ? (next_id as any)[0] : next_id ?? 0,
+        Array.isArray(next_id) ? (next_id as any)[0] : (next_id ?? 0),
       );
       // The execute() return shape varies — use {rows} fallback.
-      protocolId = Number.isFinite(id) && id > 0 ? id : await this.nextProtocolId();
+      protocolId =
+        Number.isFinite(id) && id > 0 ? id : await this.nextProtocolId();
       await this.db.insert(lms_protocols).values({
         id: protocolId,
         uuid: randomUUID(),
         ...protocolData,
         created_at: sql`NOW()`,
         updated_at: sql`NOW()`,
-      } as any);
+      });
     }
 
     // 5) Load worker_exams (with exam.tests_count).
@@ -327,11 +476,7 @@ export class LmsCertificateService {
 
     // 7) Dump full payload JSON to MinIO (Laravel parity).
     try {
-      const jsonBody = JSON.stringify(
-        { ...dto, data: certInserts },
-        null,
-        2,
-      );
+      const jsonBody = JSON.stringify({ ...dto, data: certInserts }, null, 2);
       await this.minio.putObject(
         `json/lms/protocol/${protocolId}.json`,
         Buffer.from(jsonBody, 'utf-8'),
@@ -388,7 +533,11 @@ export class LmsCertificateService {
     //    Implementing DOCX template replacement is out of scope for now;
     //    certificate rows include `file` and `confirmation_file` paths anyway.
 
-    return { success: true, protocol_id: protocolId, certificates: certInserts.length };
+    return {
+      success: true,
+      protocol_id: protocolId,
+      certificates: certInserts.length,
+    };
   }
 
   // Fallback nextId for protocols when execute() shape is unclear.

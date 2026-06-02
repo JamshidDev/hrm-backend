@@ -1,33 +1,57 @@
-// Lesson mapper. Laravel: LessonController index → calendar-style guruh.
-// Bizda CRUD-style brief mapper saqlanadi:
-//   {id, name, lesson_date, start_time, end_time, group_id, subject_id, teacher_id}
+// Lesson mapper. Laravel: LessonController::index → calendar-style guruh
+// (groupBy('lesson_date')). Har bir dars TeacherResource + EduPlanExamMinResource
+// bilan birga chiqadi.
 
-import type { lessons } from '@/db/schema';
-
-type Row = typeof lessons.$inferSelect;
-
-export interface LessonItem {
-  id: number;
-  name: string | null;
-  lesson_date: string;
-  start_time: string;
-  end_time: string;
-  group_id: number;
-  subject_id: number;
-  teacher_id: number;
-  edu_plan_id: number;
+// Laravel: WorkerMinimalResource — {id, photo(fileUrl), last_name, first_name, middle_name}
+export interface LessonWorker {
+  id: number | null;
+  photo: string | null;
+  last_name: string | null;
+  first_name: string | null;
+  middle_name: string | null;
 }
 
-export const LessonMapper = {
-  toItem: (r: Row): LessonItem => ({
-    id: r.id,
-    name: r.name,
-    lesson_date: r.lesson_date,
-    start_time: r.start_time,
-    end_time: r.end_time,
-    group_id: r.group_id,
-    subject_id: r.subject_id,
-    teacher_id: r.teacher_id,
-    edu_plan_id: r.edu_plan_id,
-  }),
-};
+// Laravel: TeacherResource — {id, worker: WorkerMinimalResource}
+export interface LessonTeacher {
+  id: number | null;
+  worker: LessonWorker;
+}
+
+// Laravel: EduPlanExamMinResource — {id, exam: {id, name}}
+export interface LessonExam {
+  id: number;
+  exam: { id: number | null; name: string | null };
+}
+
+// Laravel index har bir dars uchun map qiladigan shape.
+export interface CalendarLessonItem {
+  id: number;
+  name: string | null;
+  group: number | null; // group?.code (integer column)
+  subject: string | null; // subject?.name
+  teacher: LessonTeacher;
+  start_time: string;
+  end_time: string;
+  exam: LessonExam | null;
+}
+
+export interface CalendarDay {
+  lesson_date: string;
+  lessons: CalendarLessonItem[];
+}
+
+// Laravel `new TeacherResource(null)` → $this->id va $this->worker null bo'lib,
+// WorkerMinimalResource(null) ham barcha maydonlarni null qaytaradi
+// (photo esa fileUrl(null) = null). Soft-deleted teacher uchun shu shaklni beramiz.
+export function nullTeacher(): LessonTeacher {
+  return {
+    id: null,
+    worker: {
+      id: null,
+      photo: null,
+      last_name: null,
+      first_name: null,
+      middle_name: null,
+    },
+  };
+}

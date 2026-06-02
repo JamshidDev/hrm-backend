@@ -3,7 +3,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, Max, Min } from 'class-validator';
 import { YearMonthQueryDto } from '@/modules/economist/_shared/dto/base-query.dto';
 
 /**
@@ -203,16 +203,14 @@ export class WorkerCategoryListQueryDto {
 }
 
 /**
- * POST /api/v1/economist/worker-categories — upsert (org_id+year+month bo'yicha).
+ * POST /api/v1/economist/worker-categories — upsert.
+ * Laravel WorkerCategoryStoreRequest: year, month majburiy; kategoriya field'lari
+ * nullable numeric. organization_id YO'Q — auth user'ning organization_id'sidan olinadi.
  */
 export class CreateWorkerCategoryDto extends WorkerCategoryFieldsDto {
-  @ApiProperty({ example: 3 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  organization_id!: number;
-
+  // Laravel: year/month `required` → bo'sh bo'lsa "required" xabari (@IsNotEmpty).
   @ApiProperty({ example: 2025 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Min(2010)
@@ -220,6 +218,7 @@ export class CreateWorkerCategoryDto extends WorkerCategoryFieldsDto {
   year!: number;
 
   @ApiProperty({ example: 10 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Min(1)

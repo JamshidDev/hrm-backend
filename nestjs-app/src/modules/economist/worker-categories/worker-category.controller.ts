@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Post,
@@ -47,8 +48,9 @@ export class WorkerCategoryController {
   }
 
   @Post('worker-categories')
+  @HttpCode(200) // Laravel Helper::response — 200 (NestJS default 201 emas)
   @ApiOperation({
-    summary: 'Upsert worker category by (org_id, year, month) — Laravel parity',
+    summary: 'Upsert worker category (org from auth user, year, month)',
   })
   async store(@Body() body: CreateWorkerCategoryDto) {
     await this.service.create(body);

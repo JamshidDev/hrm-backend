@@ -2,16 +2,45 @@
 // Asosiy oylik hisobot yozuvlari (statements) ustida CRUD + extras + Excel eksport.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, eq, inArray, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
+import type { PgColumn } from 'drizzle-orm/pg-core';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
-import { statements, statement_aggregates, organizations } from '@/db/schema';
+import { OrgScopeService } from '@/common/database/org-scope.service';
+import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
+import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import {
-  paginateByYearMonth,
+  statements,
+  statement_aggregates,
+  organizations,
+  workers,
+} from '@/db/schema';
+import {
+  economistAssetUrl,
   type PageQueryLike,
 } from '@/modules/economist/_shared/helpers';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
+import {
+  StatementMapper,
+  type StatementRow,
+} from '@/modules/economist/statements/statement.mapper';
 import {
   TOTAL_ONE_COLUMNS,
   TOTAL_TWO_COLUMNS,
@@ -45,20 +74,174 @@ const MONTHS_UZ = [
  */
 type DecodingRow = Record<string, string | number | null>;
 
+// Laravel StatementIndexRequest sort_by allowed list → Drizzle ustunlari.
+const SORT_COLUMNS: Record<string, PgColumn> = {
+  id: statements.id,
+  organization_id: statements.organization_id,
+  worker_id: statements.worker_id,
+  main_salary: statements.main_salary,
+  work_time: statements.work_time,
+  full_name: statements.full_name,
+  position: statements.position,
+  pin: statements.pin,
+  year: statements.year,
+  month: statements.month,
+  total_one: statements.total_one,
+  total_two: statements.total_two,
+  total_three: statements.total_three,
+  total_four: statements.total_four,
+  total_five: statements.total_five,
+};
+
+// Service-darajadagi list query shape (StatementListQueryDto bilan mos).
+interface StatementListQuery extends PageQueryLike {
+  organizations?: string;
+  search?: string;
+  code?: string;
+  status?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  start_hours?: number | string;
+  end_hours?: number | string;
+}
+
 @Injectable()
 export class StatementService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly excel: ExcelService,
+    private readonly scope: OrgScopeService,
+    private readonly ctx: RequestContext,
+    private readonly minio: MinioService,
+    private readonly exportRunner: ExportTaskRunner,
   ) {}
 
   // ============================================================
   // CRUD
   // ============================================================
 
-  // GET /api/v1/economist/statements — yil/oy filtri bilan paginatsiya.
-  async list(q: PageQueryLike) {
-    return paginateByYearMonth(this.db, statements, q);
+  // GET /api/v1/economist/statements — Laravel StatementQueryService::paginate.
+  // filter($user, {organizations}) + year/month + search/code/hours/status,
+  // orderBy(sort_by ?? id, sort_order ?? desc), paginate(per_page ?? 10).
+  async list(q: StatementListQuery) {
+    const lang = this.ctx.lang;
+    const year =
+      q.year !== undefined ? Number(q.year) : new Date().getFullYear();
+    const month =
+      q.month !== undefined ? Number(q.month) : new Date().getMonth() + 1;
+    const page = q.page ? Number(q.page) : 1;
+    const perPage = q.per_page ? Number(q.per_page) : 10;
+    const offset = (page - 1) * perPage;
+
+    // Laravel filter($user, $filters) — StatementIndexRequest faqat `organizations`
+    // validatsiya qiladi (organization_id YO'Q) → rol-scope + organizations csv.
+    const inScope = await this.scope.whereOrg(statements.organization_id, {
+      organizations: q.organizations,
+    });
+
+    const conds: SQL[] = [
+      notDeleted(statements),
+      eq(statements.year, year),
+      eq(statements.month, month),
+    ];
+    if (inScope) conds.push(inScope);
+
+    // search: whereHas('worker', searchByFullName) OR full_name LIKE OR pin LIKE
+    if (q.search) {
+      const term = `%${q.search}%`;
+      const workerCond = buildWorkerSearchCond(q.search);
+      const orParts: SQL[] = [];
+      if (workerCond) {
+        orParts.push(
+          sql`exists (select 1 from ${workers} where ${workers.id} = ${statements.worker_id} and ${workers.deleted_at} is null and (${workerCond}))`,
+        );
+      }
+      orParts.push(ilike(statements.full_name, term));
+      orParts.push(sql`cast(${statements.pin} as text) ilike ${term}`);
+      const orCond = or(...orParts);
+      if (orCond) conds.push(orCond);
+    }
+
+    // code: s_<code> > 0 (faqat 3 raqamli kod)
+    if (q.code && /^\d{3}$/.test(q.code)) {
+      conds.push(sql`${sql.identifier('s_' + q.code)} > 0`);
+    }
+
+    // start_hours / end_hours: work_time oraliq.
+    if (q.start_hours !== undefined && q.start_hours !== null) {
+      conds.push(gte(statements.work_time, Number(q.start_hours)));
+    }
+    if (q.end_hours !== undefined && q.end_hours !== null) {
+      conds.push(lte(statements.work_time, Number(q.end_hours)));
+    }
+
+    // Laravel: array_key_exists('status', $filters) → worker_id IS NULL
+    // (qiymatdan qat'i nazar, mavjud bo'lsa filtr qo'llanadi).
+    if (q.status !== undefined) {
+      conds.push(isNull(statements.worker_id));
+    }
+
+    const where = and(...conds);
+
+    const sortCol = SORT_COLUMNS[q.sort_by ?? 'id'] ?? statements.id;
+    const dir = q.sort_order === 'asc' ? asc : desc;
+
+    const [rows, totalRes] = await Promise.all([
+      this.db
+        .select({
+          id: statements.id,
+          organization_id: statements.organization_id,
+          worker_id: statements.worker_id,
+          main_salary: statements.main_salary,
+          work_time: statements.work_time,
+          full_name: statements.full_name,
+          position: statements.position,
+          pin: statements.pin,
+          year: statements.year,
+          month: statements.month,
+          total_one: statements.total_one,
+          total_two: statements.total_two,
+          total_three: statements.total_three,
+          total_four: statements.total_four,
+          total_five: statements.total_five,
+          org_id: organizations.id,
+          org_name: organizations.name,
+          org_name_ru: organizations.name_ru,
+          org_name_en: organizations.name_en,
+          org_group: organizations.group,
+          w_id: workers.id,
+          w_last_name: workers.last_name,
+          w_first_name: workers.first_name,
+          w_middle_name: workers.middle_name,
+          w_photo: workers.photo,
+        })
+        .from(statements)
+        .leftJoin(
+          organizations,
+          and(
+            eq(organizations.id, statements.organization_id),
+            notDeleted(organizations),
+          ),
+        )
+        .leftJoin(
+          workers,
+          and(eq(workers.id, statements.worker_id), notDeleted(workers)),
+        )
+        .where(where)
+        .orderBy(dir(sortCol))
+        .limit(perPage)
+        .offset(offset),
+      this.db.select({ total: count() }).from(statements).where(where),
+    ]);
+
+    const data = await Promise.all(
+      rows.map((r) =>
+        StatementMapper.toItem(r as StatementRow, lang, this.minio),
+      ),
+    );
+
+    // Laravel PaginateResource — per_page YO'Q.
+    return { current_page: page, total: Number(totalRes[0].total), data };
   }
 
   // GET /api/v1/economist/statements/{id} — bitta yozuv. Topilmasa 404.
@@ -409,129 +592,21 @@ export class StatementService {
   }
 
   /**
-   * GET /api/v1/economist/statements-multiple-workers — bir oyda bir xil PIN
-   * ko'p tashkilotda statement topshirgan xodimlar.
+   * GET /api/v1/economist/statements-multiple-workers — Laravel
+   * exportMultipleStatementWorkers → MultipleStatementsJob. UserExportTask
+   * yaratadi va fonda bir oyda bir nechta tashkilotda statement topshirgan
+   * xodimlar Excel'ini quradi. Javob faqat success xabari (Helper::response).
    */
-  async multiWorkers(q: PageQueryLike) {
+  async multiWorkers(q: PageQueryLike): Promise<void> {
     const year =
       q?.year !== undefined ? Number(q.year) : new Date().getFullYear();
     const month =
       q?.month !== undefined ? Number(q.month) : new Date().getMonth() + 1;
-    const page = Number(q?.page ?? 1);
-    const perPage = Number(q?.per_page ?? 10);
-    const offset = (page - 1) * perPage;
-
-    // 1. PIN'lar — kamida 2 ta organizationda statement bor.
-    // null/0 PIN'lar mock/garbage data sifatida e'tibordan tashqari (data
-    // sanitatsiya muammosi: bir necha xodimda pin = NULL yoki 0, ular
-    // birga grouping qilinsa, false-positive `multi-org` yuzaga keladi).
-    const duplicates = await this.db
-      .select({ pin: statements.pin, cnt: count() })
-      .from(statements)
-      .where(
-        and(
-          notDeleted(statements),
-          eq(statements.year, year),
-          eq(statements.month, month),
-          sql`${statements.pin} > 0`,
-        ),
-      )
-      .groupBy(statements.pin)
-      .having(sql`COUNT(DISTINCT ${statements.organization_id}) > 1`);
-
-    const duplicatePins = duplicates
-      .map((d) => d.pin)
-      .filter((p): p is number => p !== null && p > 0);
-
-    if (duplicatePins.length === 0) {
-      return { current_page: page, per_page: perPage, total: 0, data: [] };
-    }
-
-    // 2. Pagination — pin bo'yicha
-    const paginatedPins = duplicatePins.slice(offset, offset + perPage);
-
-    // 3. Shu pin'lar uchun barcha statementlar
-    const allRows = paginatedPins.length
-      ? await this.db
-          .select({
-            pin: statements.pin,
-            full_name: statements.full_name,
-            position: statements.position,
-            organization_id: statements.organization_id,
-            total_four: statements.total_four,
-          })
-          .from(statements)
-          .where(
-            and(
-              notDeleted(statements),
-              eq(statements.year, year),
-              eq(statements.month, month),
-              inArray(statements.pin, paginatedPins),
-            ),
-          )
-      : [];
-
-    // 4. Organization nomlari (batch load — N+1 yo'q)
-    const orgIds = [...new Set(allRows.map((r) => r.organization_id))];
-    const orgRows = orgIds.length
-      ? await this.db
-          .select({
-            id: organizations.id,
-            name: organizations.name,
-            code: organizations.code,
-          })
-          .from(organizations)
-          .where(inArray(organizations.id, orgIds))
-      : [];
-    const orgMap = new Map(orgRows.map((o) => [o.id, o]));
-
-    // 5. PIN bo'yicha guruhlash
-    type Group = {
-      pin: number;
-      full_name: string | null;
-      year: number;
-      month: number;
-      total_salary: number;
-      organizations: Array<{
-        organization_id: number;
-        organization: string | null;
-        organization_code: string | null;
-        position: string | null;
-        salary: number;
-      }>;
-    };
-    const groups = new Map<number, Group>();
-    for (const r of allRows) {
-      const pin = r.pin!;
-      let g = groups.get(pin);
-      if (!g) {
-        g = {
-          pin,
-          full_name: r.full_name,
-          year,
-          month,
-          total_salary: 0,
-          organizations: [],
-        };
-        groups.set(pin, g);
-      }
-      const o = orgMap.get(r.organization_id);
-      g.organizations.push({
-        organization_id: r.organization_id,
-        organization: o?.name ?? null,
-        organization_code: o?.code ?? null,
-        position: r.position,
-        salary: r.total_four,
-      });
-      g.total_salary += r.total_four;
-    }
-
-    return {
-      current_page: page,
-      per_page: perPage,
-      total: duplicatePins.length,
-      data: Array.from(groups.values()),
-    };
+    await this.exportRunner.run({
+      type: 14, // ExportTaskEnum.STATEMENT_MULTIPLE_WORKERS
+      folder: 'economist',
+      build: () => this.exportMultiWorkers(year, month),
+    });
   }
 
   // GET /api/v1/economist/statements-by-positions — Excel eksport uchun ma'lumot.
@@ -549,7 +624,7 @@ export class StatementService {
 
   // GET /api/v1/economist/statement-example — namuna Excel URL.
   example() {
-    return { url: '/resumes/economist/statement_example.xlsx' };
+    return { url: economistAssetUrl('statement_example.xlsx') };
   }
 
   // ============================================================

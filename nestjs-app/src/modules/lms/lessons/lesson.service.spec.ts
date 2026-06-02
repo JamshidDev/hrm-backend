@@ -34,20 +34,24 @@ function buildMockDb(opts: MockOptions = {}) {
   return { db };
 }
 
+// Minio + i18n — show/participants/zoom testlari ularni ishlatmaydi.
+const mockMinio = { fileUrl: (p: string | null) => Promise.resolve(p) } as any;
+const mockI18n = { t: (k: string) => k } as any;
+
 describe('LmsLessonService', () => {
   describe('show', () => {
     it('Mavjud darsni qaytaradi', async () => {
       const { db } = buildMockDb({
         selectResults: [[{ id: 1, name: 'NestJS 101' }]],
       });
-      const svc = new LmsLessonService(db);
+      const svc = new LmsLessonService(db, mockMinio, mockI18n);
       const r = await svc.show(1);
       expect(r).toMatchObject({ id: 1, name: 'NestJS 101' });
     });
 
     it('Topilmasa — throw 404', async () => {
       const { db } = buildMockDb({ selectResults: [[]] });
-      const svc = new LmsLessonService(db);
+      const svc = new LmsLessonService(db, mockMinio, mockI18n);
       await expect(svc.show(999)).rejects.toThrow();
     });
   });
@@ -62,7 +66,7 @@ describe('LmsLessonService', () => {
           ],
         ],
       });
-      const svc = new LmsLessonService(db);
+      const svc = new LmsLessonService(db, mockMinio, mockI18n);
       const r = await svc.showParticipants(5);
       expect(r).toHaveLength(2);
       expect(r[0]).toMatchObject({ lesson_id: 5, worker_id: 100 });
@@ -70,7 +74,7 @@ describe('LmsLessonService', () => {
 
     it('Hech kim yo`q — bo`sh array', async () => {
       const { db } = buildMockDb({ selectResults: [[]] });
-      const svc = new LmsLessonService(db);
+      const svc = new LmsLessonService(db, mockMinio, mockI18n);
       const r = await svc.showParticipants(99);
       expect(r).toEqual([]);
     });
@@ -81,7 +85,7 @@ describe('LmsLessonService', () => {
       const { db } = buildMockDb({
         selectResults: [[{ id: 1 }]],
       });
-      const svc = new LmsLessonService(db);
+      const svc = new LmsLessonService(db, mockMinio, mockI18n);
       const r = await svc.createZoomMeeting(1);
       expect(r).toEqual({
         success: true,
@@ -93,7 +97,7 @@ describe('LmsLessonService', () => {
 
     it('Topilmagan lesson — throw 404', async () => {
       const { db } = buildMockDb({ selectResults: [[]] });
-      const svc = new LmsLessonService(db);
+      const svc = new LmsLessonService(db, mockMinio, mockI18n);
       await expect(svc.createZoomMeeting(999)).rejects.toThrow();
     });
   });

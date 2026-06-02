@@ -8,6 +8,7 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { pension_payments } from '@/db/schema';
 import {
   paginateByYearMonth,
+  economistAssetUrl,
   type PageQueryLike,
 } from '@/modules/economist/_shared/helpers';
 
@@ -48,6 +49,6 @@ export class PensionPaymentService {
 
   // GET /api/v1/economist/pension-example — namuna Excel URL.
   example() {
-    return { url: '/resumes/economist/pension_example.xlsx' };
+    return { url: economistAssetUrl('pension-payment.xlsx') };
   }
 }

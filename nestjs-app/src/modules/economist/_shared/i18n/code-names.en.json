@@ -1,203 +1,806 @@
-{
-    "001": "Piecework payment within the standard working time under the piece-bonus payment system (371\/1)",
-    "002": "Piecework payment within the standard working time under the piecework payment system (371\/1)",
-    "003": "Time-based payment for pieceworkers on shift (371\/1)",
-    "004": "Time-based payment according to tariff rates (salaries) (371\/1)",
-    "005": "Time-based payment according to tariff rates for the time spent operating trains according to schedule (371\/1)",
-    "006": "Additional payment for performing duties of temporarily absent employees (due to illness, vacation, or business trip) (373\/4)",
-    "007": "Additional payment for working in multiple professions or positions, expanding service areas, increased workload, replacing absent workers, organizing work of locomotive crew columns, chairing women’s council, promoting sports activities, conducting ",
-    "008": "Bonuses for pieceworkers (372\/2)",
-    "009": "Bonus for operating passenger trains according to the schedule (372\/2)",
-    "010": "Bonus for preventing passenger train delays (372\/2)",
-    "011": "Bonuses for time-based workers (monthly) (372\/2)",
-    "012": "Bonuses for management staff, specialists, and clerks (monthly) (372\/2)",
-    "013": "Additional payment for work on public holidays (373\/3)",
-    "014": "5% salary supplement for masters engaged in the repair of rolling stock, railway, and other technical equipment (373\/4)",
-    "015": "Payment to locomotive crews for downtime during the shift (374\/8)",
-    "016": "Payments for preferential hours (breaks for breastfeeding) for mothers with children (374\/11)",
-    "017": "Payments for preferential hours for persons under 18 and persons with group 2 disabilities (374\/11)",
-    "018": "Payment to locomotive crews for time spent traveling as passengers within the standard working hours (371\/1)",
-    "019": "Salary supplement of 10%-15% for crew leaders for leading the brigade (373\/4)",
-    "020": "Accord payment (additional piece-rate payment) (371\/1)",
-    "021": "Bonus for work in Afghanistan (371\/1)",
-    "022": "Additional payment for deviation from normal working conditions, for extremely hard and specific conditions according to the order No. 861-N of ",
-    "023": "Additional payment for night work (373\/3)",
-    "024": "Salary difference compensation for part-time workers (374\/6)",
-    "025": "Qualification allowance for drivers of locomotives, assistant drivers, cargo\/light vehicles, and buses (372\/3)",
-    "026": "Payments based on district coefficients for work in harsh climatic and living conditions, in high-altitude regions (373\/1)",
-    "027": "Payment for extra vacation days exceeding the 21-day annual leave due to work in adverse climatic and special labor conditions based on Lists No. 2 and No. 3 from workplace certification (374\/b)",
-    "028": "Bonus or allowance for professional skills (personal badge) (372\/3)",
-    "029": "Salary retained during training in educational institutions and courses (374\/7)",
-    "030": "Average salary retained at the main place of work (374\/5)",
-    "031": "Honorarium payments for correspondents of the ",
-    "032": "Payment for annual main labor leave (374\/1a)",
-    "033": "Payment for leave granted to employees studying by correspondence in higher and secondary specialized educational institutions (374\/7)",
-    "034": "Payment to the employee for performing state and public duties (374\/4)",
-    "035": "Bonus for employees holding IFRS (MHXS) or other preferential certificates (371\/2)",
-    "036": "Payment to locomotive crew for idle time while waiting to move as passengers (371\/1)",
-    "037": "Compensation up to average salary for performing lower-paid work by employer decision or as per legislation (374\/10)",
-    "038": "Payment for additional leave for women with two or more children under 12 or a child with a disability under 16 (374\/1g)",
-    "039": "Bonuses for identifying damaged wagons, hidden defects, ticketless passengers, and excess baggage cases (372\/2)",
-    "040": "Cash compensation for unused labor leave (374\/1a)",
-    "041": "Payment for the period of fulfilling military service obligations (371\/2)",
-    "043": "Payment to home-based workers (371\/2)",
-    "044": "Monetary compensation payments for moral damage as per court decision (377\/12)",
-    "045": "Honorarium payments (for non-journalists) (371\/2)",
-    "046": "Allowances for medical staff working in hazardous and highly hazardous conditions according to the profession list approved by the Cabinet of Ministers of Uzbekistan, including allowances for continuous work experience in such conditions (373\/2)",
-    "047": "Payments to non-staff employees (working under civil-law contract) (371\/1)",
-    "048": "Average salary retention at the main workplace for workers engaged in agricultural and other external work (374\/5)",
-    "049": "Bonus for foreign language proficiency and usage (373\/4)",
-    "050": "Bonus for operating trains with excess weight and length (372\/2)",
-    "051": "Payment for idle time while waiting for the train by the locomotive crew (374\/8)",
-    "052": "Payment for working on a single-haul locomotive (371\/1)",
-    "053": "Additional payment for ensuring technical condition of rolling stock (372\/2)",
-    "054": "Payment for working as a substitute (duplicate) (371\/1)",
-    "055": "Bonus for highly skilled narrow-profile workers and instructors based on official order (372\/3)",
-    "057": "Bonus for job specificity according to “UTY” JSC order No. 832-N dated 27.11.2021 (373\/1)",
-    "058": "Additional payment to economists, accountants, labor engineers, HR\/social staff, and for mentorship (372\/3)",
-    "059": "Bonus for employees with bachelor’s or master’s degrees from TOP-500 foreign universities or educated at company expense (372\/2)",
-    "060": "Payment to employees supervising students’ industrial practice (374\/12)",
-    "065": "Payments to members of the supervisory board (372\/2)",
-    "066": "Additional payment for night work (373\/3)",
-    "072": "Payment for overtime work (373\/3)",
-    "073": "Additional payment for work on weekends (373\/3)",
-    "075": "Payment for daily expenses exceeding the norm during business trips (373\/9)",
-    "076": "Extra payment for work on holidays not provided in the technological schedule (373\/3)",
-    "077": "Monetary reward for long years of service (372\/5), incentive for contribution to auxiliary-support activities (372\/2)",
-    "078": "Bonus for working in harmful and specific working conditions, fixed bonus for social sector employees (373\/2)",
-    "079": "Special bonus for employees awarded the title ",
-    "080": "Piecework supplement exceeding tariff rate based on piecework prices (371\/1)",
-    "081": "Payments to external part-time employees (371\/1)",
-    "082": "Special bonus for state honorary titles (371\/1)",
-    "083": "Field supply exceeding legal standards (373\/8)",
-    "084": "Bonus for specialists with academic degrees (371\/1)",
-    "085": "Payments to donor employees (with average salary retained) (374\/3)",
-    "096": "Payment for internal part-time work (371\/1)",
-    "097": "Bonuses for national and professional holidays (372\/7)",
-    "098": "Bonus for seniority in handling confidential information (373\/4)",
-    "107": "Special bonus for the Hero of the Republic of Uzbekistan (371\/1)",
-    "175": "Payment for excess rest time at the return point for locomotive crews (374\/8)",
-    "247": "Payments for food or reimbursement of its cost (373\/13)",
-    "248": "Bonus for saving fuel and energy resources (372\/2)",
-    "250": "Material assistance to employees in special cases and based on sectoral agreements (372\/4)",
-    "253": "Annual performance bonus (372\/1)",
-    "254": "Payments for use of personal car or other property in service purposes beyond legal limits (373\/11)",
-    "256": "Bonus for delivering waste paper (372\/2)",
-    "262": "Bonuses for employees on anniversary dates (372\/7)",
-    "263": "Quarterly bonuses to managers and specialists according to charter (372\/2)",
-    "266": "Bonus for commissioning production capacities and construction sites (372\/2)",
-    "270": "One-time bonuses not related to work results (372\/7)",
-    "276": "Travel cards for employee service trips (373\/13)",
-    "281": "Bonuses on the occasion of retirement (372\/5)",
-    "300": "Bonuses from amounts recovered from disputes resolved in favor of the Company or enterprise (372\/2)",
-    "355": "Bonus for collecting and delivering scrap ferrous metals (372\/2)",
-    "363": "Bonus for introducing new technologies (372\/2)",
-    "365": "Payment for rationalization proposal (372\/6)",
-    "471": "Compensation for food cost (373\/13)",
-    "472": "Payments for travel and annual railway tickets (forms №4,6) (373\/13)",
-    "475": "Scholarships paid from company funds (374\/13)",
-    "476": "Benefits paid by employer to young specialists during leave after graduation (374\/14)",
-    "478": "Extra allowance beyond norm for employees with mobile or travel-based work (373\/5)",
-    "480": "Material assistance to employee (mother or father) raising a disabled child (for Disability Day) (372\/4)",
-    "481": "Extra pay above standard for employees whose work involves shift-based methods (373\/5)",
-    "042": "Severance pay upon termination of employment contract (377\/9)",
-    "056": "Scholarships for students (employees) studying abroad at the expense of the Company (377\/15)",
-    "061": "Allowance for child care up to 2 years old (369\/7)",
-    "070": "Per diem payments within legal limits for business trips (369\/8)",
-    "086": "Compensation for utility expenses according to law (for Afghan war and Chernobyl veterans) (369\/6)",
-    "228": "Payments for use of employee’s personal vehicle or property in service within legal norms (369\/9)",
-    "246": "Dividends (375\/2)",
-    "251": "Material assistance to employees listed as first-time legal marriage (377\/10\/3)",
-    "271": "Additional pay to former company employees (pensioners) for ",
-    "272": "Other expenses of a legal entity being a taxpayer of income (376\/1)",
-    "273": "Payments for the cost of free railway tickets provided to employees once a year (376\/4)",
-    "274": "Material aid for work-related injury, occupational disease, or other health damage (377\/10\/2)",
-    "275": "Material aid to employee due to death of family member or vice versa (377\/10)",
-    "277": "Payments for free railway tickets given to former company pensioners (376\/4)",
-    "278": "Material aid for purchasing agricultural products (377\/10\/4)",
-    "368": "Material aid to non-working pensioners for jubilees, funerals, natural disasters (377\/11)",
-    "369": "Valuable gifts (378\/10)",
-    "461": "Costs for providing uniform clothing to employee (369\/6\/3)",
-    "469": "Compensation to employees whose work is constantly mobile or travel-related (369\/6\/3)",
-    "470": "Reimbursement for travel, accommodation, and expenses within norms during business trips (369\/8\/3)",
-    "473": "Payments under direct contracts with Uzbek universities for paid education (369\/12)",
-    "474": "Payments for higher\/professional education (own, child under 26, or spouse) or education loan coverage (378\/16\/1)",
-    "477": "Material aid due to damage from natural disasters and emergencies (369\/10\/3)",
-    "479": "Compensation for work-related injury and health damage (369\/10)",
-    "482": "Payments for dormitory space or its compensation (376\/1)",
-    "556": "Temporary disability benefit for the current month (377\/15)",
-    "557": "Maternity benefit for the current month (369\/1q\/7)",
-    "558": "Temporary disability benefit for the previous month (377\/15)",
-    "559": "Maternity benefit for the previous month (369\/1q\/7)",
-    "560": "Payment or compensation for inpatient and outpatient treatment as per sectoral agreement (376\/1), (378\/3)",
-    "562": "Funeral allowance (369\/2\/5)",
-    "563": "Pension payments to working pensioners, war and labor invalids (369\/1q\/7)",
-    "564": "One-time payments to war invalids (non-working) (377\/11)",
-    "565": "Pension payments to labor invalids (369\/1q\/7)",
-    "566": "Payments from the company to non-working athletes (377\/8)",
-    "600": "Refund of over-withheld amounts",
-    "856": "Recovery of overpaid amount based on sick leave",
-    "875": "Recovery of overpaid material assistance to employee",
-    "876": "Recovery of the value of free annual railway tickets given to employees and pensioners",
-    "877": "Deductions for overpaid sums: child benefit under 2 years, funeral, dismissal, utility compensation, work nature overpayments",
-    "879": "Deductions in favor of the enterprise (by manager's order), fines and disciplinary penalties",
-    "880": "Advance payment",
-    "881": "One-time payments",
-    "882": "Personal income tax",
-    "883": "Mandatory contributions to individual funded pension account",
-    "884": "Voluntary contributions to individual funded pension account",
-    "885": "Salary transfer to plastic card",
-    "886": "Deductions in favor of the state (based on court decision), fines",
-    "887": "Deductions for utility services (mobile communication)",
-    "888": "Deduction\/refund for shortage-related debt",
-    "889": "Deductions in favor of other individuals (alimony)",
-    "890": "Deduction for special clothing",
-    "891": "Deduction for employee insurance contributions under contract",
-    "892": "Deduction for damage or loss of material assets, special clothing",
-    "893": "Deduction\/refund of salary-related debt",
-    "894": "Deduction\/refund from accountable funds for outstanding amounts",
-    "895": "Deduction\/refund of debt based on notification",
-    "896": "Deduction of the amount allocated for credit (for goods purchased on credit)",
-    "897": "Deduction for transfer to savings cash desk",
-    "898": "Deduction of overpaid salary amount",
-    "899": "Deduction of amount allocated for credit (mortgage, preferential)",
-    "900": "Postal fee according to writ of execution",
-    "901": "Transfers to the probation inspection authority",
-    "902": "Trade union membership fee 1%",
-    "903": "Membership fee to the UzLiDeP (Uzbek Liberal Democratic Party)",
-    "904": "Deduction to the Red Crescent Society",
-    "905": "Deduction for house rent and utility payments",
-    "906": "Deductions for hot water, cold water, and heating system",
-    "907": "Deduction for defects made at work (defective products)",
-    "908": "Dormitory accommodation fee deduction",
-    "909": "Deductions to repay housing loan provided to young families",
-    "910": "Deduction for excessive consumption of fuel and energy resources",
-    "911": "Postal transfer for injuries",
-    "912": "Transfer of funds to a non-state preschool or school",
-    "913": "Transfer of funds to a non-state preschool or school (preferential)",
-    "914": "Transfers for the ",
-    "915": "Transfers to children’s fund, public education, healthcare, social welfare, etc. based on employee requests",
-    "916": "Deductions for material assets received from salary",
-    "917": "Deductions for agricultural and food products received from salary",
-    "918": "Deduction of food value provided by the enterprise",
-    "919": "Deduction for labor book",
-    "920": "Deduction for radio subscription fee",
-    "921": "Deduction for collective TV antenna (cable TV)",
-    "922": "Deduction of gift value",
-    "923": "Deduction for food packages and gifts (off-staff, pensioners)",
-    "927": "Deduction for travel card",
-    "929": "Deduction for travel expenses, train ticket",
-    "930": "Deductions for other types of services",
-    "931": "Deduction for tuition fees (contract)",
-    "932": "Deduction for tuition fees (contract, preferential)",
-    "933": "Membership fee for the People’s Democratic Party of Uzbekistan (PDPU)",
-    "934": "Membership fee for the Social Democratic Party ",
-    "935": "Membership fee for the National Revival Democratic Party of Uzbekistan (NRDPU)",
-    "936": "Membership fee for the Ecological Party of Uzbekistan (EPU)",
-    "937": "Transfers for stipend, dormitory, tickets and other expenses for students (employees) studying abroad at the company’s expense",
-    "990": "Unpaid pennies according to payment slips",
-    "991": "Transfers to pensioners based on payment slips (material aid, allowance, bonus, etc.)",
-    "992": "Transfers to pensioners (material aid, allowance, bonus, etc.)",
-    "997": "Transfers for childcare benefits for children under 2 years",
-    "999": "To be paid (cash)"
-}
+[
+  [
+    "001",
+    "Piecework payment within the standard working time under the piece-bonus payment system (371/1)"
+  ],
+  [
+    "002",
+    "Piecework payment within the standard working time under the piecework payment system (371/1)"
+  ],
+  [
+    "003",
+    "Time-based payment for pieceworkers on shift (371/1)"
+  ],
+  [
+    "004",
+    "Time-based payment according to tariff rates (salaries) (371/1)"
+  ],
+  [
+    "005",
+    "Time-based payment according to tariff rates for the time spent operating trains according to schedule (371/1)"
+  ],
+  [
+    "006",
+    "Additional payment for performing duties of temporarily absent employees (due to illness, vacation, or business trip) (373/4)"
+  ],
+  [
+    "007",
+    "Additional payment for working in multiple professions or positions, expanding service areas, increased workload, replacing absent workers, organizing work of locomotive crew columns, chairing women’s council, promoting sports activities, conducting \"Spirituality-Enlightenment\" work, chairing the Youth Union (373/4)"
+  ],
+  [
+    "008",
+    "Bonuses for pieceworkers (372/2)"
+  ],
+  [
+    "009",
+    "Bonus for operating passenger trains according to the schedule (372/2)"
+  ],
+  [
+    "010",
+    "Bonus for preventing passenger train delays (372/2)"
+  ],
+  [
+    "011",
+    "Bonuses for time-based workers (monthly) (372/2)"
+  ],
+  [
+    "012",
+    "Bonuses for management staff, specialists, and clerks (monthly) (372/2)"
+  ],
+  [
+    "013",
+    "Additional payment for work on public holidays (373/3)"
+  ],
+  [
+    "014",
+    "5% salary supplement for masters engaged in the repair of rolling stock, railway, and other technical equipment (373/4)"
+  ],
+  [
+    "015",
+    "Payment to locomotive crews for downtime during the shift (374/8)"
+  ],
+  [
+    "016",
+    "Payments for preferential hours (breaks for breastfeeding) for mothers with children (374/11)"
+  ],
+  [
+    "017",
+    "Payments for preferential hours for persons under 18 and persons with group 2 disabilities (374/11)"
+  ],
+  [
+    "018",
+    "Payment to locomotive crews for time spent traveling as passengers within the standard working hours (371/1)"
+  ],
+  [
+    "019",
+    "Salary supplement of 10%-15% for crew leaders for leading the brigade (373/4)"
+  ],
+  [
+    "020",
+    "Accord payment (additional piece-rate payment) (371/1)"
+  ],
+  [
+    "021",
+    "Bonus for work in Afghanistan (371/1)"
+  ],
+  [
+    "022",
+    "Additional payment for deviation from normal working conditions, for extremely hard and specific conditions according to the order No. 861-N of \"UTY\" JSC dated December 4, 2020, for work on the Angren-Pop section and Kamchik tunnel (373/1)"
+  ],
+  [
+    "023",
+    "Additional payment for night work (373/3)"
+  ],
+  [
+    "024",
+    "Salary difference compensation for part-time workers (374/6)"
+  ],
+  [
+    "025",
+    "Qualification allowance for drivers of locomotives, assistant drivers, cargo/light vehicles, and buses (372/3)"
+  ],
+  [
+    "026",
+    "Payments based on district coefficients for work in harsh climatic and living conditions, in high-altitude regions (373/1)"
+  ],
+  [
+    "027",
+    "Payment for extra vacation days exceeding the 21-day annual leave due to work in adverse climatic and special labor conditions based on Lists No. 2 and No. 3 from workplace certification (374/b)"
+  ],
+  [
+    "028",
+    "Bonus or allowance for professional skills (personal badge) (372/3)"
+  ],
+  [
+    "029",
+    "Salary retained during training in educational institutions and courses (374/7)"
+  ],
+  [
+    "030",
+    "Average salary retained at the main place of work (374/5)"
+  ],
+  [
+    "031",
+    "Honorarium payments for correspondents of the \"Temiryo‘lchi\" newspaper (371/2)"
+  ],
+  [
+    "032",
+    "Payment for annual main labor leave (374/1a)"
+  ],
+  [
+    "033",
+    "Payment for leave granted to employees studying by correspondence in higher and secondary specialized educational institutions (374/7)"
+  ],
+  [
+    "034",
+    "Payment to the employee for performing state and public duties (374/4)"
+  ],
+  [
+    "035",
+    "Bonus for employees holding IFRS (MHXS) or other preferential certificates (371/2)"
+  ],
+  [
+    "036",
+    "Payment to locomotive crew for idle time while waiting to move as passengers (371/1)"
+  ],
+  [
+    "037",
+    "Compensation up to average salary for performing lower-paid work by employer decision or as per legislation (374/10)"
+  ],
+  [
+    "038",
+    "Payment for additional leave for women with two or more children under 12 or a child with a disability under 16 (374/1g)"
+  ],
+  [
+    "039",
+    "Bonuses for identifying damaged wagons, hidden defects, ticketless passengers, and excess baggage cases (372/2)"
+  ],
+  [
+    "040",
+    "Cash compensation for unused labor leave (374/1a)"
+  ],
+  [
+    "041",
+    "Payment for the period of fulfilling military service obligations (371/2)"
+  ],
+  [
+    "043",
+    "Payment to home-based workers (371/2)"
+  ],
+  [
+    "044",
+    "Monetary compensation payments for moral damage as per court decision (377/12)"
+  ],
+  [
+    "045",
+    "Honorarium payments (for non-journalists) (371/2)"
+  ],
+  [
+    "046",
+    "Allowances for medical staff working in hazardous and highly hazardous conditions according to the profession list approved by the Cabinet of Ministers of Uzbekistan, including allowances for continuous work experience in such conditions (373/2)"
+  ],
+  [
+    "047",
+    "Payments to non-staff employees (working under civil-law contract) (371/1)"
+  ],
+  [
+    "048",
+    "Average salary retention at the main workplace for workers engaged in agricultural and other external work (374/5)"
+  ],
+  [
+    "049",
+    "Bonus for foreign language proficiency and usage (373/4)"
+  ],
+  [
+    "050",
+    "Bonus for operating trains with excess weight and length (372/2)"
+  ],
+  [
+    "051",
+    "Payment for idle time while waiting for the train by the locomotive crew (374/8)"
+  ],
+  [
+    "052",
+    "Payment for working on a single-haul locomotive (371/1)"
+  ],
+  [
+    "053",
+    "Additional payment for ensuring technical condition of rolling stock (372/2)"
+  ],
+  [
+    "054",
+    "Payment for working as a substitute (duplicate) (371/1)"
+  ],
+  [
+    "055",
+    "Bonus for highly skilled narrow-profile workers and instructors based on official order (372/3)"
+  ],
+  [
+    "057",
+    "Bonus for job specificity according to “UTY” JSC order No. 832-N dated 27.11.2021 (373/1)"
+  ],
+  [
+    "058",
+    "Additional payment to economists, accountants, labor engineers, HR/social staff, and for mentorship (372/3)"
+  ],
+  [
+    "059",
+    "Bonus for employees with bachelor’s or master’s degrees from TOP-500 foreign universities or educated at company expense (372/2)"
+  ],
+  [
+    "060",
+    "Payment to employees supervising students’ industrial practice (374/12)"
+  ],
+  [
+    "065",
+    "Payments to members of the supervisory board (372/2)"
+  ],
+  [
+    "066",
+    "Additional payment for night work (373/3)"
+  ],
+  [
+    "072",
+    "Payment for overtime work (373/3)"
+  ],
+  [
+    "073",
+    "Additional payment for work on weekends (373/3)"
+  ],
+  [
+    "075",
+    "Payment for daily expenses exceeding the norm during business trips (373/9)"
+  ],
+  [
+    "076",
+    "Extra payment for work on holidays not provided in the technological schedule (373/3)"
+  ],
+  [
+    "077",
+    "Monetary reward for long years of service (372/5), incentive for contribution to auxiliary-support activities (372/2)"
+  ],
+  [
+    "078",
+    "Bonus for working in harmful and specific working conditions, fixed bonus for social sector employees (373/2)"
+  ],
+  [
+    "079",
+    "Special bonus for employees awarded the title \"Honored Railwayman\" (371/1)"
+  ],
+  [
+    "080",
+    "Piecework supplement exceeding tariff rate based on piecework prices (371/1)"
+  ],
+  [
+    "081",
+    "Payments to external part-time employees (371/1)"
+  ],
+  [
+    "082",
+    "Special bonus for state honorary titles (371/1)"
+  ],
+  [
+    "083",
+    "Field supply exceeding legal standards (373/8)"
+  ],
+  [
+    "084",
+    "Bonus for specialists with academic degrees (371/1)"
+  ],
+  [
+    "085",
+    "Payments to donor employees (with average salary retained) (374/3)"
+  ],
+  [
+    "096",
+    "Payment for internal part-time work (371/1)"
+  ],
+  [
+    "097",
+    "Bonuses for national and professional holidays (372/7)"
+  ],
+  [
+    "098",
+    "Bonus for seniority in handling confidential information (373/4)"
+  ],
+  [
+    "107",
+    "Special bonus for the Hero of the Republic of Uzbekistan (371/1)"
+  ],
+  [
+    "175",
+    "Payment for excess rest time at the return point for locomotive crews (374/8)"
+  ],
+  [
+    "247",
+    "Payments for food or reimbursement of its cost (373/13)"
+  ],
+  [
+    "248",
+    "Bonus for saving fuel and energy resources (372/2)"
+  ],
+  [
+    "250",
+    "Material assistance to employees in special cases and based on sectoral agreements (372/4)"
+  ],
+  [
+    "253",
+    "Annual performance bonus (372/1)"
+  ],
+  [
+    "254",
+    "Payments for use of personal car or other property in service purposes beyond legal limits (373/11)"
+  ],
+  [
+    "256",
+    "Bonus for delivering waste paper (372/2)"
+  ],
+  [
+    "262",
+    "Bonuses for employees on anniversary dates (372/7)"
+  ],
+  [
+    "263",
+    "Quarterly bonuses to managers and specialists according to charter (372/2)"
+  ],
+  [
+    "266",
+    "Bonus for commissioning production capacities and construction sites (372/2)"
+  ],
+  [
+    "270",
+    "One-time bonuses not related to work results (372/7)"
+  ],
+  [
+    "276",
+    "Travel cards for employee service trips (373/13)"
+  ],
+  [
+    "281",
+    "Bonuses on the occasion of retirement (372/5)"
+  ],
+  [
+    "300",
+    "Bonuses from amounts recovered from disputes resolved in favor of the Company or enterprise (372/2)"
+  ],
+  [
+    "355",
+    "Bonus for collecting and delivering scrap ferrous metals (372/2)"
+  ],
+  [
+    "363",
+    "Bonus for introducing new technologies (372/2)"
+  ],
+  [
+    "365",
+    "Payment for rationalization proposal (372/6)"
+  ],
+  [
+    "471",
+    "Compensation for food cost (373/13)"
+  ],
+  [
+    "472",
+    "Payments for travel and annual railway tickets (forms №4,6) (373/13)"
+  ],
+  [
+    "475",
+    "Scholarships paid from company funds (374/13)"
+  ],
+  [
+    "476",
+    "Benefits paid by employer to young specialists during leave after graduation (374/14)"
+  ],
+  [
+    "478",
+    "Extra allowance beyond norm for employees with mobile or travel-based work (373/5)"
+  ],
+  [
+    "480",
+    "Material assistance to employee (mother or father) raising a disabled child (for Disability Day) (372/4)"
+  ],
+  [
+    "481",
+    "Extra pay above standard for employees whose work involves shift-based methods (373/5)"
+  ],
+  [
+    "042",
+    "Severance pay upon termination of employment contract (377/9)"
+  ],
+  [
+    "056",
+    "Scholarships for students (employees) studying abroad at the expense of the Company (377/15)"
+  ],
+  [
+    "061",
+    "Allowance for child care up to 2 years old (369/7)"
+  ],
+  [
+    "070",
+    "Per diem payments within legal limits for business trips (369/8)"
+  ],
+  [
+    "086",
+    "Compensation for utility expenses according to law (for Afghan war and Chernobyl veterans) (369/6)"
+  ],
+  [
+    "228",
+    "Payments for use of employee’s personal vehicle or property in service within legal norms (369/9)"
+  ],
+  [
+    "246",
+    "Dividends (375/2)"
+  ],
+  [
+    "251",
+    "Material assistance to employees listed as first-time legal marriage (377/10/3)"
+  ],
+  [
+    "271",
+    "Additional pay to former company employees (pensioners) for \"Honorary Railwayman\" title (377/11)"
+  ],
+  [
+    "272",
+    "Other expenses of a legal entity being a taxpayer of income (376/1)"
+  ],
+  [
+    "273",
+    "Payments for the cost of free railway tickets provided to employees once a year (376/4)"
+  ],
+  [
+    "274",
+    "Material aid for work-related injury, occupational disease, or other health damage (377/10/2)"
+  ],
+  [
+    "275",
+    "Material aid to employee due to death of family member or vice versa (377/10)"
+  ],
+  [
+    "277",
+    "Payments for free railway tickets given to former company pensioners (376/4)"
+  ],
+  [
+    "278",
+    "Material aid for purchasing agricultural products (377/10/4)"
+  ],
+  [
+    "368",
+    "Material aid to non-working pensioners for jubilees, funerals, natural disasters (377/11)"
+  ],
+  [
+    "369",
+    "Valuable gifts (378/10)"
+  ],
+  [
+    "461",
+    "Costs for providing uniform clothing to employee (369/6/3)"
+  ],
+  [
+    "469",
+    "Compensation to employees whose work is constantly mobile or travel-related (369/6/3)"
+  ],
+  [
+    "470",
+    "Reimbursement for travel, accommodation, and expenses within norms during business trips (369/8/3)"
+  ],
+  [
+    "473",
+    "Payments under direct contracts with Uzbek universities for paid education (369/12)"
+  ],
+  [
+    "474",
+    "Payments for higher/professional education (own, child under 26, or spouse) or education loan coverage (378/16/1)"
+  ],
+  [
+    "477",
+    "Material aid due to damage from natural disasters and emergencies (369/10/3)"
+  ],
+  [
+    "479",
+    "Compensation for work-related injury and health damage (369/10)"
+  ],
+  [
+    "482",
+    "Payments for dormitory space or its compensation (376/1)"
+  ],
+  [
+    "556",
+    "Temporary disability benefit for the current month (377/15)"
+  ],
+  [
+    "557",
+    "Maternity benefit for the current month (369/1q/7)"
+  ],
+  [
+    "558",
+    "Temporary disability benefit for the previous month (377/15)"
+  ],
+  [
+    "559",
+    "Maternity benefit for the previous month (369/1q/7)"
+  ],
+  [
+    "560",
+    "Payment or compensation for inpatient and outpatient treatment as per sectoral agreement (376/1), (378/3)"
+  ],
+  [
+    "562",
+    "Funeral allowance (369/2/5)"
+  ],
+  [
+    "563",
+    "Pension payments to working pensioners, war and labor invalids (369/1q/7)"
+  ],
+  [
+    "564",
+    "One-time payments to war invalids (non-working) (377/11)"
+  ],
+  [
+    "565",
+    "Pension payments to labor invalids (369/1q/7)"
+  ],
+  [
+    "566",
+    "Payments from the company to non-working athletes (377/8)"
+  ],
+  [
+    "600",
+    "Refund of over-withheld amounts"
+  ],
+  [
+    "856",
+    "Recovery of overpaid amount based on sick leave"
+  ],
+  [
+    "875",
+    "Recovery of overpaid material assistance to employee"
+  ],
+  [
+    "876",
+    "Recovery of the value of free annual railway tickets given to employees and pensioners"
+  ],
+  [
+    "877",
+    "Deductions for overpaid sums: child benefit under 2 years, funeral, dismissal, utility compensation, work nature overpayments"
+  ],
+  [
+    "879",
+    "Deductions in favor of the enterprise (by manager's order), fines and disciplinary penalties"
+  ],
+  [
+    "880",
+    "Advance payment"
+  ],
+  [
+    "881",
+    "One-time payments"
+  ],
+  [
+    "882",
+    "Personal income tax"
+  ],
+  [
+    "883",
+    "Mandatory contributions to individual funded pension account"
+  ],
+  [
+    "884",
+    "Voluntary contributions to individual funded pension account"
+  ],
+  [
+    "885",
+    "Salary transfer to plastic card"
+  ],
+  [
+    "886",
+    "Deductions in favor of the state (based on court decision), fines"
+  ],
+  [
+    "887",
+    "Deductions for utility services (mobile communication)"
+  ],
+  [
+    "888",
+    "Deduction/refund for shortage-related debt"
+  ],
+  [
+    "889",
+    "Deductions in favor of other individuals (alimony)"
+  ],
+  [
+    "890",
+    "Deduction for special clothing"
+  ],
+  [
+    "891",
+    "Deduction for employee insurance contributions under contract"
+  ],
+  [
+    "892",
+    "Deduction for damage or loss of material assets, special clothing"
+  ],
+  [
+    "893",
+    "Deduction/refund of salary-related debt"
+  ],
+  [
+    "894",
+    "Deduction/refund from accountable funds for outstanding amounts"
+  ],
+  [
+    "895",
+    "Deduction/refund of debt based on notification"
+  ],
+  [
+    "896",
+    "Deduction of the amount allocated for credit (for goods purchased on credit)"
+  ],
+  [
+    "897",
+    "Deduction for transfer to savings cash desk"
+  ],
+  [
+    "898",
+    "Deduction of overpaid salary amount"
+  ],
+  [
+    "899",
+    "Deduction of amount allocated for credit (mortgage, preferential)"
+  ],
+  [
+    "900",
+    "Postal fee according to writ of execution"
+  ],
+  [
+    "901",
+    "Transfers to the probation inspection authority"
+  ],
+  [
+    "902",
+    "Trade union membership fee 1%"
+  ],
+  [
+    "903",
+    "Membership fee to the UzLiDeP (Uzbek Liberal Democratic Party)"
+  ],
+  [
+    "904",
+    "Deduction to the Red Crescent Society"
+  ],
+  [
+    "905",
+    "Deduction for house rent and utility payments"
+  ],
+  [
+    "906",
+    "Deductions for hot water, cold water, and heating system"
+  ],
+  [
+    "907",
+    "Deduction for defects made at work (defective products)"
+  ],
+  [
+    "908",
+    "Dormitory accommodation fee deduction"
+  ],
+  [
+    "909",
+    "Deductions to repay housing loan provided to young families"
+  ],
+  [
+    "910",
+    "Deduction for excessive consumption of fuel and energy resources"
+  ],
+  [
+    "911",
+    "Postal transfer for injuries"
+  ],
+  [
+    "912",
+    "Transfer of funds to a non-state preschool or school"
+  ],
+  [
+    "913",
+    "Transfer of funds to a non-state preschool or school (preferential)"
+  ],
+  [
+    "914",
+    "Transfers for the \"Honored Railway Worker\" title"
+  ],
+  [
+    "915",
+    "Transfers to children’s fund, public education, healthcare, social welfare, etc. based on employee requests"
+  ],
+  [
+    "916",
+    "Deductions for material assets received from salary"
+  ],
+  [
+    "917",
+    "Deductions for agricultural and food products received from salary"
+  ],
+  [
+    "918",
+    "Deduction of food value provided by the enterprise"
+  ],
+  [
+    "919",
+    "Deduction for labor book"
+  ],
+  [
+    "920",
+    "Deduction for radio subscription fee"
+  ],
+  [
+    "921",
+    "Deduction for collective TV antenna (cable TV)"
+  ],
+  [
+    "922",
+    "Deduction of gift value"
+  ],
+  [
+    "923",
+    "Deduction for food packages and gifts (off-staff, pensioners)"
+  ],
+  [
+    "927",
+    "Deduction for travel card"
+  ],
+  [
+    "929",
+    "Deduction for travel expenses, train ticket"
+  ],
+  [
+    "930",
+    "Deductions for other types of services"
+  ],
+  [
+    "931",
+    "Deduction for tuition fees (contract)"
+  ],
+  [
+    "932",
+    "Deduction for tuition fees (contract, preferential)"
+  ],
+  [
+    "933",
+    "Membership fee for the People’s Democratic Party of Uzbekistan (PDPU)"
+  ],
+  [
+    "934",
+    "Membership fee for the Social Democratic Party \"Adolat\" (SDPU)"
+  ],
+  [
+    "935",
+    "Membership fee for the National Revival Democratic Party of Uzbekistan (NRDPU)"
+  ],
+  [
+    "936",
+    "Membership fee for the Ecological Party of Uzbekistan (EPU)"
+  ],
+  [
+    "937",
+    "Transfers for stipend, dormitory, tickets and other expenses for students (employees) studying abroad at the company’s expense"
+  ],
+  [
+    "990",
+    "Unpaid pennies according to payment slips"
+  ],
+  [
+    "991",
+    "Transfers to pensioners based on payment slips (material aid, allowance, bonus, etc.)"
+  ],
+  [
+    "992",
+    "Transfers to pensioners (material aid, allowance, bonus, etc.)"
+  ],
+  [
+    "997",
+    "Transfers for childcare benefits for children under 2 years"
+  ],
+  [
+    "999",
+    "To be paid (cash)"
+  ]
+]

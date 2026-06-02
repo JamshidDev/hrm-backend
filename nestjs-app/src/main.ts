@@ -1,13 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { useContainer } from 'class-validator';
+import { useContainer, type ValidationError } from 'class-validator';
 import methodOverride from 'method-override';
 import type { Request } from 'express';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'node:path';
 import { AppModule } from '@/app.module';
+import { LaravelValidationException } from '@/common/exceptions/validation.exception';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Laravel `public/` statik fayllari — `asset('resumes/...')` ekvivalenti.
+  // example .xlsx fayllar `/resumes/economist/*.xlsx` URL'da yuklab olinadi.
+  app.useStaticAssets(join(__dirname, '..', '..', 'public'));
 
   // Laravel'da ETag avtomatik yaratilmaydi — Express default'ini o'chiramiz.
   // Frontend `If-None-Match` yuborganda 304 Not Modified qaytmasligi uchun
@@ -56,6 +65,10 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
       // Laravel parity — ValidationException 422 qaytaradi (default 400 emas).
       errorHttpStatusCode: 422,
+      // Laravel ValidationException body parity: { message, errors }.
+      // Xom xatolarni exception'ga o'rab beramiz — localize'ni filter qiladi.
+      exceptionFactory: (errors: ValidationError[]) =>
+        new LaravelValidationException(errors),
     }),
   );
 

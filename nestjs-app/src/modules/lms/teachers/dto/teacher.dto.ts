@@ -6,10 +6,25 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
+
+// GET /lms/teacher/lessons — Laravel: TeacherLessonController::index.
+//   'start_date' => 'required|date', 'end_date' => 'required|date|after_or_equal:start_date'.
+export class TeacherLessonsQueryDto {
+  @ApiProperty({ example: '2026-06-01' })
+  @IsNotEmpty()
+  @IsString()
+  start_date!: string;
+
+  @ApiProperty({ example: '2026-06-30' })
+  @IsNotEmpty()
+  @IsString()
+  end_date!: string;
+}
 
 export class TeacherListQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1 })
