@@ -87,9 +87,11 @@ export class DepartmentLocationListController {
 
   @Get('list')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
-  @ApiOperation({ summary: 'Department locations short list' })
-  async list() {
-    return buildSuccess(true, await this.service.list());
+  @Permission('extra-worker-user')
+  @ApiOperation({ summary: 'Root departments with location/children flags' })
+  async list(
+    @Query() q: { page?: number; per_page?: number; search?: string },
+  ) {
+    return buildSuccess(true, await this.service.list(q));
   }
 }
