@@ -34,6 +34,41 @@ function toDateTimeString(v: string | null): string | null {
   return m ? `${m[1]} ${m[2]}` : v;
 }
 
+// Laravel boolean validation — "1"/"true"/1/true → true.
+function toBool(v: unknown): boolean {
+  return v === true || v === 1 || v === '1' || v === 'true';
+}
+
+// FormData bracket-notation (a[0][b]=c) → nested obyekt/massiv. JSON body o'zgarmaydi.
+function unflattenForm(flat: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const fullKey of Object.keys(flat)) {
+    if (!fullKey.includes('[')) {
+      result[fullKey] = flat[fullKey];
+      continue;
+    }
+    const path = fullKey.replace(/\]/g, '').split('[');
+    let cur: Record<string, unknown> | unknown[] = result;
+    for (let i = 0; i < path.length; i++) {
+      const key = path[i];
+      const last = i === path.length - 1;
+      if (last) {
+        (cur as Record<string, unknown>)[key] = flat[fullKey];
+      } else {
+        const next = path[i + 1];
+        const container = (cur as Record<string, unknown>)[key];
+        if (container == null) {
+          (cur as Record<string, unknown>)[key] = /^\d+$/.test(next) ? [] : {};
+        }
+        cur = (cur as Record<string, unknown>)[key] as
+          | Record<string, unknown>
+          | unknown[];
+      }
+    }
+  }
+  return result;
+}
+
 @Injectable()
 export class ChatNewsService {
   constructor(
@@ -41,6 +76,127 @@ export class ChatNewsService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
   ) {}
+
+  /**
+   * PUT /chat/news/:id (multipart, _method=PUT spoofing) — Laravel update.
+   * Frontend FormData yuboradi (media fayllari uchun). method-override multipart
+   * body'ni o'qiy olmaydi, shuning uchun controller POST(:id)'ni alias qiladi.
+   * Bracket-notation (translations[0][locale], media[0][file]) → nested struktura.
+   */
+  async updateFromForm(
+    id: number,
+    rawBody: Record<string, unknown>,
+    files: Express.Multer.File[],
+  ): Promise<void> {
+    const body = unflattenForm(rawBody);
+    // _method spoofing maydoni — e'tiborsiz.
+    delete body._method;
+
+    await this.db.transaction(async (tx) => {
+      // 1. Scalar maydonlar (faqat berilganlar).
+      const set: Record<string, unknown> = { updated_at: sql`NOW()` };
+      if ('slug' in body) set.slug = String(body.slug);
+      if ('status' in body) set.status = Number(body.status);
+      if ('published_at' in body) set.published_at = body.published_at;
+      if ('is_pinned' in body) set.is_pinned = toBool(body.is_pinned);
+
+      const [news] = await tx
+        .update(chat_news)
+        .set(set)
+        .where(eq(chat_news.id, id))
+        .returning();
+      if (!news) throw new BusinessException(404, 'not_found');
+
+      // 2. Translations upsert per locale.
+      const translations = Array.isArray(body.translations)
+        ? (body.translations as Record<string, string>[])
+        : [];
+      for (const t of translations) {
+        if (!t?.locale) continue;
+        const [existing] = await tx
+          .select({ id: chat_news_translations.id })
+          .from(chat_news_translations)
+          .where(
+            and(
+              eq(chat_news_translations.chat_news_id, id),
+              eq(chat_news_translations.locale, t.locale),
+            ),
+          )
+          .limit(1);
+        const vals = {
+          title: t.title ?? null,
+          short_description: t.short_description ?? null,
+          content: t.content ?? null,
+        };
+        if (existing) {
+          await tx
+            .update(chat_news_translations)
+            .set({ ...vals, updated_at: sql`NOW()` })
+            .where(eq(chat_news_translations.id, existing.id));
+        } else {
+          await tx.insert(chat_news_translations).values({
+            chat_news_id: id,
+            locale: t.locale,
+            ...vals,
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
+          });
+        }
+      }
+
+      // 3. Categories sync (berilgan bo'lsa).
+      if ('categories' in body) {
+        const catIds = (Array.isArray(body.categories) ? body.categories : [])
+          .map((c) => Number(c))
+          .filter((n) => Number.isFinite(n));
+        await tx
+          .delete(chat_categories_news)
+          .where(eq(chat_categories_news.chat_news_id, id));
+        if (catIds.length) {
+          await tx.insert(chat_categories_news).values(
+            catIds.map((catId) => ({
+              chat_news_id: id,
+              chat_news_category_id: catId,
+            })),
+          );
+        }
+      }
+
+      // 4. Media — Laravel: data['media'] bo'lsa eskilarni o'chirib qayta yaratadi.
+      const mediaMeta = Array.isArray(body.media)
+        ? (body.media as Record<string, unknown>[])
+        : [];
+      if (files.length) {
+        await tx
+          .update(chat_news_media)
+          .set({ deleted_at: sql`NOW()` })
+          .where(eq(chat_news_media.chat_news_id, id));
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          const meta = mediaMeta[i] ?? {};
+          const path = await this.minio.uploadFormFile(f, 'chat-media', [
+            'pdf',
+            'doc',
+            'docx',
+            'png',
+            'jpg',
+            'jpeg',
+          ]);
+          await tx.insert(chat_news_media).values({
+            chat_news_id: id,
+            type: String(meta.type ?? 'image'),
+            path,
+            extension:
+              (f.originalname.split('.').pop() ?? '').toLowerCase() || null,
+            size: f.size,
+            order: meta.order != null ? Number(meta.order) : i + 1,
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
+          });
+        }
+      }
+    });
+  }
 
   // ChatNewsTranslationsResource.
   private mapTranslation(t: typeof chat_news_translations.$inferSelect) {
@@ -182,12 +338,12 @@ export class ChatNewsService {
     };
   }
 
-  /** GET /chat/news/:id — bitta yozuv. */
+  /** GET /chat/news/:id — Laravel show: ChatNews::with('categories')->findOrFail → ChatNewsResource. */
   async show(id: number) {
     const [row] = await this.db
       .select()
       .from(chat_news)
-      .where(eq(chat_news.id, id))
+      .where(and(eq(chat_news.id, id), notDeleted(chat_news)))
       .limit(1);
     if (!row) throw new BusinessException(404, 'not_found');
 
@@ -214,7 +370,7 @@ export class ChatNewsService {
           .where(inArray(chat_news_categories.id, categoryIds))
       : [];
 
-    return { ...row, translations, media, categories };
+    return this.mapNews(row, translations, media, categories);
   }
 
   /**

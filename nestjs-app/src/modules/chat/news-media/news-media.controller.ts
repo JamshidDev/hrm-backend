@@ -76,10 +76,9 @@ export class ChatNewsMediaController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateMediaDto,
   ) {
-    return buildSuccess(
-      this.i18n.t('messages.successfully_stored'),
-      await this.service.create(dto, file),
-    );
+    await this.service.create(dto, file);
+    // Laravel ChatNewsMediaController::store — faqat message qaytaradi (data yo'q).
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   @Delete(':id')

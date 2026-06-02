@@ -12,8 +12,13 @@ import {
   Post,
   Put,
   Query,
+  Req,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
@@ -59,18 +64,34 @@ export class ChatNewsAdminController {
     );
   }
 
+  // PUT (JSON) — translations/categories nested JSON bilan.
   @Put(':id')
-  @ApiOperation({
-    summary: 'Update news (translations upsert per locale, categories sync)',
-  })
+  @ApiOperation({ summary: 'Update news (JSON body)' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateNewsDto,
   ) {
-    return buildSuccess(
-      this.i18n.t('messages.successfully_updated'),
-      await this.service.update(id, dto),
+    await this.service.update(id, dto);
+    // Laravel ChatNewsController::update — faqat message (data yo'q).
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
+  }
+
+  // POST(:id) — frontend FormData + `_method=PUT` (method-override multipart'ni
+  // o'qiy olmaydi, shuning uchun POST alias). Fayllar + bracket-notation maydonlar.
+  @Post(':id')
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiOperation({ summary: 'Update news (multipart FormData, _method=PUT)' })
+  async updateMultipart(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: Request,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    await this.service.updateFromForm(
+      id,
+      (req.body ?? {}) as Record<string, unknown>,
+      files ?? [],
     );
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Delete(':id')
