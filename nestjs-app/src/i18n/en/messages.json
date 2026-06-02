@@ -640,5 +640,17 @@
   },
   "does_not_delete_related_item": "This item is linked to other data, Cannot be deleted...",
   "does_not_delete_approved_document": "Cannot delete an approved document.",
-  "director_not_found": "Director not found."
+  "director_not_found": "Director not found.",
+  "tax_four": {
+    "employee_status": {
+      "one": "Employed",
+      "two": "Unemployed"
+    },
+    "contract_type": {
+      "one": "Main job",
+      "two": "Part-time / Concurrent job",
+      "three": "Individual entrepreneur",
+      "four": "Hired worker"
+    }
+  }
 }

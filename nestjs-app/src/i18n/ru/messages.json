@@ -642,5 +642,17 @@
   },
   "does_not_delete_related_item": "Этот элемент связан с другими данными. Не может быть удален...",
   "does_not_delete_approved_document": "Утверждённый документ нельзя удалить.",
-  "director_not_found": "Директор не найден."
+  "director_not_found": "Директор не найден.",
+  "tax_four": {
+    "employee_status": {
+      "one": "Работает",
+      "two": "Не работает"
+    },
+    "contract_type": {
+      "one": "Основной",
+      "two": "Совместитель",
+      "three": "ИП (ФХШ)",
+      "four": "Наёмный работник"
+    }
+  }
 }

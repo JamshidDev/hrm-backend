@@ -640,5 +640,17 @@
   },
   "does_not_delete_related_item": "Bu element boshqa maʼlumotlar bilan bogʻlangan, O'chirish mumkin emas...",
   "does_not_delete_approved_document": "Tasdiqlangan hujjatni o'chirib bo'lmaydi.",
-  "director_not_found": "Direktor topilmadi."
+  "director_not_found": "Direktor topilmadi.",
+  "tax_four": {
+    "employee_status": {
+      "one": "Ishlaydi",
+      "two": "Ishlamaydi"
+    },
+    "contract_type": {
+      "one": "Asosiy",
+      "two": "O'rindosh",
+      "three": "FXSH",
+      "four": "Yollanma"
+    }
+  }
 }
