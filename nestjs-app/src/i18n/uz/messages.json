@@ -590,6 +590,18 @@
   "chat": {
     "notifications": {
       "send_success": "Sizning xabaringiz muvaffaqqiyatli yuborildi!"
+    },
+    "telegram": {
+      "messages": {
+        "types": {
+          "birthday": "Tug'ilgan kun",
+          "vacations": "Ta'til",
+          "med": "Tibbiy ko'rik",
+          "passport": "Passport",
+          "mobile_app": "Mobil ilova",
+          "turnstile_stats": "Turniket statistikasi"
+        }
+      }
     }
   },
   "turnstile": {

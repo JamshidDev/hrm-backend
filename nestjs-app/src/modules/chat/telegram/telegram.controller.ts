@@ -22,7 +22,7 @@ export class ChatTelegramController {
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Telegram messages by type (GROUP BY counter)' })
-  async dashboard() {
-    return buildSuccess(true, await this.service.dashboard());
+  async dashboard(@Query() q: TelegramMessagesQueryDto) {
+    return buildSuccess(true, await this.service.dashboard(q));
   }
 }

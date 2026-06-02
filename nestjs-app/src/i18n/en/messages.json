@@ -590,6 +590,18 @@
   "chat": {
     "notifications": {
       "send_success": "Your message was sent successfully!"
+    },
+    "telegram": {
+      "messages": {
+        "types": {
+          "birthday": "Birthday",
+          "vacations": "Vacation",
+          "med": "Medical check-up",
+          "passport": "Passport",
+          "mobile_app": "Mobile app",
+          "turnstile_stats": "Turnstile statistics"
+        }
+      }
     }
   },
   "turnstile": {

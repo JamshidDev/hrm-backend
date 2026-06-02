@@ -592,6 +592,18 @@
   "chat": {
     "notifications": {
       "send_success": "Ваше сообщение успешно отправлено!"
+    },
+    "telegram": {
+      "messages": {
+        "types": {
+          "birthday": "День рождения",
+          "vacations": "Отпуск",
+          "med": "Медицинский осмотр",
+          "passport": "Паспорт",
+          "mobile_app": "Мобильное приложение",
+          "turnstile_stats": "Статистика турникета"
+        }
+      }
     }
   },
   "turnstile": {

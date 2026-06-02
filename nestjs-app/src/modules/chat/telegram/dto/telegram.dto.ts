@@ -2,7 +2,7 @@
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class TelegramMessagesQueryDto {
   @ApiPropertyOptional()
@@ -20,9 +20,13 @@ export class TelegramMessagesQueryDto {
   @Max(100)
   per_page?: number;
 
-  @ApiPropertyOptional({
-    description: 'organization_id orqali user filter (WorkerPosition)',
-  })
+  // Laravel WorkerPosition::filter — org-scope (childIds) + organizations csv + single.
+  @ApiPropertyOptional({ description: 'CSV organization ids' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ description: 'Single organization id' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
