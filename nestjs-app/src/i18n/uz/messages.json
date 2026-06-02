@@ -43,6 +43,9 @@
     "rejected_successful": "Hujjat muvaffaqqiyatli bekor qilindi"
   },
   "worker": {
+    "full_name": "To‘liq ism",
+    "position": "Lavozim",
+    "organization": "Tashkilot",
     "med": {
       "one": "Sog'lom",
       "two": "Nosog'lom"

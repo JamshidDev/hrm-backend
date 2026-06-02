@@ -43,6 +43,9 @@
     "rejected_successful": "Документ успешно отменён"
   },
   "worker": {
+    "full_name": "Полное имя",
+    "position": "Должность",
+    "organization": "Организация",
     "med": {
       "one": "Годен",
       "two": "Негоден"
