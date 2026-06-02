@@ -674,5 +674,17 @@
     }
   },
   "feature_not_available": "Bu imkoniyat hozircha mavjud emas",
-  "not_allowed_confirmatory_and_director": "Rahbar va kelishuvchilar bir xil tanlanmasligi kerak"
+  "not_allowed_confirmatory_and_director": "Rahbar va kelishuvchilar bir xil tanlanmasligi kerak",
+  "roles": {
+    "worker": "Ishchi xodim",
+    "hr": "HR",
+    "finance": "Buxgalter",
+    "jurist": "Yurist",
+    "economist": "Iqtisodchi",
+    "hr_leader": "HR rahbari",
+    "economist_leader": "Iqtisodchi rahbari",
+    "hospital": "Poliklinika xodimi",
+    "turnstile_viewer": "Turniket ko'ruvchi",
+    "turnstile_leader": "Turniket Leader"
+  }
 }

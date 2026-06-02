@@ -674,5 +674,17 @@
     }
   },
   "feature_not_available": "This feature is not available yet",
-  "not_allowed_confirmatory_and_director": "The head of the organization and additional signatories should not be selected at the same time."
+  "not_allowed_confirmatory_and_director": "The head of the organization and additional signatories should not be selected at the same time.",
+  "roles": {
+    "worker": "Worker",
+    "hr": "HR",
+    "finance": "Accountant",
+    "jurist": "Lawyer",
+    "economist": "Economist",
+    "hr_leader": "HR Manager",
+    "economist_leader": "Chief Economist",
+    "hospital": "Polyclinic employee",
+    "turnstile_viewer": "Turnstile viewer",
+    "turnstile_leader": "Turnstile Leader"
+  }
 }
