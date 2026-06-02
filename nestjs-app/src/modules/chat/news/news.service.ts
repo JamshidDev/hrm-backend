@@ -10,6 +10,7 @@ import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
 import {
   chat_news,
   chat_news_translations,
@@ -26,12 +27,76 @@ import type {
   UpdateNewsDto,
 } from '@/modules/chat/news/dto/news.dto';
 
+// Carbon toDateTimeString() — "Y-m-d H:i:s" (fraksiya/ISO 'T' tashlanadi).
+function toDateTimeString(v: string | null): string | null {
+  if (!v) return null;
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(v);
+  return m ? `${m[1]} ${m[2]}` : v;
+}
+
 @Injectable()
 export class ChatNewsService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly minio: MinioService,
   ) {}
+
+  // ChatNewsTranslationsResource.
+  private mapTranslation(t: typeof chat_news_translations.$inferSelect) {
+    return {
+      id: t.id,
+      locale: t.locale,
+      title: t.title,
+      short_description: t.short_description,
+      content: t.content,
+    };
+  }
+
+  // ChatNewsMediaResource — path => fileUrl.
+  private async mapMedia(m: typeof chat_news_media.$inferSelect) {
+    return {
+      id: m.id,
+      type: m.type,
+      path: await this.minio.fileUrl(m.path),
+      size: m.size,
+      extension: m.extension,
+      order: m.order,
+    };
+  }
+
+  // ChatNewsCategoryResource.
+  private mapCategory(c: typeof chat_news_categories.$inferSelect) {
+    return {
+      id: c.id,
+      name: c.name,
+      created_at: toDateTimeString(c.created_at),
+    };
+  }
+
+  // ChatNewsResource — to'liq news shape (categories/translations/media nested).
+  private async mapNews(
+    r: typeof chat_news.$inferSelect,
+    translations: (typeof chat_news_translations.$inferSelect)[],
+    media: (typeof chat_news_media.$inferSelect)[],
+    categories: (typeof chat_news_categories.$inferSelect)[],
+  ) {
+    return {
+      id: r.id,
+      categories: categories.map((c) => this.mapCategory(c)),
+      created_at: toDateTimeString(r.created_at),
+      slug: r.slug,
+      status: r.status,
+      published_at: r.published_at,
+      is_pinned: r.is_pinned,
+      views_count: r.views_count,
+      likes_count: r.likes_count,
+      dislikes_count: r.dislikes_count,
+      comments_count: r.comments_count,
+      translations: translations.map((t) => this.mapTranslation(t)),
+      media: await Promise.all(media.map((m) => this.mapMedia(m))),
+    };
+  }
 
   /** GET /chat/news — admin paginatsiya (status filtri bilan). */
   async list(q: NewsListQueryDto) {
@@ -43,12 +108,12 @@ export class ChatNewsService {
     if (q.status !== undefined) conds.push(eq(chat_news.status, q.status));
     const where = and(...conds);
 
+    // Laravel index — orderBy YO'Q (natural order), with('categories') + lazy translations/media.
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select()
         .from(chat_news)
         .where(where)
-        .orderBy(desc(chat_news.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(chat_news).where(where),
@@ -98,17 +163,22 @@ export class ChatNewsService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: rows.map((r) => ({
-        ...r,
-        translations: translations.filter((t) => t.chat_news_id === r.id),
-        media: media.filter((m) => m.chat_news_id === r.id),
-        categories: categoryLinks
-          .filter((l) => l.chat_news_id === r.id)
-          .map((l) => catMap.get(l.chat_news_category_id))
-          .filter(Boolean),
-      })),
+      data: await Promise.all(
+        rows.map((r) =>
+          this.mapNews(
+            r,
+            translations.filter((t) => t.chat_news_id === r.id),
+            media.filter((m) => m.chat_news_id === r.id),
+            categoryLinks
+              .filter((l) => l.chat_news_id === r.id)
+              .map((l) => catMap.get(l.chat_news_category_id))
+              .filter((c): c is typeof chat_news_categories.$inferSelect =>
+                Boolean(c),
+              ),
+          ),
+        ),
+      ),
     };
   }
 
