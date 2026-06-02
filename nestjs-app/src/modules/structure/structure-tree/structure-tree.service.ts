@@ -11,19 +11,39 @@ import {
   and,
   asc,
   between,
+  count,
   eq,
   gt,
   ilike,
+  inArray,
+  isNull,
   lt,
   or,
   type SQL,
 } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
-import { organizations } from '@/db/schema';
+import {
+  organizations,
+  worker_positions,
+  workers,
+  departments,
+  positions as positionsTable,
+} from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { PermissionService } from '@/shared/permission/permission.service';
+import { MinioService } from '@/shared/minio/minio.service';
+import {
+  getFullPosition,
+  getShortPosition,
+} from '@/modules/hr/_shared/position-helper';
+
+// Laravel App\Helpers\Helper::leadPositionIds() — [$leadIds, $leadDeputyIds].
+// confirmations faqat $leadIds (rahbar lavozimlari) ishlatadi.
+const LEAD_POSITION_IDS = [
+  84, 399, 934, 144, 171, 232, 1546, 21, 8, 12, 16, 218, 437, 499, 822, 1503,
+];
 
 // Tree response item.
 export interface OrgTreeNode {
@@ -47,6 +67,7 @@ export class StructureTreeService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly permissions: PermissionService,
+    private readonly minio: MinioService,
   ) {}
 
   // Laravel: StructureController::getAllStructure() — barcha orglar tree.
@@ -246,6 +267,123 @@ export class StructureTreeService {
     return this.buildTree(flat, lang);
   }
 
+  /**
+   * Laravel: StructureController::confirmations() — `/api/v1/structure/confirmations`.
+   *
+   * WorkerPosition::whereIn('position_id', $leadIds)   // Helper::leadPositionIds()[0]
+   *   ->with([worker, organization, department, position])
+   *   ->paginate(per_page ?? 50)
+   *   → PaginateResource(WorkerPositionMinimalResource).
+   *
+   * Diqqat: Laravel `organization_id` query'sini E'TIBORGA OLMAYDI (filter yo'q) —
+   * faqat lead lavozimdagi barcha worker_position'lar (org-scopesiz). Parity uchun
+   * NestJS ham organization_id'ni e'tiborsiz qoldiradi.
+   */
+  async confirmations(perPage?: number, page?: number) {
+    const lang = this.ctx.lang;
+    const pp = perPage ?? 50;
+    const pg = page ?? 1;
+    const offset = (pg - 1) * pp;
+
+    // WorkerPosition SoftDeletes — default scope deleted'larni chiqarib tashlaydi.
+    const where = and(
+      notDeleted(worker_positions),
+      inArray(worker_positions.position_id, LEAD_POSITION_IDS),
+    );
+
+    // Laravel paginate() — count-first.
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(worker_positions)
+      .where(where);
+    const totalNum = Number(total);
+    if (totalNum === 0) {
+      return { current_page: pg, total: 0, data: [] };
+    }
+
+    // Laravel index'da orderBy yo'q → natural Postgres tartibi.
+    const rows = await this.db
+      .select({
+        id: worker_positions.id,
+        worker_id: workers.id,
+        worker_photo: workers.photo,
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        org_id: organizations.id,
+        org_name: organizations.name,
+        org_name_ru: organizations.name_ru,
+        org_name_en: organizations.name_en,
+        org_group: organizations.group,
+        org_full_name: organizations.full_name,
+        dept_name: departments.name,
+        dept_level: departments.level,
+        pos_name: positionsTable.name,
+      })
+      .from(worker_positions)
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(
+        positionsTable,
+        eq(positionsTable.id, worker_positions.position_id),
+      )
+      .where(where)
+      .limit(pp)
+      .offset(offset);
+
+    // Laravel HR\Transformers\WorkerPosition\WorkerPositionMinimalResource:
+    // {id, worker(WorkerMinimalResource), organization(OrganizationListResource),
+    //  post_name, post_short_name}.
+    const data = await Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        worker: r.worker_id
+          ? {
+              id: r.worker_id,
+              photo: await this.minio.fileUrl(r.worker_photo),
+              last_name: r.worker_last,
+              first_name: r.worker_first,
+              middle_name: r.worker_middle,
+            }
+          : null,
+        organization: r.org_id
+          ? {
+              id: r.org_id,
+              // OrganizationListResource: ru→name_ru, en→name_en, default→name (fallback YO'Q).
+              name:
+                lang === 'ru'
+                  ? r.org_name_ru
+                  : lang === 'en'
+                    ? r.org_name_en
+                    : r.org_name,
+              group: r.org_group ?? false,
+            }
+          : null,
+        post_name: getFullPosition({
+          position_name: r.pos_name,
+          department_name: r.dept_name,
+          department_level: r.dept_level,
+          organization_full_name: r.org_full_name,
+        }),
+        post_short_name: getShortPosition({
+          position_name: r.pos_name,
+          department_name: r.dept_name,
+          department_level: r.dept_level,
+          organization_full_name: r.org_full_name,
+        }),
+      })),
+    );
+
+    return { current_page: pg, total: totalNum, data };
+  }
+
   // ---- Helpers ----
 
   // Flat list → nested tree via parent_id chain. Root nodes have parent_id IS NULL.
@@ -262,8 +400,7 @@ export class StructureTreeService {
     }[],
     lang: string,
   ): OrgTreeNode[] {
-    // Group by parent_id.
-    const childrenByParent = new Map<number | null, OrgTreeNode[]>();
+    // parent_id chain bo'yicha tree.
     const allNodes = new Map<number, OrgTreeNode>();
 
     // First pass — create nodes (children empty).

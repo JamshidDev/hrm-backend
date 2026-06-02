@@ -1,23 +1,24 @@
 // Staffing approve controller. Laravel: Economist/StaffingApproveController.
+// Routes (Laravel parity — prefix economist, permission:economist):
+//   GET    staffing/generate    → viewGenerateChanges (changedPositions)
+//   POST   staffing/generate    → generate
+//   GET    staffing/approve      → index (ApproveIndexResource paginated)
+//   DELETE staffing/approve/{id} → destroy
 
 import {
   Body,
   Controller,
   Delete,
   Get,
-  Header,
   Param,
   ParseIntPipe,
   Post,
   Query,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
-import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { StaffingService } from '@/modules/economist/staffing/staffing.service';
 import {
@@ -25,9 +26,6 @@ import {
   StaffingGenerateDto,
   StaffingApproveListQueryDto,
 } from '@/modules/economist/staffing/dto/staffing.dto';
-
-const XLSX_MIME =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 @ApiTags('Economist / Staffing')
 @ApiBearerAuth('access-token')
@@ -39,6 +37,7 @@ export class StaffingController {
     private readonly i18n: I18nService,
   ) {}
 
+  // GET /api/v1/economist/staffing/generate — shtat o'zgarishlari (changedPositions).
   @Get('generate')
   @ApiOperation({
     summary:
@@ -48,59 +47,24 @@ export class StaffingController {
     return buildSuccess(true, await this.service.generateView(q));
   }
 
+  // POST /api/v1/economist/staffing/generate — hujjat generatsiyasi.
   @Post('generate')
-  @ApiOperation({ summary: 'Dispatch staffing generation job' })
+  @ApiOperation({
+    summary: 'Generate staffing-approve document (Laravel DocumentReplace)',
+  })
   async generate(@Body() body: StaffingGenerateDto) {
     await this.service.generate(body);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
+  // GET /api/v1/economist/staffing/approve — tasdiqlash ro'yxati (ApproveIndexResource).
   @Get('approve')
   @ApiOperation({ summary: 'List staffing-approve records (paginated)' })
   async approveList(@Query() q: StaffingApproveListQueryDto) {
     return buildSuccess(true, await this.service.approveList(q));
   }
 
-  // Demo: ExcelService bilan styled .xlsx download.
-  // `@RawResponse()` — `ResponseInterceptor` wrap qilmasin (Buffer to'g'ridan stream'ga).
-  @Get('approve/export')
-  @RawResponse()
-  @Header(
-    'Content-Type',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  )
-  @ApiOperation({ summary: 'Export staffing-approve list as styled .xlsx' })
-  async approveExport(@Res() res: Response) {
-    const buffer = await this.service.approveListExport();
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename="staffing-approves.xlsx"',
-    );
-    res.end(buffer);
-  }
-
-  /**
-   * Demo: ExcelService bilan Laravel `StaffingApproveExport` ekvivalenti.
-   * Title section (9 qator merge) + QR drawing + position data.
-   */
-  @Get('approve/:id/export')
-  @RawResponse()
-  @Header('Content-Type', XLSX_MIME)
-  @ApiOperation({
-    summary: 'Export full staffing-approve with title section + QR (.xlsx)',
-  })
-  async approveDetailExport(
-    @Param('id', ParseIntPipe) id: number,
-    @Res() res: Response,
-  ) {
-    const buffer = await this.service.approveDetailExport(id);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="staffing-approve-${id}.xlsx"`,
-    );
-    res.end(buffer);
-  }
-
+  // DELETE /api/v1/economist/staffing/approve/{id} — soft-delete (tasdiqlangan bo'lmasa).
   @Delete('approve/:id')
   @ApiOperation({
     summary: 'Soft-delete a staffing-approve record (unless approved)',

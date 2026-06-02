@@ -9,6 +9,7 @@ import {
   IsDateString,
   IsInt,
   IsOptional,
+  IsString,
   Min,
 } from 'class-validator';
 import { YearMonthPaginationDto } from '@/modules/economist/_shared/dto/base-query.dto';
@@ -78,5 +79,21 @@ export class StaffingGenerateDto {
 
 /**
  * GET /api/v1/economist/staffing/approve
+ * Laravel filter($user, request()->all()) — organizations (csv) + organization_id org-scope.
  */
-export class StaffingApproveListQueryDto extends YearMonthPaginationDto {}
+export class StaffingApproveListQueryDto extends YearMonthPaginationDto {
+  @ApiPropertyOptional({
+    example: '140,151',
+    description: 'CSV organization ids',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ example: 137 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  organization_id?: number;
+}
