@@ -3,7 +3,31 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+// Laravel ChatNewsCategoryStoreRequest — name.uz required, name.ru/en nullable.
+export class CategoryNameDto {
+  @ApiProperty({ example: 'Yangiliklar' })
+  @IsString()
+  uz!: string;
+
+  @ApiPropertyOptional({ example: 'Новости' })
+  @IsOptional()
+  @IsString()
+  ru?: string;
+
+  @ApiPropertyOptional({ example: 'News' })
+  @IsOptional()
+  @IsString()
+  en?: string;
+}
 
 export class CategoryListQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1 })
@@ -23,23 +47,12 @@ export class CategoryListQueryDto {
 }
 
 /**
- * POST/PUT body. Laravel: { name: { uz, ru?, en? } } ham, flat ham.
- * Frontend ikkala variantni yuborishi mumkin — biz quyidagicha qabul qilamiz:
- *   - `name` (uz uchun majburiy)
- *   - `name_ru`, `name_en` (ixtiyoriy, default `name`)
+ * POST/PUT body — Laravel ChatNewsCategoryStoreRequest: { name: { uz, ru?, en? } }.
+ * `name` jsonb sifatida obyekt ko'rinishida saqlanadi.
  */
 export class UpsertCategoryDto {
-  @ApiProperty({ example: 'Yangiliklar' })
-  @IsString()
-  name!: string;
-
-  @ApiPropertyOptional({ example: 'Новости' })
-  @IsOptional()
-  @IsString()
-  name_ru?: string;
-
-  @ApiPropertyOptional({ example: 'News' })
-  @IsOptional()
-  @IsString()
-  name_en?: string;
+  @ApiProperty({ type: CategoryNameDto })
+  @ValidateNested()
+  @Type(() => CategoryNameDto)
+  name!: CategoryNameDto;
 }
