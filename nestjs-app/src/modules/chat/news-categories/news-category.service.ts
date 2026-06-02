@@ -1,7 +1,7 @@
 // Chat news categories service. Laravel: ChatNewsCategoryService.
 
 import { Injectable } from '@nestjs/common';
-import { count, desc, eq, sql } from 'drizzle-orm';
+import { count, eq, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -11,6 +11,13 @@ import type {
   CategoryListQueryDto,
   UpsertCategoryDto,
 } from '@/modules/chat/news-categories/dto/category.dto';
+
+// Carbon toDateTimeString() — "Y-m-d H:i:s".
+function toDateTimeString(v: string | null): string | null {
+  if (!v) return null;
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(v);
+  return m ? `${m[1]} ${m[2]}` : v;
+}
 
 @Injectable()
 export class ChatNewsCategoryService {
@@ -23,12 +30,12 @@ export class ChatNewsCategoryService {
     const offset = (page - 1) * perPage;
     const where = notDeleted(chat_news_categories);
 
+    // Laravel ChatNewsCategory::paginate — orderBy YO'Q (natural order).
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select()
         .from(chat_news_categories)
         .where(where)
-        .orderBy(desc(chat_news_categories.id))
         .limit(perPage)
         .offset(offset),
       this.db
@@ -37,11 +44,15 @@ export class ChatNewsCategoryService {
         .where(where),
     ]);
 
+    // ChatNewsCategoryResource — {id, name (array cast), created_at (Y-m-d H:i:s)}.
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: rows,
+      data: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        created_at: toDateTimeString(r.created_at),
+      })),
     };
   }
 
