@@ -50,7 +50,7 @@ import {
 } from '@/modules/economist/_shared/code-groups';
 import { getCodeNames } from '@/modules/economist/_shared/code-names';
 import { ExcelService } from '@/shared/excel/excel.service';
-import { HEADER_BLUE, HEADER_GRAY, FMT } from '@/shared/excel/style-presets';
+import { HEADER_BLUE, FMT } from '@/shared/excel/style-presets';
 import type { ExcelHeaderRow } from '@/shared/excel/types';
 
 // O'zbek tilidagi oylar (Excel sarlavhalar uchun).
@@ -624,16 +624,18 @@ export class StatementService {
   }
 
   // GET /api/v1/economist/statements-by-positions — Excel eksport uchun ma'lumot.
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async byPositions(q: PageQueryLike) {
+
+  // GET /api/v1/economist/statements-by-positions — Laravel
+  // downloadWorkersByPositions → StatementsByPositionJob. UserExportTask + fonda
+  // Excel (javob faqat success xabari).
+  async byPositions(q: PageQueryLike): Promise<void> {
     const year =
       q?.year !== undefined ? Number(q.year) : new Date().getFullYear();
-    // Eksport uchun haqiqiy data — Excel endpoint orqali yuklanadi.
-    return {
-      year,
-      message:
-        'Use GET /statements-export-by-position?year=Y for Excel download',
-    };
+    await this.exportRunner.run({
+      type: 27, // ExportTaskEnum.STATEMENTS_BY_POSITIONS
+      folder: 'economist',
+      build: () => this.exportByPosition(year),
+    });
   }
 
   // GET /api/v1/economist/statement-example — namuna Excel URL.
@@ -696,9 +698,25 @@ export class StatementService {
       item.months[r.month] = (item.months[r.month] ?? 0) + r.total_four;
     }
 
+    // Org nomlari (real, batch) — `Org #N` placeholder o'rniga.
+    const orgIds = [
+      ...new Set(
+        [...byPin.values()]
+          .map((w) => w.organization_id)
+          .filter((x): x is number => x != null),
+      ),
+    ];
+    const orgRows = orgIds.length
+      ? await this.db
+          .select({ id: organizations.id, name: organizations.name })
+          .from(organizations)
+          .where(inArray(organizations.id, orgIds))
+      : [];
+    const orgMap = new Map(orgRows.map((o) => [o.id, o.name]));
+
     const excelRows = Array.from(byPin.values()).map((w) => {
       const row: Record<string, unknown> = {
-        organization: `Org #${w.organization_id}`,
+        organization: orgMap.get(w.organization_id) ?? null,
         full_name: w.full_name ?? '-',
         position: w.position ?? '-',
         pin: w.pin?.toString() ?? '-',
@@ -825,8 +843,8 @@ export class StatementService {
       }
       g.orgs.push({
         organization_id: r.organization_id,
-        organization_name:
-          orgMap.get(r.organization_id) ?? `Org #${r.organization_id}`,
+        // Laravel MultiStatementWorkersExport: $org['organization'] ?? '' (real nom).
+        organization_name: orgMap.get(r.organization_id) ?? '',
         position: r.position,
         salary: r.total_four,
       });
@@ -1126,68 +1144,129 @@ export class StatementService {
   }
 
   /**
-   * StatementYearCodesExport — yillik pivot jadval: F.I.SH × code × month.
-   * 2-qator sarlavha (top: kod, bottom: oy).
+   * POST /api/v1/economist/statements-export-with-codes-by-year — Laravel
+   * StatementExportByYearWithCodesJob. UserExportTask + fonda yillik pivot Excel.
+   */
+  async exportWithCodesByYear(body: {
+    year: number | string;
+    type: string;
+    codes?: string[];
+  }): Promise<void> {
+    await this.exportRunner.run({
+      type: 33, // ExportTaskEnum.STATEMENT_WITH_CODES_BY_YEAR
+      folder: 'statements',
+      build: () =>
+        this.exportYearCodes(Number(body.year), body.type, body.codes ?? []),
+    });
+  }
+
+  /**
+   * StatementYearCodesExport — yillik pivot: FIO × (kod|total_four) × oy.
+   * 2-qatorli sarlavha (top: kod/total_four, bottom: oy nomi).
    */
   async exportYearCodes(
     year: number,
-    codes: string[] = ['total_four'],
+    type: string,
+    codes: string[],
   ): Promise<Buffer> {
-    const rows = await this.db
-      .select({
-        pin: statements.pin,
-        full_name: statements.full_name,
-        position: statements.position,
-        organization_id: statements.organization_id,
-        month: statements.month,
-        total_four: statements.total_four,
-      })
+    const isCode = type === 'code';
+    const groups = isCode ? codes : ['total_four'];
+
+    // Laravel filter($user) — rol org-scope.
+    const inScope = await this.scope.whereOrg(statements.organization_id, {});
+    // type=code → OR s_<code> > 0; aks holda total_four > 0.
+    const filterCond = isCode
+      ? or(...codes.map((c) => sql`${sql.identifier('s_' + c)} > 0`))
+      : sql`${statements.total_four} > 0`;
+    const conds: SQL[] = [notDeleted(statements), eq(statements.year, year)];
+    if (inScope) conds.push(inScope);
+    if (filterCond) conds.push(filterCond);
+
+    // Dinamik select (s_<code>... yoki total_four).
+    const stmtCols = statements as unknown as Record<string, PgColumn>;
+    const sel: Record<string, PgColumn> = {
+      full_name: statements.full_name,
+      position: statements.position,
+      organization_id: statements.organization_id,
+      month: statements.month,
+    };
+    if (isCode) for (const c of codes) sel['s_' + c] = stmtCols['s_' + c];
+    else sel['total_four'] = statements.total_four;
+    const rows = (await this.db
+      .select(sel)
       .from(statements)
-      .where(and(notDeleted(statements), eq(statements.year, year)))
-      .orderBy(statements.organization_id, statements.full_name);
+      .where(and(...conds))
+      .orderBy(statements.organization_id, statements.full_name)) as Array<
+      Record<string, unknown>
+    >;
 
     type WorkerYear = {
-      pin: number | null;
       full_name: string | null;
       position: string | null;
-      organization_id: number;
+      organization_id: number | null;
       values: Record<string, Record<number, number>>;
     };
-    const byPin = new Map<string, WorkerYear>();
+    // Laravel ->groupBy('full_name').
+    const byName = new Map<string, WorkerYear>();
     for (const r of rows) {
-      const key = String(r.pin ?? r.full_name ?? Math.random());
-      let w = byPin.get(key);
+      const key = String((r.full_name as string | null) ?? '');
+      let w = byName.get(key);
       if (!w) {
         w = {
-          pin: r.pin,
-          full_name: r.full_name,
-          position: r.position,
-          organization_id: r.organization_id,
+          full_name: r.full_name as string | null,
+          position: r.position as string | null,
+          organization_id: r.organization_id as number | null,
           values: {},
         };
-        byPin.set(key, w);
+        byName.set(key, w);
       }
-      for (const code of codes) {
-        if (!w.values[code]) w.values[code] = {};
-        w.values[code][r.month] = (w.values[code][r.month] ?? 0) + r.total_four;
+      const month = Number(r.month);
+      for (const g of groups) {
+        const val = Number(isCode ? r['s_' + g] : r.total_four) || 0;
+        if (!w.values[g]) w.values[g] = {};
+        w.values[g][month] = (w.values[g][month] ?? 0) + val;
       }
     }
 
-    const top: (string | number)[] = ['F.I.SH', 'Lavozim', 'Tashkilot'];
+    // Org nomlari (Laravel organization?->name — haqiqiy `name`, batch).
+    const orgIds = [
+      ...new Set(
+        [...byName.values()]
+          .map((w) => w.organization_id)
+          .filter((x): x is number => x != null),
+      ),
+    ];
+    const orgs = orgIds.length
+      ? await this.db
+          .select({ id: organizations.id, name: organizations.name })
+          .from(organizations)
+          .where(inArray(organizations.id, orgIds))
+      : [];
+    const orgMap = new Map(orgs.map((o) => [o.id, o.name]));
+
+    // 2-qatorli sarlavha (Laravel StatementYearCodesExport): top FIO/Lavozim/
+    // Tashkilot + (kod|total_four) har oy; bottom — oy nomlari.
+    const top: (string | number)[] = ['FIO', 'Lavozim', 'Tashkilot'];
     const bottom: (string | number)[] = ['', '', ''];
-    for (const code of codes) {
+    const columns = [
+      { header: 'FIO', key: 'full_name', width: 28 },
+      { header: 'Lavozim', key: 'position', width: 22 },
+      { header: 'Tashkilot', key: 'organization', width: 22 },
+    ];
+    for (const g of groups) {
       for (let m = 1; m <= 12; m++) {
-        top.push(code);
+        top.push(g);
         bottom.push(MONTHS_UZ[m - 1]);
+        columns.push({ header: '', key: `${g}_m${m}`, width: 12 });
       }
     }
 
     const headerMergesTop: string[] = ['A1:A2', 'B1:B2', 'C1:C2'];
     let col = 4;
-    for (let i = 0; i < codes.length; i++) {
-      const startLetter = this.colLetter(col);
-      const endLetter = this.colLetter(col + 11);
-      headerMergesTop.push(`${startLetter}1:${endLetter}1`);
+    for (let i = 0; i < groups.length; i++) {
+      headerMergesTop.push(
+        `${this.colLetter(col)}1:${this.colLetter(col + 11)}1`,
+      );
       col += 12;
     }
 
@@ -1195,37 +1274,23 @@ export class StatementService {
       {
         values: top,
         merges: headerMergesTop,
-        style: HEADER_BLUE,
+        style: { bold: true },
         height: 26,
       },
-      {
-        values: bottom,
-        style: HEADER_GRAY,
-        height: 22,
-      },
+      { values: bottom, style: { bold: true }, height: 22 },
     ];
 
-    const columns = [
-      { header: 'F.I.SH', key: 'full_name', width: 28 },
-      { header: 'Lavozim', key: 'position', width: 22 },
-      { header: 'Tashkilot', key: 'organization', width: 22 },
-    ];
-    for (const code of codes) {
-      for (let m = 1; m <= 12; m++) {
-        columns.push({ header: '', key: `${code}_m${m}`, width: 12 });
-      }
-    }
-
-    const excelRows = Array.from(byPin.values()).map((w) => {
+    const excelRows = [...byName.values()].map((w) => {
       const row: Record<string, unknown> = {
-        full_name: w.full_name ?? '-',
-        position: w.position ?? '-',
-        organization: `Org #${w.organization_id}`,
+        full_name: w.full_name,
+        position: w.position,
+        organization:
+          w.organization_id != null
+            ? (orgMap.get(w.organization_id) ?? null)
+            : null,
       };
-      for (const code of codes) {
-        for (let m = 1; m <= 12; m++) {
-          row[`${code}_m${m}`] = w.values[code]?.[m] ?? 0;
-        }
+      for (const g of groups) {
+        for (let m = 1; m <= 12; m++) row[`${g}_m${m}`] = w.values[g]?.[m] ?? 0;
       }
       return row;
     });
@@ -1234,7 +1299,7 @@ export class StatementService {
       creator: 'HRM Economist',
       sheets: [
         {
-          name: `Year ${year}`,
+          name: 'Worksheet',
           columns,
           rows: excelRows,
           headerRows,

@@ -237,11 +237,23 @@ export class ExportWithCodesDto {
  */
 export class ExportWithCodesByYearDto {
   @ApiProperty({ example: 2025 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Min(2010)
   @Max(2030)
   year!: number;
+
+  // Laravel: 'type' => required|string ('code' → s_<code>, aks holda total_four)
+  @ApiProperty({ example: 'code' })
+  @IsString()
+  type!: string;
+
+  @ApiPropertyOptional({ type: [String], example: ['002', '003'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  codes?: string[];
 }
 
 /**

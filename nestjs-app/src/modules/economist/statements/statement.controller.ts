@@ -118,9 +118,11 @@ export class StatementController {
   }
 
   @Get('statements-by-positions')
-  @ApiOperation({ summary: 'Workers grouped by positions (export trigger)' })
+  @ApiOperation({ summary: 'Workers by positions — background export task' })
   async byPositions(@Query() q: ByPositionsQueryDto) {
-    return buildSuccess(true, await this.service.byPositions(q));
+    // Laravel downloadWorkersByPositions — UserExportTask + fonda Excel.
+    await this.service.byPositions(q);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   // --- example ---
@@ -148,21 +150,13 @@ export class StatementController {
   }
 
   @Post('statements-export-with-codes-by-year')
-  @RawResponse()
-  @Header('Content-Type', XLSX_MIME)
-  @ApiOperation({ summary: 'Export statements with codes grouped by year' })
-  async exportWithCodesByYear(
-    @Body() body: ExportWithCodesByYearDto,
-    @Res() res: Response,
-  ) {
-    const buffer = await this.service.exportYearCodes(body.year, [
-      'total_four',
-    ]);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="statements-codes-year-${body.year}.xlsx"`,
-    );
-    res.end(buffer);
+  @HttpCode(200) // Laravel Helper::response — async task, 200
+  @ApiOperation({
+    summary: 'Export statements with codes by year — background task',
+  })
+  async exportWithCodesByYear(@Body() body: ExportWithCodesByYearDto) {
+    await this.service.exportWithCodesByYear(body);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   @Get('statements-export-by-position')
