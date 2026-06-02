@@ -38,18 +38,22 @@ export class ChatNotificationController {
   @Post('send')
   @ApiOperation({ summary: 'Send notification to a single user' })
   async send(@Body() dto: SendNotificationDto) {
+    await this.service.send(dto);
+    // Laravel — faqat success message (data yo'q).
     return buildSuccess(
       this.i18n.t('messages.chat.notifications.send_success'),
-      await this.service.send(dto),
+      [],
     );
   }
 
   @Post('send-batch')
   @ApiOperation({ summary: 'Send notification to multiple users' })
   async sendBatch(@Body() dto: SendBatchNotificationDto) {
+    await this.service.sendBatch(dto);
+    // Laravel — faqat success message (data yo'q).
     return buildSuccess(
       this.i18n.t('messages.chat.notifications.send_success'),
-      await this.service.sendBatch(dto),
+      [],
     );
   }
 }

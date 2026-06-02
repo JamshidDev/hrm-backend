@@ -228,13 +228,15 @@ export class ChatNotificationService {
     >,
     senderId: number | null,
   ) {
+    // Laravel UserMessageNotification.data — {title, message, type, alert, action}.
+    // sender_id alohida ustunda saqlanadi (data ichida emas).
+    void senderId;
     return {
       title: dto.title,
       message: dto.message,
       type: dto.type,
       alert: dto.alert ?? 'info',
       action: dto.action ?? [],
-      sender_id: senderId,
     };
   }
 }
