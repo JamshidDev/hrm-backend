@@ -97,7 +97,11 @@ export class StatementController {
   @Get('statement-decoding')
   @ApiOperation({ summary: 'Statement decoding by codes (yearly pivot)' })
   async decoding(@Query() q: StatementDecodingQueryDto) {
-    return buildSuccess(true, await this.service.decoding(q));
+    const result = await this.service.decoding(q);
+    // Laravel: is_string($result) → Helper::response($result) ({message}); aks holda data.
+    return typeof result === 'string'
+      ? buildSuccess(result, [])
+      : buildSuccess(true, result);
   }
 
   @Get('statement-decoding-organizations')

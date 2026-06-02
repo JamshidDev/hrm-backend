@@ -98,6 +98,12 @@ export class StatementDecodingQueryDto extends YearOnlyQueryDto {
   @IsOptional()
   @IsString()
   lang?: string;
+
+  // Laravel: 'download' => nullable — mavjud bo'lsa Excel export (async task).
+  @ApiPropertyOptional({ description: 'Mavjud bo`lsa — Excel export trigger' })
+  @IsOptional()
+  @IsString()
+  download?: string;
 }
 
 /**

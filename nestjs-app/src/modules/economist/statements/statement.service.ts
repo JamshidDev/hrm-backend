@@ -48,7 +48,10 @@ import {
   TOTAL_FOUR_COLUMNS,
   TOTAL_FIVE_COLUMNS,
 } from '@/modules/economist/_shared/code-groups';
-import { getCodeNames } from '@/modules/economist/_shared/code-names';
+import {
+  getCodeNames,
+  getCodeNamesOrdered,
+} from '@/modules/economist/_shared/code-names';
 import { ExcelService } from '@/shared/excel/excel.service';
 import { HEADER_BLUE, FMT } from '@/shared/excel/style-presets';
 import type { ExcelHeaderRow } from '@/shared/excel/types';
@@ -315,24 +318,24 @@ export class StatementService {
     month?: string | number;
     organizations?: string;
     lang?: string;
-  }) {
+    download?: string;
+  }): Promise<DecodingRow[] | string> {
     const year =
       q?.year !== undefined ? Number(q.year) : new Date().getFullYear();
-    const lang = q?.lang ?? 'uz';
+    // Laravel: trans()/names() app locale (Accept-Language) ishlatadi, `?lang` emas.
+    const lang = this.ctx.lang;
 
-    // Laravel StatementAggregate::filter → QueryHelper::filterByOrganizations —
-    // `organizations` (vergulli ID'lar) bo'yicha filtr. `month` esa decode()'da
-    // ishlatilmaydi (faqat 12 oyning hammasi pivotlanadi).
-    const conds = [eq(statement_aggregates.year, year)];
-    if (q.organizations) {
-      const ids = q.organizations
-        .split(',')
-        .map((s) => Number(s.trim()))
-        .filter((n) => !Number.isNaN(n));
-      if (ids.length) {
-        conds.push(inArray(statement_aggregates.organization_id, ids));
-      }
-    }
+    // Laravel StatementAggregate::filter($user, $filters) → rol org-scope +
+    // organizations csv. `month` decode()'da ishlatilmaydi (12 oy pivot).
+    const inScope = await this.scope.whereOrg(
+      statement_aggregates.organization_id,
+      { organizations: q.organizations },
+    );
+    const conds: SQL[] = [
+      notDeleted(statement_aggregates),
+      eq(statement_aggregates.year, year),
+    ];
+    if (inScope) conds.push(inScope);
 
     // 1. statement_aggregates'dan har month × code uchun SUM
     const rows = await this.db
@@ -358,9 +361,6 @@ export class StatementService {
     const minusTwoCodes = new Set([...TOTAL_TWO_COLUMNS].map(Number));
     const holdCodes = new Set([...TOTAL_FIVE_COLUMNS].map(Number));
 
-    // 4. Kod nomlari
-    const names = getCodeNames(lang);
-
     // 5. Har guruh uchun rows + sums
     const plusList: DecodingRow[] = [];
     const minusOneList: DecodingRow[] = [];
@@ -375,8 +375,8 @@ export class StatementService {
       hold: this.initSums(),
     };
 
-    // 6. Barcha kodlar bo'yicha aylanish
-    for (const [codeStr, name] of Object.entries(names)) {
+    // 6. Barcha kodlar bo'yicha aylanish — Laravel paymentTypes (lug'at tartibi).
+    for (const [codeStr, name] of getCodeNamesOrdered(lang)) {
       const code = Number(codeStr);
       const row: DecodingRow = {
         type_name: name,
@@ -409,43 +409,115 @@ export class StatementService {
       }
     }
 
-    // 7. Header qatorlar + sub-total
-    const headerRow = this.buildHeaderRow(year);
-    const monthRow = this.buildMonthRow();
+    // 7. Laravel StatementDecodingService::decode yig'ilishi — i18n labellar.
+    const t = (k: string): string =>
+      this.i18n.t(`messages.economist.statement.decoding.${k}`, { lang });
+    const MONTHS_LOWER = [
+      'yanvar',
+      'fevral',
+      'mart',
+      'aprel',
+      'may',
+      'iyun',
+      'iyul',
+      'avgust',
+      'sentyabr',
+      'oktyabr',
+      'noyabr',
+      'dekabr',
+    ];
 
-    const finalPlus = [
+    // initHeaderRow: type_name=four, type_code=five, 1=year, 2..12=' ', total=in_year.
+    const headerRow: DecodingRow = {
+      type_name: t('four'),
+      type_code: t('five'),
+    };
+    headerRow['1'] = String(year);
+    for (let m = 2; m <= 12; m++) headerRow[String(m)] = ' ';
+    headerRow.total_year = t('in_year');
+
+    // initEmptyMonthRow: 1..12 = oy nomi (kichik harf), qolgani ' '.
+    const monthRow: DecodingRow = { type_name: '', type_code: ' ' };
+    for (let m = 1; m <= 12; m++) monthRow[String(m)] = MONTHS_LOWER[m - 1];
+    monthRow.total_year = ' ';
+
+    // initEmptyRow: section sarlavhasi (barcha katak ' ').
+    const sectionRow = (typeName: string): DecodingRow => {
+      const r: DecodingRow = { type_name: typeName, type_code: ' ' };
+      for (let m = 1; m <= 12; m++) r[String(m)] = ' ';
+      r.total_year = ' ';
+      return r;
+    };
+
+    const result: DecodingRow[] = [
       headerRow,
       monthRow,
-      this.groupTitle('Hisoblangan'),
+      sectionRow(t('one')),
       ...plusList,
-      this.summaryRow(sums.plus),
-    ];
-    const finalMinusOne = [
-      this.groupTitle('Ushlanmalar (1-guruh)'),
+      this.summaryRow(sums.plus, t('six')),
+      sectionRow(t('two')),
       ...minusOneList,
-      this.summaryRow(sums.minus_one),
-    ];
-    const finalMinusTwo = [
-      this.groupTitle('Ushlanmalar (2-guruh)'),
+      this.summaryRow(sums.minus_one, t('six')),
+      sectionRow(t('eight')),
       ...minusTwoList,
-      this.summaryRow(sums.minus_two),
-      // Kombinatsiya qatorlari
+      this.summaryRow(sums.minus_two, t('six')),
       this.combinedRow(
-        'Ushlanmalar jami',
+        t('seven'),
         this.sumOfSums(sums.minus_one, sums.minus_two),
       ),
       this.combinedRow(
-        'Yakuniy jami',
+        t('nine'),
         this.sumOfSums(sums.plus, sums.minus_one, sums.minus_two),
       ),
-    ];
-    const finalHold = [
-      this.groupTitle('Saqlanmalar'),
+      sectionRow(t('three')),
       ...holdList,
-      this.summaryRow(sums.hold),
+      this.summaryRow(sums.hold, t('six')),
     ];
 
-    return [...finalPlus, ...finalMinusOne, ...finalMinusTwo, ...finalHold];
+    // Laravel: array_key_exists('download') → UserExportTask + fonda Excel,
+    // javob faqat success xabari (string). Aks holda matritsa.
+    if (q.download !== undefined) {
+      await this.exportRunner.run({
+        type: 15, // ExportTaskEnum.STATEMENTS_WITH_CODES
+        folder: 'statements',
+        build: () => this.buildDecodingExcel(result),
+      });
+      return this.i18n.t('messages.successfully_exported', { lang });
+    }
+
+    return result;
+  }
+
+  /** StatementDecodingByMonthExport — decode matritsasini Excel'ga (FromArray). */
+  private buildDecodingExcel(rows: DecodingRow[]): Promise<Buffer> {
+    const keys = [
+      'type_name',
+      'type_code',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      '11',
+      '12',
+      'total_year',
+    ];
+    const columns = keys.map((k) => ({ header: k, key: k, width: 16 }));
+    return this.excel.build({
+      creator: 'HRM Economist',
+      sheets: [
+        {
+          name: 'Worksheet',
+          columns,
+          rows: rows,
+        },
+      ],
+    });
   }
 
   /**
@@ -1315,11 +1387,12 @@ export class StatementService {
    * Real `decoding()` natijasidan foydalanadi.
    */
   async exportDecodingByMonth(year: number, lang = 'uz'): Promise<Buffer> {
-    // decoding() bilan bir xil ma'lumot — endi haqiqiy
-    const decodingRows = await this.decoding({ year, lang });
+    // decoding() endi DecodingRow[] | string (download holati) qaytaradi —
+    // bu yerda download yo'q, lekin tip uchun guard.
+    const res = await this.decoding({ year, lang });
+    const decodingRows: DecodingRow[] = Array.isArray(res) ? res : [];
 
     // Excel uchun: filterlangan rows (faqat real ma'lumot bor qatorlar).
-    // `DecodingRow` shape: `{ type_name, type_code, 1..12, total_year }`.
     const dataRows: DecodingRow[] = decodingRows.filter(
       (r) => r.type_name && r.type_code,
     );
@@ -1399,8 +1472,12 @@ export class StatementService {
     return combined;
   }
 
-  private summaryRow(sums: { monthly: number[]; total: number }): DecodingRow {
-    const row: DecodingRow = { type_name: 'Jami', type_code: '' };
+  private summaryRow(
+    sums: { monthly: number[]; total: number },
+    label: string,
+  ): DecodingRow {
+    // Laravel appendSummaryRow: type_name=six, type_code=' '.
+    const row: DecodingRow = { type_name: label, type_code: ' ' };
     for (let m = 1; m <= 12; m++) {
       row[String(m)] = this.fmt(sums.monthly[m] ?? 0);
     }
@@ -1412,26 +1489,13 @@ export class StatementService {
     label: string,
     sums: { monthly: number[]; total: number },
   ): DecodingRow {
-    const row: DecodingRow = { type_name: label, type_code: '' };
+    // Laravel createCombined*Row: type_code=' '.
+    const row: DecodingRow = { type_name: label, type_code: ' ' };
     for (let m = 1; m <= 12; m++) {
       row[String(m)] = this.fmt(sums.monthly[m] ?? 0);
     }
     row.total_year = this.fmt(sums.total);
     return row;
-  }
-
-  private buildHeaderRow(year: number): DecodingRow {
-    const row: DecodingRow = {
-      type_name: `${year} yil`,
-      type_code: 'Kod',
-    };
-    for (let m = 1; m <= 12; m++) row[String(m)] = MONTHS_UZ[m - 1] ?? '';
-    row.total_year = 'Jami';
-    return row;
-  }
-
-  private buildMonthRow(): DecodingRow {
-    return { type_name: '', type_code: '' };
   }
 
   private groupTitle(label: string): DecodingRow {

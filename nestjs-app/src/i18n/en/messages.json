@@ -373,7 +373,19 @@
       "total_two": "Payments not included in income structure",
       "total_three": "Types of payments not included in the wage fund",
       "total_four": "Total wage",
-      "total_five": "Deductions from wages"
+      "total_five": "Deductions from wages",
+      "decoding": {
+        "one": "Wage fund reflected in the 1-T report",
+        "two": "Payments not included in the wage fund",
+        "three": "Deductions from salary",
+        "four": "Payment type names",
+        "five": "Type",
+        "six": "Total",
+        "seven": "Overall",
+        "eight": "Payments not included in income",
+        "nine": "Calculated total salary",
+        "in_year": "From the beginning of the year"
+      }
     },
     "tax_four": {
       "reported_salary_income": "Wage-type income during the reporting period",
