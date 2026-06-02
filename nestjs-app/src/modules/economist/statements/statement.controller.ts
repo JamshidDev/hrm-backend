@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   Header,
+  HttpCode,
   Param,
   ParseIntPipe,
   Post,
@@ -134,20 +135,16 @@ export class StatementController {
   // ============================================================
 
   @Post('statements-export-with-codes')
-  @RawResponse()
-  @Header('Content-Type', XLSX_MIME)
-  @ApiOperation({ summary: 'Export statements with codes (pivot Excel)' })
-  async exportWithCodes(
-    @Body() body: ExportWithCodesDto,
-    @Res() res: Response,
-  ) {
-    const codes = body.codes ?? ['total_four'];
-    const buffer = await this.service.exportYearCodes(body.year, codes);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="statements-codes-${body.year}.xlsx"`,
-    );
-    res.end(buffer);
+  @HttpCode(200) // Laravel Helper::response — async task, 200
+  @ApiOperation({
+    summary:
+      'Export statements with codes — background task (workers/organizations)',
+  })
+  async exportWithCodes(@Body() body: ExportWithCodesDto) {
+    // Laravel: UserExportTask yaratadi + fonda job (by-workers / by-organizations),
+    // javob faqat success xabari.
+    await this.service.exportWithCodes(body);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   @Post('statements-export-with-codes-by-year')

@@ -90,20 +90,26 @@ export async function paginateByYearMonth<T extends PaginatableTable>(
   if (q.month !== undefined) conds.push(eq(table.month, Number(q.month)));
   const where = and(...conds);
   const t = table as PgTable;
-  const [rows, [{ total }]] = await Promise.all([
-    db
-      .select()
-      .from(t)
-      .where(where)
-      .orderBy(desc(table.id))
-      .limit(perPage)
-      .offset(offset),
-    db.select({ total: count() }).from(t).where(where),
-  ]);
+
+  // Laravel paginate() — AVVAL count; total=0 bo'lsa items query UMUMAN
+  // ishlamaydi. Aks holda `ORDER BY id DESC LIMIT n` bo'sh natijada (masalan
+  // ma'lumot yo'q oy) butun id-indeksni teskari skan qiladi → so'rov osilib
+  // qoladi. Shu sabab parallel emas: count → (>0 bo'lsa) items.
+  const [{ total }] = await db.select({ total: count() }).from(t).where(where);
+  const totalNum = Number(total);
+  const rows = totalNum
+    ? await db
+        .select()
+        .from(t)
+        .where(where)
+        .orderBy(desc(table.id))
+        .limit(perPage)
+        .offset(offset)
+    : [];
+  // Laravel PaginateResource — `per_page` javobda QAYTMAYDI.
   return {
     current_page: page,
-    per_page: perPage,
-    total: Number(total),
+    total: totalNum,
     data: rows,
   };
 }

@@ -5,7 +5,9 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Max,
@@ -195,22 +197,39 @@ export class UpdateStatementDto extends CreateStatementDto {}
  */
 export class ExportWithCodesDto {
   @ApiProperty({ example: 2025, minimum: 2010, maximum: 2030 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Min(2010)
   @Max(2030)
   year!: number;
 
-  @ApiPropertyOptional({
-    type: [String],
-    example: ['total_four'],
-    description: 'Eksport qilinadigan kodlar nomi',
-  })
-  @IsOptional()
+  @ApiProperty({ example: 5 })
+  @IsNotEmpty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty({ type: [String], example: ['002', '003'] })
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })
-  codes?: string[];
+  codes!: string[];
+
+  // Laravel: 'type' => required|string|in:organizations,workers
+  @ApiProperty({ enum: ['organizations', 'workers'], example: 'workers' })
+  @IsIn(['organizations', 'workers'])
+  type!: string;
+
+  @ApiPropertyOptional({
+    example: '140',
+    description: 'CSV org ids (by-organizations variant)',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
 }
 
 /**

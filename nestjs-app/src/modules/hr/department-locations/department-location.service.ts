@@ -1,13 +1,12 @@
 // DepartmentLocation service. Laravel: HR/DepartmentLocationController.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ilike, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { department_locations, departments, organizations } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
-import { notDeleted } from '@/common/database/soft-delete.helper';
 import {
   CreateDepartmentLocationDto,
   QueryDepartmentLocationDto,

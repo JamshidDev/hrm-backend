@@ -43,6 +43,9 @@
     "rejected_successful": "The document has been successfully cancelled"
   },
   "worker": {
+    "full_name": "Full Name",
+    "position": "Position",
+    "organization": "Organization",
     "med": {
       "one": "Healthy",
       "two": "Unhealthy"

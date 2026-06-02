@@ -2,6 +2,7 @@
 // Asosiy oylik hisobot yozuvlari (statements) ustida CRUD + extras + Excel eksport.
 
 import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import {
   and,
   asc,
@@ -114,6 +115,7 @@ export class StatementService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly exportRunner: ExportTaskRunner,
+    private readonly i18n: I18nService,
   ) {}
 
   // ============================================================
@@ -186,53 +188,65 @@ export class StatementService {
     const sortCol = SORT_COLUMNS[q.sort_by ?? 'id'] ?? statements.id;
     const dir = q.sort_order === 'asc' ? asc : desc;
 
-    const [rows, totalRes] = await Promise.all([
-      this.db
-        .select({
-          id: statements.id,
-          organization_id: statements.organization_id,
-          worker_id: statements.worker_id,
-          main_salary: statements.main_salary,
-          work_time: statements.work_time,
-          full_name: statements.full_name,
-          position: statements.position,
-          pin: statements.pin,
-          year: statements.year,
-          month: statements.month,
-          total_one: statements.total_one,
-          total_two: statements.total_two,
-          total_three: statements.total_three,
-          total_four: statements.total_four,
-          total_five: statements.total_five,
-          org_id: organizations.id,
-          org_name: organizations.name,
-          org_name_ru: organizations.name_ru,
-          org_name_en: organizations.name_en,
-          org_group: organizations.group,
-          w_id: workers.id,
-          w_last_name: workers.last_name,
-          w_first_name: workers.first_name,
-          w_middle_name: workers.middle_name,
-          w_photo: workers.photo,
-        })
-        .from(statements)
-        .leftJoin(
-          organizations,
-          and(
-            eq(organizations.id, statements.organization_id),
-            notDeleted(organizations),
-          ),
-        )
-        .leftJoin(
-          workers,
-          and(eq(workers.id, statements.worker_id), notDeleted(workers)),
-        )
-        .where(where)
-        .orderBy(dir(sortCol))
-        .limit(perPage)
-        .offset(offset),
-      this.db.select({ total: count() }).from(statements).where(where),
-    ]);
+    // Laravel paginate() — AVVAL count, total=0 bo'lsa items query UMUMAN
+    // ishlamaydi. Bizda ham shunday qilamiz: aks holda `ORDER BY id DESC LIMIT n`
+    // bo'sh natijada (masalan ma'lumot yo'q oy) butun id-indeksni teskari skan
+    // qiladi (~1.8M qator → so'rov osilib qoladi). Shu sabab parallel emas:
+    // count → (faqat >0 bo'lsa) items.
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(statements)
+      .where(where);
+    const totalNum = Number(total);
+    if (totalNum === 0) {
+      // Laravel PaginateResource — per_page YO'Q.
+      return { current_page: page, total: 0, data: [] };
+    }
+
+    const rows = await this.db
+      .select({
+        id: statements.id,
+        organization_id: statements.organization_id,
+        worker_id: statements.worker_id,
+        main_salary: statements.main_salary,
+        work_time: statements.work_time,
+        full_name: statements.full_name,
+        position: statements.position,
+        pin: statements.pin,
+        year: statements.year,
+        month: statements.month,
+        total_one: statements.total_one,
+        total_two: statements.total_two,
+        total_three: statements.total_three,
+        total_four: statements.total_four,
+        total_five: statements.total_five,
+        org_id: organizations.id,
+        org_name: organizations.name,
+        org_name_ru: organizations.name_ru,
+        org_name_en: organizations.name_en,
+        org_group: organizations.group,
+        w_id: workers.id,
+        w_last_name: workers.last_name,
+        w_first_name: workers.first_name,
+        w_middle_name: workers.middle_name,
+        w_photo: workers.photo,
+      })
+      .from(statements)
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, statements.organization_id),
+          notDeleted(organizations),
+        ),
+      )
+      .leftJoin(
+        workers,
+        and(eq(workers.id, statements.worker_id), notDeleted(workers)),
+      )
+      .where(where)
+      .orderBy(dir(sortCol))
+      .limit(perPage)
+      .offset(offset);
 
     const data = await Promise.all(
       rows.map((r) =>
@@ -241,7 +255,7 @@ export class StatementService {
     );
 
     // Laravel PaginateResource — per_page YO'Q.
-    return { current_page: page, total: Number(totalRes[0].total), data };
+    return { current_page: page, total: totalNum, data };
   }
 
   // GET /api/v1/economist/statements/{id} — bitta yozuv. Topilmasa 404.
@@ -871,6 +885,242 @@ export class StatementService {
           freezeHeader: true,
           merges,
         },
+      ],
+    });
+  }
+
+  // ============================================================
+  // statements-export-with-codes — Laravel async-task
+  //   type=workers       → flat jadval (DynamicExportFromArray)
+  //   type=organizations → tashkilotlar daraxti + kod summalari
+  // ============================================================
+
+  /**
+   * POST /api/v1/economist/statements-export-with-codes — Laravel
+   * StatementExportService::exportWithCodes. UserExportTask yaratadi + fonda
+   * type bo'yicha Excel quradi (javob faqat success xabari).
+   */
+  async exportWithCodes(body: {
+    year: number | string;
+    month: number | string;
+    codes: string[];
+    type: string;
+    organizations?: string;
+  }): Promise<void> {
+    const isOrg = body.type === 'organizations';
+    await this.exportRunner.run({
+      // ExportTaskEnum: STATEMENT_WITH_CODES_BY_ORGANIZATION=12, _BY_WORKERS=13
+      type: isOrg ? 12 : 13,
+      folder: 'statements',
+      build: () =>
+        isOrg
+          ? this.buildCodesByOrganization(body)
+          : this.buildCodesByWorkers(body),
+    });
+  }
+
+  /**
+   * Laravel StatementExportWithCodesByWorkersJob + DynamicExportFromArray.
+   * filter($user) (rol org-scope) + (OR s_<code> > 0) + year + month →
+   * flat qatorlar: {full_name, position, organization(real name), <code>: s_<code>}.
+   */
+  private async buildCodesByWorkers(body: {
+    year: number | string;
+    month: number | string;
+    codes: string[];
+  }): Promise<Buffer> {
+    const lang = this.ctx.lang;
+    const year = Number(body.year);
+    const month = Number(body.month);
+    const codes = body.codes;
+
+    const inScope = await this.scope.whereOrg(statements.organization_id, {});
+    const codeOr = or(
+      ...codes.map((c) => sql`${sql.identifier('s_' + c)} > 0`),
+    );
+    const conds: SQL[] = [
+      notDeleted(statements),
+      eq(statements.year, year),
+      eq(statements.month, month),
+    ];
+    if (inScope) conds.push(inScope);
+    if (codeOr) conds.push(codeOr);
+
+    // Dinamik select: full_name, position, organization_id, s_<code>...
+    const stmtCols = statements as unknown as Record<string, PgColumn>;
+    const sel: Record<string, PgColumn> = {
+      full_name: statements.full_name,
+      position: statements.position,
+      organization_id: statements.organization_id,
+    };
+    for (const c of codes) sel['s_' + c] = stmtCols['s_' + c];
+    const rows = (await this.db
+      .select(sel)
+      .from(statements)
+      .where(and(...conds))) as Array<Record<string, unknown>>;
+
+    // Org nomlari (Laravel organization?->name — haqiqiy `name`, batch).
+    const orgIds = [
+      ...new Set(rows.map((r) => Number(r.organization_id)).filter(Boolean)),
+    ];
+    const orgs = orgIds.length
+      ? await this.db
+          .select({ id: organizations.id, name: organizations.name })
+          .from(organizations)
+          .where(inArray(organizations.id, orgIds))
+      : [];
+    const orgMap = new Map(orgs.map((o) => [o.id, o.name]));
+
+    const data = rows.map((r) => {
+      const row: Record<string, unknown> = {
+        full_name: r.full_name,
+        position: r.position,
+        organization: orgMap.get(Number(r.organization_id)) ?? null,
+      };
+      for (const c of codes) row[c] = r['s_' + c] ?? 0;
+      return row;
+    });
+
+    // DynamicExportFromArray sarlavhalari: worker.* tarjima + raw kod, 1-qator bold.
+    const columns = [
+      {
+        header: this.i18n.t('messages.worker.full_name', { lang }),
+        key: 'full_name',
+        width: 30,
+      },
+      {
+        header: this.i18n.t('messages.worker.position', { lang }),
+        key: 'position',
+        width: 28,
+      },
+      {
+        header: this.i18n.t('messages.worker.organization', { lang }),
+        key: 'organization',
+        width: 28,
+      },
+      ...codes.map((c) => ({ header: c, key: c, width: 14 })),
+    ];
+    return this.excel.build({
+      creator: 'HRM Economist',
+      sheets: [
+        { name: 'Worksheet', columns, rows: data, headerStyle: { bold: true } },
+      ],
+    });
+  }
+
+  /**
+   * Laravel StatementExportWithCodesJob + StatementWithCodesByOrganizationExport.
+   * leaderOrganizations($user) (rol subtree) + organizations csv → tashkilotlar
+   * daraxti; har kod uchun statement_aggregates(year/month/code) summasi.
+   * Headings: ID, C-1..C-maxDepth, <codes>. (Outline/merge bezaklari soddalashtirilgan.)
+   */
+  private async buildCodesByOrganization(body: {
+    year: number | string;
+    month: number | string;
+    codes: string[];
+    organizations?: string;
+  }): Promise<Buffer> {
+    const year = Number(body.year);
+    const month = Number(body.month);
+    const codes = body.codes;
+
+    const scopeIds = await this.scope.ids();
+    let orgRows = scopeIds.length
+      ? await this.db
+          .select({
+            id: organizations.id,
+            name: organizations.name,
+            parent_id: organizations.parent_id,
+          })
+          .from(organizations)
+          .where(
+            and(notDeleted(organizations), inArray(organizations.id, scopeIds)),
+          )
+          .orderBy(asc(organizations._lft))
+      : [];
+
+    // Laravel: when(request('organizations')) → whereIn('id', csv).
+    if (body.organizations) {
+      const ids = new Set(
+        body.organizations
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter(Boolean),
+      );
+      orgRows = orgRows.filter((o) => ids.has(o.id));
+    }
+
+    // Per-code summalar: statement_aggregates(year/month/code) → sum(total_sum).
+    const orgIds = orgRows.map((o) => o.id);
+    const codeInts = codes.map((c) => Number(c));
+    const aggMap = new Map<string, number>();
+    if (orgIds.length && codeInts.length) {
+      const aggs = await this.db
+        .select({
+          organization_id: statement_aggregates.organization_id,
+          code: statement_aggregates.code,
+          total: sql<number>`COALESCE(SUM(${statement_aggregates.total_sum}), 0)`,
+        })
+        .from(statement_aggregates)
+        .where(
+          and(
+            notDeleted(statement_aggregates),
+            inArray(statement_aggregates.organization_id, orgIds),
+            eq(statement_aggregates.year, year),
+            eq(statement_aggregates.month, month),
+            inArray(statement_aggregates.code, codeInts),
+          ),
+        )
+        .groupBy(
+          statement_aggregates.organization_id,
+          statement_aggregates.code,
+        );
+      for (const a of aggs) {
+        aggMap.set(`${a.organization_id}:${a.code}`, Number(a.total));
+      }
+    }
+
+    // Daraxt (parent_id) + flatten: name faqat o'z levelida (name_level_N).
+    const idSet = new Set(orgIds);
+    const childrenOf = new Map<number | null, typeof orgRows>();
+    for (const o of orgRows) {
+      const p =
+        o.parent_id != null && idSet.has(o.parent_id) ? o.parent_id : null;
+      if (!childrenOf.has(p)) childrenOf.set(p, []);
+      childrenOf.get(p)!.push(o);
+    }
+    const flat: Array<{ id: number; level: number; name: string | null }> = [];
+    let maxDepth = 1;
+    const walk = (parentId: number | null, level: number): void => {
+      for (const o of childrenOf.get(parentId) ?? []) {
+        flat.push({ id: o.id, level, name: o.name });
+        maxDepth = Math.max(maxDepth, level);
+        walk(o.id, level + 1);
+      }
+    };
+    walk(null, 1);
+
+    const columns: { header: string; key: string; width?: number }[] = [
+      { header: 'ID', key: 'id', width: 8 },
+    ];
+    for (let i = 1; i <= maxDepth; i++) {
+      columns.push({ header: `C-${i}`, key: `name_level_${i}`, width: 28 });
+    }
+    for (const c of codes) columns.push({ header: c, key: c, width: 16 });
+
+    const data = flat.map((r) => {
+      const row: Record<string, unknown> = { id: r.id };
+      for (let i = 1; i <= maxDepth; i++) {
+        row[`name_level_${i}`] = i === r.level ? r.name : null;
+      }
+      codes.forEach((c) => (row[c] = aggMap.get(`${r.id}:${Number(c)}`) ?? 0));
+      return row;
+    });
+
+    return this.excel.build({
+      creator: 'HRM Economist',
+      sheets: [
+        { name: 'Worksheet', columns, rows: data, headerStyle: { bold: true } },
       ],
     });
   }
