@@ -6,7 +6,7 @@
 //     forward, generate-url, history, files.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, ne, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, createHash, randomBytes } from 'crypto';
@@ -31,6 +31,8 @@ import {
   vacation_schedule_confirmations,
   worker_application_confirmations,
   worker_applications,
+  staffing_approves,
+  staffing_approve_confirmations,
   users as usersTable,
   workers,
 } from '@/db/schema';
@@ -103,6 +105,13 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'sended_worker_id',
     label: 'Med',
     fqcn: 'Modules\\Med\\Models\\SendedWorker',
+  },
+  'staffing-approve': {
+    doc: staffing_approves,
+    conf: staffing_approve_confirmations,
+    fk: 'staffing_approve_id',
+    label: 'Staffing Approve',
+    fqcn: 'Modules\\Economist\\Models\\StaffingApprove',
   },
 };
 
@@ -246,8 +255,13 @@ export class DocumentService {
       .leftJoin(workers, eq(workers.id, confTable.worker_id))
       .where(and(eq(confTable[map.fk], doc.id), notDeleted(confTable)));
 
-    // Laravel sort: type-index (['s','w','d']) primary, order secondary.
-    const typeIdx = (t: string | null) => ['s', 'w', 'd'].indexOf(t ?? '');
+    // Laravel sort: $document->confirmations->sortBy('order')->sortBy(type-index).
+    // Type-index = array_search(type, ['s','w','d']) — topilmasa `false` (=0, 's' bilan teng),
+    // shuning uchun noma'lum tip (masalan staffing 'c'=confirmatory) -1 emas, 0 sifatida sort'lanadi.
+    const typeIdx = (t: string | null) => {
+      const i = ['s', 'w', 'd'].indexOf(t ?? '');
+      return i === -1 ? 0 : i;
+    };
     confRows.sort(
       (a, b) =>
         typeIdx(a.type) - typeIdx(b.type) || (a.order ?? 0) - (b.order ?? 0),

@@ -105,5 +105,16 @@ export class StructureTreeController {
     return this.service.confirmations(q.per_page, q.page);
   }
 
-  // TODO: parent-leaders — HR module (WorkerPosition) kerak.
+  // Laravel: StructureController::parentLeaders — `Helper::response(true, PaginateResource(...))`.
+  // Lead-position worker_positions ∈ ancestorsAndSelf(auth user org). organization_id/parent_id
+  // query'lari Laravel'da e'tiborsiz (org-scope auth user'dan).
+  @Get('parent-leaders')
+  @ApiOperation({
+    summary:
+      'Lead-position worker_positions within user org ancestors-and-self, paginated',
+  })
+  @ApiOkResponse()
+  async parentLeaders(@Query() q: StructureConfirmationsQueryDto) {
+    return this.service.parentLeaders(q.per_page, q.page);
+  }
 }

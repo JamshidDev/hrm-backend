@@ -1,10 +1,11 @@
-// Structure tree views. Laravel: StructureController::index/all/parents/...
+// Structure tree views. Laravel: StructureController::index/all/parents/confirmations/parentLeaders.
 //
-// Hozirgi qamrov:
-//   - all      — barcha organizations tree (OrganizationChildResource recursive).
-//   - parents  — user.organization_id ancestorsAndSelf chain (OrganizationListResource).
-//
-// Skip (HR modul kerak): index, leaders, parent-leaders, confirmations.
+// Qamrov:
+//   - index          — `/structure` (rol-asosli org tree: admin/leader/own).
+//   - all            — barcha organizations tree (OrganizationChildResource recursive).
+//   - parents        — user.organization_id ancestorsAndSelf chain (OrganizationListResource).
+//   - confirmations  — lead-lavozim worker_position'lar (org-scopesiz), WorkerPositionMinimalResource.
+//   - parentLeaders  — lead-lavozim worker_position'lar ∈ ancestorsAndSelf(user org).
 
 import { Injectable } from '@nestjs/common';
 import {
@@ -14,10 +15,12 @@ import {
   count,
   eq,
   gt,
+  gte,
   ilike,
   inArray,
   isNull,
   lt,
+  lte,
   or,
   type SQL,
 } from 'drizzle-orm';
@@ -280,15 +283,71 @@ export class StructureTreeService {
    * NestJS ham organization_id'ni e'tiborsiz qoldiradi.
    */
   async confirmations(perPage?: number, page?: number) {
+    return this.listLeadPositions(perPage ?? 50, page ?? 1);
+  }
+
+  /**
+   * Laravel: StructureController::parentLeaders — `/api/v1/structure/parent-leaders`.
+   *
+   * $orgIds = Organization::ancestorsAndSelf($user->organization_id)->select('id');
+   * WorkerPosition::whereIn('position_id', $leadIds)->whereIn('organization_id', $orgIds)
+   *   ->with([worker, organization, department, position])->paginate(per_page ?? 50)
+   *   → PaginateResource(WorkerPositionMinimalResource).
+   *
+   * Diqqat: Laravel `organization_id`/`parent_id` query'sini E'TIBORGA OLMAYDI — org-scope
+   * AUTH foydalanuvchining organization_id ancestorsAndSelf (ajdodlar + o'zi) zanjiri bo'yicha.
+   */
+  async parentLeaders(perPage?: number, page?: number) {
+    const orgId = this.ctx.user?.organization_id;
+    if (!orgId) return { current_page: page ?? 1, total: 0, data: [] };
+    const orgIds = await this.getAncestorAndSelfOrgIds(orgId);
+    return this.listLeadPositions(perPage ?? 50, page ?? 1, orgIds);
+  }
+
+  // ancestorsAndSelf(orgId) — NestedSet: ajdodlar + o'zi (_lft <= node._lft AND _rgt >= node._rgt).
+  private async getAncestorAndSelfOrgIds(orgId: number): Promise<number[]> {
+    const [node] = await this.db
+      .select({ _lft: organizations._lft, _rgt: organizations._rgt })
+      .from(organizations)
+      .where(eq(organizations.id, orgId))
+      .limit(1);
+    if (!node) return [];
+    const rows = await this.db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(
+        and(
+          notDeleted(organizations),
+          lte(organizations._lft, node._lft),
+          gte(organizations._rgt, node._rgt),
+        ),
+      );
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * Lead-position worker_positions — `confirmations` (org-scopesiz) va `parent-leaders`
+   * (ancestorsAndSelf org-scope) uchun umumiy. WorkerPositionMinimalResource shape, paginate(50).
+   */
+  private async listLeadPositions(
+    perPage: number,
+    page: number,
+    orgIds?: number[],
+  ) {
     const lang = this.ctx.lang;
-    const pp = perPage ?? 50;
-    const pg = page ?? 1;
+    const pp = perPage;
+    const pg = page;
     const offset = (pg - 1) * pp;
+
+    if (orgIds && orgIds.length === 0) {
+      return { current_page: pg, total: 0, data: [] };
+    }
 
     // WorkerPosition SoftDeletes — default scope deleted'larni chiqarib tashlaydi.
     const where = and(
       notDeleted(worker_positions),
       inArray(worker_positions.position_id, LEAD_POSITION_IDS),
+      orgIds ? inArray(worker_positions.organization_id, orgIds) : undefined,
     );
 
     // Laravel paginate() — count-first.
@@ -321,7 +380,13 @@ export class StructureTreeService {
         pos_name: positionsTable.name,
       })
       .from(worker_positions)
-      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .leftJoin(
+        workers,
+        and(
+          eq(workers.id, worker_positions.worker_id),
+          isNull(workers.deleted_at),
+        ),
+      )
       .leftJoin(
         organizations,
         and(

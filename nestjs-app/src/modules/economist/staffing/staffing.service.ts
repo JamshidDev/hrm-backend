@@ -546,14 +546,17 @@ export class StaffingService {
       );
     }
     const date = body.date ?? new Date().toISOString().slice(0, 10);
-    const confirmations = body.confirmations ?? [];
+    // confirmations — [{id, order}]. order bo'yicha sort qilib worker_position ID'larini extract.
+    const confirmations = [...(body.confirmations ?? [])]
+      .sort((a, b) => a.order - b.order)
+      .map((c) => c.id);
 
     // Validatsiya (Laravel syncConfirmations) — yozuvdan oldin.
-    if (
-      body.confirmatory_id === body.director_id ||
-      confirmations.includes(body.director_id) ||
-      confirmations.includes(body.confirmatory_id)
-    ) {
+    // Laravel `in_array($id, $request->confirmations)` object-array bo'lgani uchun hech qachon
+    // mos kelmaydi (int vs object), shuning uchun faqat confirmatory === director tekshiriladi.
+    // Bir worker bir vaqtda confirmation + confirmatory bo'lishi mumkin (syncConfirmations
+    // updateOrCreate (sa_id, worker_id) bo'yicha deduplikatsiya qiladi).
+    if (body.confirmatory_id === body.director_id) {
       throw new BusinessException(
         400,
         this.i18n.t('messages.not_allowed_confirmatory_and_director'),
@@ -622,9 +625,12 @@ export class StaffingService {
       .where(eq(organizations.id, orgId))
       .limit(1);
 
-    // Excel data — changedPositions(user, departmentPositionsIds).
+    // Excel data — Laravel changedPositions($user, $departmentPositionsIds).
+    // Org-filter = request('organization_id', user.organization_id) — staffing_approve
+    // record va Excel sarlavhasi user org bo'lsa-da, department_positions filtri request org.
+    const changedOrgId = body.organization_id ?? orgId;
     const changed = await this.buildChangedPositions(
-      orgId,
+      changedOrgId,
       departmentPositionsIds,
     );
 

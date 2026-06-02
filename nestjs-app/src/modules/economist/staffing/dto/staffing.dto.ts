@@ -11,8 +11,27 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { YearMonthPaginationDto } from '@/modules/economist/_shared/dto/base-query.dto';
+
+/**
+ * Confirmation item — {id, order}. Frontend har bir tasdiqlovchini order bilan yuboradi;
+ * service order bo'yicha sort qilib worker_position ID'larini extract qiladi.
+ */
+export class ConfirmationItemDto {
+  @ApiProperty({ example: 249 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  id!: number;
+
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  order!: number;
+}
 
 /**
  * GET /api/v1/economist/staffing/generate?organization_id=
@@ -35,6 +54,17 @@ export class StaffingGenerateDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @ApiPropertyOptional({
+    example: 19,
+    description:
+      'department_positions org-filter (Laravel changedPositions request org). Yo`q bo`lsa user org.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  organization_id?: number;
 
   @ApiProperty({
     type: [Number],
@@ -67,14 +97,17 @@ export class StaffingGenerateDto {
   director_id!: number;
 
   @ApiProperty({
-    type: [Number],
-    description: 'Qo`shimcha tasdiqlovchi worker_position ID`lari',
-    example: [12, 13],
+    type: [ConfirmationItemDto],
+    description: 'Tasdiqlovchi worker_position`lar ({id, order})',
+    example: [
+      { id: 249, order: 1 },
+      { id: 329, order: 2 },
+    ],
   })
   @IsArray()
-  @Type(() => Number)
-  @IsInt({ each: true })
-  confirmations!: number[];
+  @ValidateNested({ each: true })
+  @Type(() => ConfirmationItemDto)
+  confirmations!: ConfirmationItemDto[];
 }
 
 /**
