@@ -661,5 +661,6 @@
       "four": "Boshqa"
     }
   },
-  "feature_not_available": "Bu imkoniyat hozircha mavjud emas"
+  "feature_not_available": "Bu imkoniyat hozircha mavjud emas",
+  "not_allowed_confirmatory_and_director": "Rahbar va kelishuvchilar bir xil tanlanmasligi kerak"
 }

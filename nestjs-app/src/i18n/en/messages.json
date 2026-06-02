@@ -661,5 +661,6 @@
       "four": "Other"
     }
   },
-  "feature_not_available": "This feature is not available yet"
+  "feature_not_available": "This feature is not available yet",
+  "not_allowed_confirmatory_and_director": "The head of the organization and additional signatories should not be selected at the same time."
 }

@@ -91,4 +91,57 @@ export class ConvertService {
       await rm(dir, { recursive: true, force: true });
     }
   }
+
+  // XLSX buffer → PDF buffer (LibreOffice Calc). Laravel: ConvertHelper::docxToPdf
+  // staffing-approve `.xlsx` faylni PDF'ga aylantiradi (nom docxToPdf bo'lsa-da, kirish xlsx).
+  async xlsxToPdf(xlsxBuffer: Buffer): Promise<Buffer> {
+    const soffice = this.resolveSoffice();
+    const dir = await mkdtemp(join(tmpdir(), 'hrm-convert-'));
+    const xlsxPath = join(dir, 'in.xlsx');
+    const pdfPath = join(dir, 'in.pdf');
+
+    try {
+      await writeFile(xlsxPath, xlsxBuffer);
+      // Calc PDF filtri — rasm (QR) sifatini saqlash uchun lossless + downsample yo'q.
+      const pdfFilter =
+        'pdf:calc_pdf_Export:{"ReduceImageResolution":{"type":"boolean","value":false},"UseLosslessCompression":{"type":"boolean","value":true}}';
+      const { stdout, stderr } = await execFileAsync(
+        soffice,
+        [
+          `-env:UserInstallation=file://${join(dir, 'lo-profile')}`,
+          '--headless',
+          '--invisible',
+          '--nologo',
+          '--nolockcheck',
+          '--nofirststartwizard',
+          '--convert-to',
+          pdfFilter,
+          '--outdir',
+          dir,
+          xlsxPath,
+        ],
+        { timeout: 90_000 },
+      );
+
+      if (!existsSync(pdfPath)) {
+        this.logger.error(
+          `xlsxToPdf: PDF yaratilmadi. stdout=${stdout} stderr=${stderr}`,
+        );
+        throw new BusinessException(
+          500,
+          'PDF konvertatsiya muvaffaqiyatsiz tugadi',
+        );
+      }
+      return await readFile(pdfPath);
+    } catch (err) {
+      this.logger.error('xlsxToPdf failed', err as Error);
+      if (err instanceof BusinessException) throw err;
+      throw new BusinessException(
+        500,
+        'PDF konvertatsiya xatosi (LibreOffice topilmadi yoki ishlamadi)',
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
 }
