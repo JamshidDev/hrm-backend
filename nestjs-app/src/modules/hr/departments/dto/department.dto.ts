@@ -230,9 +230,6 @@ export class DepartmentListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
 
-  @ApiProperty({ example: 10 })
-  per_page!: number;
-
   @ApiProperty({ example: 50 })
   total!: number;
 
@@ -243,9 +240,6 @@ export class DepartmentListResponseDto {
 export class DepartmentListMinResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
-
-  @ApiProperty({ example: 50 })
-  per_page!: number;
 
   @ApiProperty({ example: 200 })
   total!: number;

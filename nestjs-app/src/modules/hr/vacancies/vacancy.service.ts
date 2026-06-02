@@ -179,7 +179,6 @@ export class VacancyService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => VacancyMapper.toItem(r, this.i18n, lang)),
     };

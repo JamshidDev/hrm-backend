@@ -2,7 +2,6 @@
 // Endpoint: /api/v1/structure/learning-centers (LMS modul'idan, lekin route Structure prefix'ida).
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
@@ -109,9 +108,6 @@ export class LearningCenterItemDto {
 export class LearningCenterListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
-
-  @ApiProperty({ example: 10 })
-  per_page!: number;
 
   @ApiProperty({ example: 50 })
   total!: number;

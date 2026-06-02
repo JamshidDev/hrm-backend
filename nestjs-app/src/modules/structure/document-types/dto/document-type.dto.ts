@@ -70,9 +70,6 @@ export class DocumentTypeListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
 
-  @ApiProperty({ example: 10 })
-  per_page!: number;
-
   @ApiProperty({ example: 100 })
   total!: number;
 

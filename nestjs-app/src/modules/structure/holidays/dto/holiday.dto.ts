@@ -90,9 +90,6 @@ export class HolidayListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
 
-  @ApiProperty({ example: 10 })
-  per_page!: number;
-
   @ApiProperty({ example: 12 })
   total!: number;
 

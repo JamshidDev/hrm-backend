@@ -3,7 +3,6 @@
 import { Injectable } from '@nestjs/common';
 import {
   and,
-  asc,
   count,
   eq,
   gte,
@@ -223,7 +222,6 @@ export class TimeSheetWorkerService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data,
     };

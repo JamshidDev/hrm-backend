@@ -97,7 +97,6 @@ export class LearningCenterService {
 
     return {
       current_page: result.current_page,
-      per_page: result.per_page,
       total: result.total,
       data,
     };

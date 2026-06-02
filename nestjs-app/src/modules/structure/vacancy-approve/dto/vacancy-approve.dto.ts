@@ -3,15 +3,9 @@
 //   - attach: bulk insert (replaces existing for from_organization_id)
 //   - destroy: delete by id
 
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  ArrayMinSize,
-  ArrayUnique,
-  IsArray,
-  IsInt,
-  IsOptional,
-} from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsArray, IsInt } from 'class-validator';
 import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Exists } from '@/common/validators/exists.validator';
 
@@ -60,9 +54,6 @@ export class VacancyApproveItemDto {
 export class VacancyApproveListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
-
-  @ApiProperty({ example: 10 })
-  per_page!: number;
 
   @ApiProperty({ example: 50 })
   total!: number;

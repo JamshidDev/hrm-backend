@@ -26,7 +26,6 @@ export class PolyclinicItemDto {
 
 export class PolyclinicListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [PolyclinicItemDto] })
   data!: PolyclinicItemDto[];

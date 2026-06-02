@@ -62,7 +62,6 @@ export class PolyclinicService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({ id: r.id, name: r.name })),
     };

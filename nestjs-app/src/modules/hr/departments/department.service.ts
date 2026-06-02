@@ -1,7 +1,7 @@
 // Department service. Laravel: DepartmentController + DepartmentService.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -72,10 +72,9 @@ export class DepartmentService {
       mapper: (row) => DepartmentMapper.toWithJoinItem(row, this.i18n, lang),
     });
 
-    // Laravel PaginateResource: {current_page, total, data} — `per_page` yo'q.
-    const { per_page: _pp, ...rest } = result;
-    void _pp;
-    return rest as DepartmentListResponseDto;
+    // Laravel PaginateResource: {current_page, total, data} — `per_page` yo'q
+    // (paginate util endi per_page qaytarmaydi).
+    return result;
   }
 
   // GET /department-list — minimal {id, name, level}, paginated.
@@ -118,10 +117,8 @@ export class DepartmentService {
       perPage,
       mapper: DepartmentMapper.toListMin,
     });
-    // Laravel PaginateResource: `per_page` yo'q.
-    const { per_page: _pp, ...rest } = result;
-    void _pp;
-    return rest as DepartmentListMinResponseDto;
+    // Laravel PaginateResource: `per_page` yo'q (paginate util endi qaytarmaydi).
+    return result;
   }
 
   levels(): DepartmentLevelDto[] {

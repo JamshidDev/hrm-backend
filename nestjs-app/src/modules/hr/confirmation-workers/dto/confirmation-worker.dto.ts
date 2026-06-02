@@ -73,7 +73,6 @@ export class ConfirmationWorkerItemDto {
 
 export class ConfirmationWorkerListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [ConfirmationWorkerItemDto] })
   data!: ConfirmationWorkerItemDto[];

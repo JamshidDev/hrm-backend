@@ -119,7 +119,6 @@ export class WorkerUniversityItemDto {
 
 export class WorkerUniversityListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [WorkerUniversityItemDto] })
   data!: WorkerUniversityItemDto[];
