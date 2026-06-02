@@ -11,6 +11,8 @@ import {
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { EconomistEnumsService } from '@/modules/economist/enums-endpoint/enums.service';
@@ -18,7 +20,8 @@ import { StructureQueryDto } from '@/modules/economist/enums-endpoint/dto/struct
 
 @ApiTags('Economist / Enums')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('economist')
 @Controller('api/v1/economist')
 export class EconomistEnumsController {
   constructor(private readonly service: EconomistEnumsService) {}

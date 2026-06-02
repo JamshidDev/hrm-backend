@@ -19,6 +19,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { StaffingService } from '@/modules/economist/staffing/staffing.service';
 import {
@@ -29,7 +31,8 @@ import {
 
 @ApiTags('Economist / Staffing')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('economist')
 @Controller('api/v1/economist/staffing')
 export class StaffingController {
   constructor(
