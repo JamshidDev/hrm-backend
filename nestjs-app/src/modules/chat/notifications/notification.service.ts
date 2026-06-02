@@ -11,7 +11,8 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
-import { notifications, users } from '@/db/schema';
+import { MinioService } from '@/shared/minio/minio.service';
+import { notifications, users, workers } from '@/db/schema';
 import type {
   NotificationListQueryDto,
   SendBatchNotificationDto,
@@ -38,6 +39,7 @@ export class ChatNotificationService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly minio: MinioService,
   ) {}
 
   /** GET /notifications/enums */
@@ -51,6 +53,7 @@ export class ChatNotificationService {
     const perPage = Number(q?.per_page ?? 10);
     const offset = (page - 1) * perPage;
 
+    // Laravel: DatabaseNotification::latest('created_at')->with(notifiable.worker).
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select()
@@ -61,12 +64,70 @@ export class ChatNotificationService {
       this.db.select({ total: count() }).from(notifications),
     ]);
 
-    return {
-      current_page: page,
-      per_page: perPage,
-      total: Number(total),
-      data: rows,
-    };
+    // notifiable (User) + worker batch — UserWorkerResource uchun.
+    const userIds = [
+      ...new Set(
+        rows
+          .filter((r) => r.notifiable_type === NOTIFIABLE_TYPE)
+          .map((r) => r.notifiable_id)
+          .filter((id): id is number => id != null),
+      ),
+    ];
+    const userRows = userIds.length
+      ? await this.db
+          .select({
+            id: users.id,
+            w_id: workers.id,
+            w_photo: workers.photo,
+            w_last: workers.last_name,
+            w_first: workers.first_name,
+            w_middle: workers.middle_name,
+          })
+          .from(users)
+          .leftJoin(workers, eq(workers.id, users.worker_id))
+          .where(inArray(users.id, userIds))
+      : [];
+    const userMap = new Map(userRows.map((u) => [u.id, u]));
+
+    const data = await Promise.all(
+      rows.map(async (r) => {
+        // UserWorkerResource — {id, worker: WorkerMinimalResource}.
+        const u =
+          r.notifiable_type === NOTIFIABLE_TYPE
+            ? userMap.get(r.notifiable_id)
+            : undefined;
+        const user = u
+          ? {
+              id: u.id,
+              worker: u.w_id
+                ? {
+                    id: u.w_id,
+                    photo: await this.minio.fileUrl(u.w_photo),
+                    last_name: u.w_last,
+                    first_name: u.w_first,
+                    middle_name: u.w_middle,
+                  }
+                : null,
+            }
+          : null;
+        return {
+          id: r.id,
+          user,
+          data: r.data,
+          read_at: r.read_at,
+          created_at: this.toDateTimeString(r.created_at),
+        };
+      }),
+    );
+
+    return { current_page: page, total: Number(total), data };
+  }
+
+  // Carbon toDateTimeString() — "Y-m-d H:i:s".
+  private toDateTimeString(v: string | null): string | null {
+    if (!v) return null;
+    const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(v);
+    return m ? `${m[1]} ${m[2]}` : v;
   }
 
   /**
