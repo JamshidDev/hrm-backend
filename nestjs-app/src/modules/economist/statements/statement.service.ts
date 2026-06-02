@@ -48,10 +48,7 @@ import {
   TOTAL_FOUR_COLUMNS,
   TOTAL_FIVE_COLUMNS,
 } from '@/modules/economist/_shared/code-groups';
-import {
-  getCodeNames,
-  getCodeNamesOrdered,
-} from '@/modules/economist/_shared/code-names';
+import { getCodeNamesOrdered } from '@/modules/economist/_shared/code-names';
 import { ExcelService } from '@/shared/excel/excel.service';
 import { HEADER_BLUE, FMT } from '@/shared/excel/style-presets';
 import type { ExcelHeaderRow } from '@/shared/excel/types';
@@ -490,23 +487,12 @@ export class StatementService {
 
   /** StatementDecodingByMonthExport — decode matritsasini Excel'ga (FromArray). */
   private buildDecodingExcel(rows: DecodingRow[]): Promise<Buffer> {
-    const keys = [
-      'type_name',
-      'type_code',
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      '8',
-      '9',
-      '10',
-      '11',
-      '12',
-      'total_year',
-    ];
+    // Ustun kalitlari: type_name, type_code, (oylar 1..12 yoki org id'lari), total_year.
+    const first = rows[0] ?? {};
+    const middle = Object.keys(first).filter(
+      (k) => k !== 'type_name' && k !== 'type_code' && k !== 'total_year',
+    );
+    const keys = ['type_name', 'type_code', ...middle, 'total_year'];
     const columns = keys.map((k) => ({ header: k, key: k, width: 16 }));
     return this.excel.build({
       creator: 'HRM Economist',
@@ -530,35 +516,42 @@ export class StatementService {
     month?: string | number;
     organizations?: string;
     lang?: string;
-  }) {
+    download?: string;
+  }): Promise<DecodingRow[] | string> {
     const year =
       q?.year !== undefined ? Number(q.year) : new Date().getFullYear();
     const month =
       q?.month !== undefined ? Number(q.month) : new Date().getMonth() + 1;
-    const lang = q?.lang ?? 'uz';
+    const lang = this.ctx.lang;
+    const t = (k: string): string =>
+      this.i18n.t(`messages.economist.statement.decoding.${k}`, { lang });
 
-    // 1. Tashkilotlar ro'yxati (15 ta limit)
-    let orgWhere = notDeleted(organizations);
+    // Laravel leaderOrganizations($user) (rol subtree) + organizations csv,
+    // orderBy id, limit 15.
+    const scopeIds = await this.scope.ids();
+    if (!scopeIds.length) return [];
+    const orgConds: SQL[] = [
+      notDeleted(organizations),
+      inArray(organizations.id, scopeIds),
+    ];
     if (q.organizations) {
       const ids = q.organizations
         .split(',')
         .map((s) => Number(s.trim()))
         .filter((n) => !Number.isNaN(n));
-      if (ids.length) {
-        orgWhere = and(orgWhere, inArray(organizations.id, ids))!;
-      }
+      if (ids.length) orgConds.push(inArray(organizations.id, ids));
     }
     const orgRows = await this.db
-      .select({ id: organizations.id, name: organizations.name })
+      .select({ id: organizations.id, code: organizations.code })
       .from(organizations)
-      .where(orgWhere)
+      .where(and(...orgConds))
+      .orderBy(asc(organizations.id))
       .limit(15);
+    if (orgRows.length === 0) return [];
     const orgIds = orgRows.map((o) => o.id);
 
-    if (orgIds.length === 0) return [];
-
-    // 2. statement_aggregates'dan: organization_id × code SUM (filter year+month+orgs)
-    const rows = await this.db
+    // statement_aggregates: org × code SUM (year + month + orgs).
+    const aggRows = await this.db
       .select({
         organization_id: statement_aggregates.organization_id,
         code: statement_aggregates.code,
@@ -573,51 +566,39 @@ export class StatementService {
         ),
       )
       .groupBy(statement_aggregates.organization_id, statement_aggregates.code);
-
-    // 3. orgData[org_id][code] = sum
     const orgData = new Map<number, Map<number, number>>();
-    for (const r of rows) {
-      const orgId = r.organization_id!;
-      if (!orgData.has(orgId)) orgData.set(orgId, new Map());
-      orgData.get(orgId)!.set(r.code, Number(r.total_sum ?? 0));
+    for (const r of aggRows) {
+      const oid = r.organization_id!;
+      if (!orgData.has(oid)) orgData.set(oid, new Map());
+      orgData.get(oid)!.set(r.code, Number(r.total_sum ?? 0));
     }
 
-    // 4. Decoding logikasi shu yerda — kodlar bo'yicha aylanish + guruhlash
     const plusCodes = new Set([...TOTAL_ONE_COLUMNS].map(Number));
     const minusOneCodes = new Set([...TOTAL_FOUR_COLUMNS].map(Number));
     const minusTwoCodes = new Set([...TOTAL_TWO_COLUMNS].map(Number));
     const holdCodes = new Set([...TOTAL_FIVE_COLUMNS].map(Number));
-    const names = getCodeNames(lang);
 
     const plusList: DecodingRow[] = [];
     const minusOneList: DecodingRow[] = [];
     const minusTwoList: DecodingRow[] = [];
     const holdList: DecodingRow[] = [];
 
-    // Per-org sums (organization_id → total)
+    // Per-org sum + total_year (har guruh).
+    type OrgSums = { org: Map<number, number>; total: number };
+    const mkSums = (): OrgSums => ({
+      org: new Map<number, number>(orgIds.map((id) => [id, 0])),
+      total: 0,
+    });
     const sums = {
-      plus: new Map<number, number>(),
-      minus_one: new Map<number, number>(),
-      minus_two: new Map<number, number>(),
-      hold: new Map<number, number>(),
+      plus: mkSums(),
+      minus_one: mkSums(),
+      minus_two: mkSums(),
+      hold: mkSums(),
     };
-    const initOrgSum = () => {
-      for (const id of orgIds) {
-        sums.plus.set(id, 0);
-        sums.minus_one.set(id, 0);
-        sums.minus_two.set(id, 0);
-        sums.hold.set(id, 0);
-      }
-    };
-    initOrgSum();
 
-    for (const [codeStr, name] of Object.entries(names)) {
+    // Laravel paymentTypes (lug'at tartibi).
+    for (const [codeStr, name] of getCodeNamesOrdered(lang)) {
       const code = Number(codeStr);
-      const row: DecodingRow = {
-        type_name: name,
-        type_code: codeStr,
-      };
-
       let group: keyof typeof sums | null = null;
       if (plusCodes.has(code)) group = 'plus';
       else if (minusOneCodes.has(code)) group = 'minus_one';
@@ -625,14 +606,16 @@ export class StatementService {
       else if (holdCodes.has(code)) group = 'hold';
       if (!group) continue;
 
+      const row: DecodingRow = { type_name: name, type_code: codeStr };
       let total = 0;
       for (const o of orgRows) {
         const v = orgData.get(o.id)?.get(code) ?? 0;
-        row[`org_${o.id}`] = this.fmt(v);
+        row[String(o.id)] = this.fmt(v);
         total += v;
-        sums[group].set(o.id, (sums[group].get(o.id) ?? 0) + v);
+        sums[group].org.set(o.id, (sums[group].org.get(o.id) ?? 0) + v);
       }
-      row.total = this.fmt(total);
+      row.total_year = this.fmt(total);
+      sums[group].total += total;
 
       if (group === 'plus') plusList.push(row);
       else if (group === 'minus_one') minusOneList.push(row);
@@ -640,41 +623,61 @@ export class StatementService {
       else holdList.push(row);
     }
 
-    // 5. Header + summary qatorlar
-    const header: DecodingRow = {
-      type_name: 'Kod nomi',
-      type_code: 'Kod',
-      ...Object.fromEntries(orgRows.map((o) => [`org_${o.id}`, o.name ?? ''])),
-      total: 'Jami',
+    // initHeaderRowOrganization: [org.id]=org.code, total_year=six (Jami).
+    const headerRow: DecodingRow = {
+      type_name: t('four'),
+      type_code: t('five'),
     };
+    for (const o of orgRows) headerRow[String(o.id)] = o.code ?? '';
+    headerRow.total_year = t('six');
 
-    const summary = (label: string, m: Map<number, number>): DecodingRow => {
-      const row: DecodingRow = { type_name: label, type_code: '' };
-      let total = 0;
+    // initEmptyRowOrganization: section label (barcha katak ' ').
+    const sectionRow = (typeName: string): DecodingRow => {
+      const r: DecodingRow = { type_name: typeName, type_code: ' ' };
+      for (const o of orgRows) r[String(o.id)] = ' ';
+      r.total_year = ' ';
+      return r;
+    };
+    // appendSummary / combined — 1+ guruh per-org yig'indisi.
+    const sumRow = (typeName: string, ...groups: OrgSums[]): DecodingRow => {
+      const r: DecodingRow = { type_name: typeName, type_code: ' ' };
       for (const o of orgRows) {
-        const v = m.get(o.id) ?? 0;
-        row[`org_${o.id}`] = this.fmt(v);
-        total += v;
+        const v = groups.reduce((acc, g) => acc + (g.org.get(o.id) ?? 0), 0);
+        r[String(o.id)] = this.fmt(v);
       }
-      row.total = this.fmt(total);
-      return row;
+      r.total_year = this.fmt(groups.reduce((acc, g) => acc + g.total, 0));
+      return r;
     };
 
-    return [
-      header,
-      this.groupTitle('Hisoblangan'),
+    // Laravel tartibi: plus, [minusOne, minusTwo, combinedMinus, combinedTotal], hold.
+    const result: DecodingRow[] = [
+      headerRow,
+      sectionRow(t('one')),
       ...plusList,
-      summary('Jami', sums.plus),
-      this.groupTitle('Ushlanmalar (1-guruh)'),
+      sumRow(t('six'), sums.plus),
+      sectionRow(t('two')),
       ...minusOneList,
-      summary('Jami', sums.minus_one),
-      this.groupTitle('Ushlanmalar (2-guruh)'),
+      sumRow(t('six'), sums.minus_one),
+      sectionRow(t('eight')),
       ...minusTwoList,
-      summary('Jami', sums.minus_two),
-      this.groupTitle('Saqlanmalar'),
+      sumRow(t('six'), sums.minus_two),
+      sumRow(t('seven'), sums.minus_one, sums.minus_two),
+      sumRow(t('nine'), sums.plus, sums.minus_one, sums.minus_two),
+      sectionRow(t('three')),
       ...holdList,
-      summary('Jami', sums.hold),
+      sumRow(t('six'), sums.hold),
     ];
+
+    if (q.download !== undefined) {
+      await this.exportRunner.run({
+        type: 16, // ExportTaskEnum.STATEMENTS_WITH_ORGANIZATIONS
+        folder: 'statements',
+        build: () => this.buildDecodingExcel(result),
+      });
+      return this.i18n.t('messages.successfully_exported', { lang });
+    }
+
+    return result;
   }
 
   /**
@@ -1496,10 +1499,6 @@ export class StatementService {
     }
     row.total_year = this.fmt(sums.total);
     return row;
-  }
-
-  private groupTitle(label: string): DecodingRow {
-    return { type_name: label, type_code: '' };
   }
 
   /** 1 → 'A', 27 → 'AA'. */

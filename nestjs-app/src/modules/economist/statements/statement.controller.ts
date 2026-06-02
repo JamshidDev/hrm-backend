@@ -107,7 +107,10 @@ export class StatementController {
   @Get('statement-decoding-organizations')
   @ApiOperation({ summary: 'Statement decoding by organizations (monthly)' })
   async decodingOrgs(@Query() q: StatementDecodingByOrgQueryDto) {
-    return buildSuccess(true, await this.service.decodingByOrganization(q));
+    const result = await this.service.decodingByOrganization(q);
+    return typeof result === 'string'
+      ? buildSuccess(result, [])
+      : buildSuccess(true, result);
   }
 
   @Get('statements-multiple-workers')
