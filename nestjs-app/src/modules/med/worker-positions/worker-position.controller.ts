@@ -5,6 +5,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { MedWorkerPositionService } from '@/modules/med/worker-positions/worker-position.service';
+import { QueryMedWorkerPositionDto } from '@/modules/med/worker-positions/dto/worker-position.dto';
 
 @ApiTags('Med / Worker Positions')
 @ApiBearerAuth('access-token')
@@ -15,7 +16,7 @@ export class MedWorkerPositionController {
 
   @Get('worker-positions')
   @ApiOperation({ summary: 'List worker positions eligible for medical check' })
-  async list(@Query() query: any) {
+  async list(@Query() query: QueryMedWorkerPositionDto) {
     return buildSuccess(true, await this.service.list(query));
   }
 }
