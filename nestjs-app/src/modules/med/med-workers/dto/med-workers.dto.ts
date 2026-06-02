@@ -23,9 +23,10 @@ export class QueryMedWorkersDto {
   @IsString()
   search?: string;
 
+  // Laravel: request('organizations') — bitta organization id bo'yicha filter.
   @ApiPropertyOptional({ description: 'Filter by organization id' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  organization_id?: number;
+  organizations?: number;
 }
