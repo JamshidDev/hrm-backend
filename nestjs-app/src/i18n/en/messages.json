@@ -652,5 +652,13 @@
       "three": "Individual entrepreneur",
       "four": "Hired worker"
     }
+  },
+  "tax_five": {
+    "income_type": {
+      "one": "Property income",
+      "two": "Rental income",
+      "three": "In-kind benefits",
+      "four": "Other"
+    }
   }
 }

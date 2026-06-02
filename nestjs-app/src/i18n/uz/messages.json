@@ -652,5 +652,13 @@
       "three": "FXSH",
       "four": "Yollanma"
     }
+  },
+  "tax_five": {
+    "income_type": {
+      "one": "Mulkiy",
+      "two": "Ijara",
+      "three": "Moddiy naf tarzidagi",
+      "four": "Boshqa"
+    }
   }
 }
