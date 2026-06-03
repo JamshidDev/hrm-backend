@@ -10,6 +10,7 @@ import { AdminTelegramModule } from '@/modules/admin/telegram/telegram.module';
 import { AdminMobileUserModule } from '@/modules/admin/mobile-users/mobile-user.module';
 import { DeployModule } from '@/modules/admin/deploy/deploy.module';
 import { ActivityLogModule } from '@/modules/admin/activity-logs/activity-log.module';
+import { AuthenticationLogModule } from '@/modules/admin/authentication-logs/authentication-log.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ActivityLogModule } from '@/modules/admin/activity-logs/activity-log.mo
     AdminMobileUserModule,
     DeployModule,
     ActivityLogModule,
+    AuthenticationLogModule,
   ],
 })
 export class AdminModule {}
