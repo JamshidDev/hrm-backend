@@ -199,7 +199,9 @@ export class WorkerExamService {
 
     // Batch-load topic'lar + worker'ning natijalari.
     const topicIds = [
-      ...new Set(rows.map((r) => r.topic_id).filter((v): v is number => v != null)),
+      ...new Set(
+        rows.map((r) => r.topic_id).filter((v): v is number => v != null),
+      ),
     ];
     const examIds = rows.map((r) => r.id);
 
@@ -213,7 +215,9 @@ export class WorkerExamService {
             })
             .from(topics)
             .where(inArray(topics.id, topicIds))
-        : Promise.resolve([] as Array<{ id: number; name: string | null; type: number }>),
+        : Promise.resolve(
+            [] as Array<{ id: number; name: string | null; type: number }>,
+          ),
       workerId != null && examIds.length
         ? this.db
             .select({
@@ -298,7 +302,9 @@ export class WorkerExamService {
   // Laravel: DashboardController::workerStatistics → ExamDashboardService::workerStatistics
   //   SUM(CASE WHEN result BETWEEN X AND Y THEN 1 ELSE 0 END) for 4 buckets.
   //   Default from = startOfYear, to = today.
-  async statistics(q: QueryStatsLike): Promise<Array<{ label: string; count: number }>> {
+  async statistics(
+    q: QueryStatsLike,
+  ): Promise<Array<{ label: string; count: number }>> {
     const workerId = this.ctx.user_or_fail.worker_id;
     const now = new Date();
     const defaultFrom = `${now.getFullYear()}-01-01`;
@@ -363,7 +369,8 @@ export class WorkerExamService {
       .from(exams)
       .where(and(eq(exams.id, examId), notDeleted(exams)))
       .limit(1);
-    if (!exam) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!exam)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
 
     // 2) Tugamagan attemp bormi.
     const [running] = await this.db
@@ -393,9 +400,7 @@ export class WorkerExamService {
         count: exam_tests.count,
       })
       .from(exam_tests)
-      .where(
-        and(eq(exam_tests.exam_id, examId), notDeleted(exam_tests)),
-      );
+      .where(and(eq(exam_tests.exam_id, examId), notDeleted(exam_tests)));
 
     // 4) buildForExam — har kategoriya'dan `count` ta random savol.
     //    inRandomOrder() + limit + options(select id,text,is_correct) + shuffle.
@@ -414,7 +419,10 @@ export class WorkerExamService {
       if (cnt <= 0 || t.exam_category_id == null) continue;
       // Eloquent inRandomOrder() → ORDER BY RANDOM().
       const qs = await this.db
-        .select({ id: exam_category_questions.id, ques: exam_category_questions.ques })
+        .select({
+          id: exam_category_questions.id,
+          ques: exam_category_questions.ques,
+        })
         .from(exam_category_questions)
         .where(
           and(
@@ -484,7 +492,7 @@ export class WorkerExamService {
           worker_exam_id: weId,
           question: b.ques,
           // Laravel Eloquent options collection'ni JSON sifatida saqlaydi.
-          answers: b.options as unknown,
+          answers: b.options,
           created_at: sql`NOW()`,
           updated_at: sql`NOW()`,
         }));
@@ -517,15 +525,13 @@ export class WorkerExamService {
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1);
-    let workerInfo:
-      | {
-          id: number;
-          photo: string | null;
-          last_name: string | null;
-          first_name: string | null;
-          middle_name: string | null;
-        }
-      | null = null;
+    let workerInfo: {
+      id: number;
+      photo: string | null;
+      last_name: string | null;
+      first_name: string | null;
+      middle_name: string | null;
+    } | null = null;
     const [workerRow] = await this.db
       .select({
         id: workers.id,
@@ -607,8 +613,114 @@ export class WorkerExamService {
       active_token: activeToken,
     };
   }
-  async continue(_examId: number) {
-    return { continued: true };
+  /**
+   * GET /exam/worker-exams/:workerExamId/continue — Laravel WorkerExamService::continueExam.
+   * active_token tekshiriladi; {worker_exam_details, exam, questions} qaytariladi.
+   */
+  async continue(workerExamId: number, activeToken?: string) {
+    const [we] = await this.db
+      .select()
+      .from(worker_exams)
+      .where(eq(worker_exams.id, workerExamId))
+      .limit(1);
+    if (!we) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+
+    // assertActiveToken — boshqa qurilmadan kirish taqiqlangan.
+    if (we.active_token !== (activeToken ?? null)) {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.exam.access_from_another_device_is_prohibited'),
+      );
+    }
+
+    // user (UserInfoResource: id, uuid, worker(WorkerMinimal), phone).
+    let user: Record<string, unknown> | null = null;
+    const [u] = await this.db
+      .select({
+        id: users.id,
+        uuid: users.uuid,
+        phone: users.phone,
+        w_id: workers.id,
+        w_photo: workers.photo,
+        w_last: workers.last_name,
+        w_first: workers.first_name,
+        w_middle: workers.middle_name,
+      })
+      .from(users)
+      .leftJoin(workers, eq(workers.id, users.worker_id))
+      .where(eq(users.id, we.user_id))
+      .limit(1);
+    if (u) {
+      user = {
+        id: u.id,
+        uuid: u.uuid,
+        worker: u.w_id
+          ? {
+              id: u.w_id,
+              photo: await this.minio.fileUrl(u.w_photo),
+              last_name: u.w_last,
+              first_name: u.w_first,
+              middle_name: u.w_middle,
+            }
+          : null,
+        phone: u.phone,
+      };
+    }
+
+    // exam (ExamInfoResource).
+    const [exam] = await this.db
+      .select({
+        id: exams.id,
+        name: exams.name,
+        deadline: exams.deadline,
+        variant: exams.variant,
+        minute: exams.minute,
+        tests_count: exams.tests_count,
+        chances: exams.chances,
+        active: exams.active,
+        description: exams.description,
+        camera: exams.camera,
+      })
+      .from(exams)
+      .where(eq(exams.id, we.exam_id))
+      .limit(1);
+
+    // questions (WorkerExamQuestionsResource: answers = json → [{id, text}]).
+    const qs = await this.db
+      .select({
+        id: worker_exam_questions.id,
+        question: worker_exam_questions.question,
+        answers: worker_exam_questions.answers,
+        result: worker_exam_questions.result,
+      })
+      .from(worker_exam_questions)
+      .where(eq(worker_exam_questions.worker_exam_id, workerExamId));
+
+    return {
+      worker_exam_details: {
+        id: we.id,
+        created: we.created,
+        ended: we.ended,
+        result: we.result,
+        ip_address: we.ip_address,
+        user_agent: we.user_agent,
+        user,
+      },
+      exam: exam ?? null,
+      questions: qs.map((q) => ({
+        id: q.id,
+        question: q.question,
+        answers: Array.isArray(q.answers)
+          ? (q.answers as { id: number; text: string }[]).map((a) => ({
+              id: a.id,
+              text: a.text,
+            }))
+          : [],
+        result: q.result,
+      })),
+    };
   }
   async finish(_examId: number) {
     return { finished: true };
@@ -636,7 +748,10 @@ export class WorkerExamService {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
     if (we.ended == null) {
-      throw new BusinessException(400, this.i18n.t('messages.exam.exam_not_ended'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.exam.exam_not_ended'),
+      );
     }
 
     // is_correct=false → noto'g'ri javob berilgan savollar.
@@ -667,8 +782,77 @@ export class WorkerExamService {
       };
     });
   }
-  async sendResult(_examId: number, _questionId: number, _body: unknown) {
-    return { saved: true };
+  /**
+   * POST /exam/worker-exams/:examId/send-result/:questionId — Laravel
+   * WorkerExamService::sendResult. active_token + expiry tekshiriladi; tanlangan
+   * javob (result) saqlanadi, is_correct = (result === to'g'ri javob id).
+   */
+  async sendResult(
+    _examId: number,
+    questionId: number,
+    result: number,
+    activeToken?: string,
+  ): Promise<void> {
+    // WorkerExamQuestion::with('worker_exam.exam')->findOrFail.
+    const [q] = await this.db
+      .select({
+        id: worker_exam_questions.id,
+        answers: worker_exam_questions.answers,
+        we_created: worker_exams.created,
+        we_ended: worker_exams.ended,
+        we_active_token: worker_exams.active_token,
+        exam_minute: exams.minute,
+      })
+      .from(worker_exam_questions)
+      .innerJoin(
+        worker_exams,
+        eq(worker_exams.id, worker_exam_questions.worker_exam_id),
+      )
+      .leftJoin(exams, eq(exams.id, worker_exams.exam_id))
+      .where(eq(worker_exam_questions.id, questionId))
+      .limit(1);
+    if (!q) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+
+    // assertActiveToken — boshqa qurilmadan kirish taqiqlangan.
+    if (q.we_active_token !== (activeToken ?? null)) {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.exam.access_from_another_device_is_prohibited'),
+      );
+    }
+
+    // assertExamNotExpired — created + exam.minute < now() YOKI ended → 400.
+    const createdMs = q.we_created
+      ? new Date(q.we_created).getTime()
+      : Number.NaN;
+    const deadlineMs = createdMs + (q.exam_minute ?? 0) * 60_000;
+    if (q.we_ended || deadlineMs < Date.now()) {
+      throw new BusinessException(
+        400,
+        this.i18n.t(
+          'messages.exam.this_exam_has_already_been_completed_or_expired',
+        ),
+      );
+    }
+
+    // answers JSON ichidan to'g'ri javobni (is_correct == 1) topamiz.
+    const answers = Array.isArray(q.answers)
+      ? (q.answers as { id: number; is_correct?: number | boolean }[])
+      : [];
+    const correct = answers.find(
+      (a) => a.is_correct === 1 || a.is_correct === true,
+    );
+
+    await this.db
+      .update(worker_exam_questions)
+      .set({
+        result,
+        is_correct: correct != null && result === correct.id,
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(worker_exam_questions.id, questionId));
   }
 
   async destroy(examId: number) {

@@ -587,7 +587,9 @@
       "five": "Belgilangan xodimlarga (Ishlamayotgan)"
     },
     "the_number_of_tests_is_not_equal": "Testdagi savollar soni imtihondagi savollar soniga teng emas!",
-    "permission_topic_type": "Ushbu turdagi imtihonlarni yaratish, taxrirlash ruxsati mavjud emas!"
+    "permission_topic_type": "Ushbu turdagi imtihonlarni yaratish, taxrirlash ruxsati mavjud emas!",
+    "access_from_another_device_is_prohibited": "Ushbu qurilmadan imtihonga kirish taqiqlangan",
+    "this_exam_has_already_been_completed_or_expired": "Bu imtihon allaqachon yakunlangan yoki mavjud emas"
   },
   "chat": {
     "notifications": {
