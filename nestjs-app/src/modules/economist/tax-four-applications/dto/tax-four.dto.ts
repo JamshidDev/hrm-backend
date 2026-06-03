@@ -16,6 +16,14 @@ export class TaxFourListQueryDto extends YearMonthPaginationDto {
   @IsString()
   search?: string;
 
+  @ApiPropertyOptional({
+    example: '140,151',
+    description: 'CSV organization ids',
+  })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
   @ApiPropertyOptional({ example: 3 })
   @IsOptional()
   @Type(() => Number)

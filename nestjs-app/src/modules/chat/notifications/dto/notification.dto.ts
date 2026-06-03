@@ -11,6 +11,7 @@ import {
   IsString,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 export class NotificationListQueryDto {
@@ -96,10 +97,24 @@ export class BatchFilterDto {
   @Type(() => Number)
   @IsInt({ each: true })
   unCheck?: number[];
+
+  // Laravel sendBatch ulardan foydalanmaydi (faqat userIds/all/unCheck), lekin
+  // frontend yuboradi — qabul qilamiz (e'tiborsiz).
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  roles?: string;
 }
 
 export class SendBatchNotificationDto {
   @ApiProperty({ type: BatchFilterDto })
+  @ValidateNested()
+  @Type(() => BatchFilterDto)
   filter!: BatchFilterDto;
 
   @ApiProperty({ example: 'Hammaga eslatma' })

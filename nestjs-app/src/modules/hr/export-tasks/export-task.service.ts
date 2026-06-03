@@ -117,7 +117,6 @@ export class ExportTaskService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => {

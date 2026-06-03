@@ -371,7 +371,19 @@
       "total_two": "Daromad tarkibiga kiritilmaydigan to‘lovlar",
       "total_three": "Ish haqi fondiga kirmaydigan to'lov turlari",
       "total_four": "Jami ish haqi",
-      "total_five": "Ish haqidan ushlamalar"
+      "total_five": "Ish haqidan ushlamalar",
+      "decoding": {
+        "one": "Mehnatga haq to‘lash fondi, 1-T hisobotida aks etuvchi",
+        "two": "Mehnatga haq to‘lash fondiga kirmaydigan to‘lovlar",
+        "three": "Ish xaqidan ushlanmalar",
+        "four": "To‘lov turlarining nomi",
+        "five": "Tur",
+        "six": "Jami",
+        "seven": "Umumiy",
+        "eight": "Daromad tarkibiga kirmaydigan to‘lovlar",
+        "nine": "Hisoblangan jami ish haqi",
+        "in_year": "Yil boshidan"
+      }
     },
     "tax_four": {
       "reported_salary_income": "Hisobot davridagi mehnatga haq to‘lash tarzidagi daromadlar",
@@ -578,6 +590,18 @@
   "chat": {
     "notifications": {
       "send_success": "Sizning xabaringiz muvaffaqqiyatli yuborildi!"
+    },
+    "telegram": {
+      "messages": {
+        "types": {
+          "birthday": "Tug'ilgan kun",
+          "vacations": "Ta'til",
+          "med": "Tibbiy ko'rik",
+          "passport": "Passport",
+          "mobile_app": "Mobil ilova",
+          "turnstile_stats": "Turniket statistikasi"
+        }
+      }
     }
   },
   "turnstile": {
@@ -628,5 +652,39 @@
   },
   "does_not_delete_related_item": "Bu element boshqa maʼlumotlar bilan bogʻlangan, O'chirish mumkin emas...",
   "does_not_delete_approved_document": "Tasdiqlangan hujjatni o'chirib bo'lmaydi.",
-  "director_not_found": "Direktor topilmadi."
+  "director_not_found": "Direktor topilmadi.",
+  "tax_four": {
+    "employee_status": {
+      "one": "Ishlaydi",
+      "two": "Ishlamaydi"
+    },
+    "contract_type": {
+      "one": "Asosiy",
+      "two": "O'rindosh",
+      "three": "FXSH",
+      "four": "Yollanma"
+    }
+  },
+  "tax_five": {
+    "income_type": {
+      "one": "Mulkiy",
+      "two": "Ijara",
+      "three": "Moddiy naf tarzidagi",
+      "four": "Boshqa"
+    }
+  },
+  "feature_not_available": "Bu imkoniyat hozircha mavjud emas",
+  "not_allowed_confirmatory_and_director": "Rahbar va kelishuvchilar bir xil tanlanmasligi kerak",
+  "roles": {
+    "worker": "Ishchi xodim",
+    "hr": "HR",
+    "finance": "Buxgalter",
+    "jurist": "Yurist",
+    "economist": "Iqtisodchi",
+    "hr_leader": "HR rahbari",
+    "economist_leader": "Iqtisodchi rahbari",
+    "hospital": "Poliklinika xodimi",
+    "turnstile_viewer": "Turniket ko'ruvchi",
+    "turnstile_leader": "Turniket Leader"
+  }
 }

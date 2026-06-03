@@ -19,6 +19,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { StatementService } from '@/modules/economist/statements/statement.service';
@@ -42,7 +44,8 @@ const XLSX_MIME =
 
 @ApiTags('Economist / Statements')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('economist')
 @Controller('api/v1/economist')
 export class StatementController {
   constructor(
@@ -97,13 +100,20 @@ export class StatementController {
   @Get('statement-decoding')
   @ApiOperation({ summary: 'Statement decoding by codes (yearly pivot)' })
   async decoding(@Query() q: StatementDecodingQueryDto) {
-    return buildSuccess(true, await this.service.decoding(q));
+    const result = await this.service.decoding(q);
+    // Laravel: is_string($result) → Helper::response($result) ({message}); aks holda data.
+    return typeof result === 'string'
+      ? buildSuccess(result, [])
+      : buildSuccess(true, result);
   }
 
   @Get('statement-decoding-organizations')
   @ApiOperation({ summary: 'Statement decoding by organizations (monthly)' })
   async decodingOrgs(@Query() q: StatementDecodingByOrgQueryDto) {
-    return buildSuccess(true, await this.service.decodingByOrganization(q));
+    const result = await this.service.decodingByOrganization(q);
+    return typeof result === 'string'
+      ? buildSuccess(result, [])
+      : buildSuccess(true, result);
   }
 
   @Get('statements-multiple-workers')
@@ -118,9 +128,11 @@ export class StatementController {
   }
 
   @Get('statements-by-positions')
-  @ApiOperation({ summary: 'Workers grouped by positions (export trigger)' })
+  @ApiOperation({ summary: 'Workers by positions — background export task' })
   async byPositions(@Query() q: ByPositionsQueryDto) {
-    return buildSuccess(true, await this.service.byPositions(q));
+    // Laravel downloadWorkersByPositions — UserExportTask + fonda Excel.
+    await this.service.byPositions(q);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   // --- example ---
@@ -148,21 +160,13 @@ export class StatementController {
   }
 
   @Post('statements-export-with-codes-by-year')
-  @RawResponse()
-  @Header('Content-Type', XLSX_MIME)
-  @ApiOperation({ summary: 'Export statements with codes grouped by year' })
-  async exportWithCodesByYear(
-    @Body() body: ExportWithCodesByYearDto,
-    @Res() res: Response,
-  ) {
-    const buffer = await this.service.exportYearCodes(body.year, [
-      'total_four',
-    ]);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="statements-codes-year-${body.year}.xlsx"`,
-    );
-    res.end(buffer);
+  @HttpCode(200) // Laravel Helper::response — async task, 200
+  @ApiOperation({
+    summary: 'Export statements with codes by year — background task',
+  })
+  async exportWithCodesByYear(@Body() body: ExportWithCodesByYearDto) {
+    await this.service.exportWithCodesByYear(body);
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 
   @Get('statements-export-by-position')

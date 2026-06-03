@@ -3,7 +3,7 @@
 // Endpointlar: index, attachRole, detachRole, updatePassword, updateProfile.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -13,10 +13,12 @@ import {
   roles,
   users as usersTable,
   worker_phones,
+  worker_positions,
   workers,
 } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -29,6 +31,20 @@ import {
   UpdateProfileDto,
 } from '@/modules/hr/worker-users/dto/worker-user.dto';
 
+// Laravel App\Enums\RolesEnum — name → i18n label kaliti.
+const ROLE_LABELS: Record<string, string> = {
+  Worker: 'messages.roles.worker',
+  HR: 'messages.roles.hr',
+  Finance: 'messages.roles.finance',
+  Jurist: 'messages.roles.jurist',
+  Economist: 'messages.roles.economist',
+  HrLeader: 'messages.roles.hr_leader',
+  EconomistLeader: 'messages.roles.economist_leader',
+  Hospital: 'messages.roles.hospital',
+  TurnstileViewer: 'messages.roles.turnstile_viewer',
+  TurnstileLeader: 'messages.roles.turnstile_leader',
+};
+
 @Injectable()
 export class WorkerUserService {
   constructor(
@@ -36,99 +52,264 @@ export class WorkerUserService {
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly scope: OrgScopeService,
   ) {}
 
-  // GET /api/v1/hr/users
+  // RolesEnum::tryFrom(name)?->label() — RoleOrganizationsResource name mantiqi.
+  // Enum bo'lsa label; enum emas & id!==3 bo'lsa raw name; id===3 (Admin) bo'lsa null.
+  private roleName(
+    id: number,
+    name: string | null,
+    lang: string,
+  ): string | null {
+    const key = name ? ROLE_LABELS[name] : undefined;
+    if (!key) {
+      return id !== 3 ? name : null;
+    }
+    const v = this.i18n.t(key, { lang });
+    return typeof v === 'string' ? v : null;
+  }
+
+  // Laravel OrganizationListResource — ru→name_ru, en→name_en, default→name.
+  private orgName(
+    o: {
+      name: string | null;
+      name_ru: string | null;
+      name_en: string | null;
+    },
+    lang: string,
+  ): string | null {
+    if (lang === 'ru') return o.name_ru;
+    if (lang === 'en') return o.name_en;
+    return o.name;
+  }
+
+  /**
+   * GET /api/v1/extra/users — Laravel WorkerUserController::index → UserWorkerRolesResource.
+   * Org-scope: WorkerPosition::filter worker_ids + User::filter. search + role filter.
+   */
   async findAll(filters: QueryWorkerUserDto) {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
+    const lang = this.ctx.lang;
+    const orgFilters = {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    };
 
-    // Laravel scopeSearchByFullName parity.
-    const searchCond = buildWorkerSearchCond(filters.search);
+    // Org-scope: $workerIds = WorkerPosition::filter(...)->select('worker_id').
+    const wpCond = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      orgFilters,
+    );
+    const scopedWorkerIds = this.db
+      .select({ worker_id: worker_positions.worker_id })
+      .from(worker_positions)
+      .where(and(notDeleted(worker_positions), wpCond));
+
+    // User::filter — users.organization_id org-scope.
+    const userCond = await this.scope.whereOrg(
+      usersTable.organization_id,
+      orgFilters,
+    );
+
+    // search — whereHas('worker', searchByFullName).
+    const searchCond = filters.search
+      ? buildWorkerSearchCond(filters.search)
+      : undefined;
+
+    // role — whereHas('roles', where name = role) → EXISTS.
+    const roleCond = filters.role
+      ? sql`EXISTS (SELECT 1 FROM ${model_has_roles} mhr JOIN ${roles} r ON r.id = mhr.role_id WHERE mhr.model_id = ${usersTable.id} AND r.name = ${filters.role})`
+      : undefined;
 
     const where = and(
       notDeleted(usersTable),
-      filters.organization_id
-        ? eq(usersTable.organization_id, filters.organization_id)
-        : undefined,
+      userCond,
+      inArray(usersTable.worker_id, scopedWorkerIds),
       searchCond,
+      roleCond,
     );
 
-    const [rows, [{ total }]] = await Promise.all([
-      this.db
-        .select({
-          id: usersTable.id,
-          uuid: usersTable.uuid,
-          phone: usersTable.phone,
-          organization_id: usersTable.organization_id,
-          worker_id: workers.id,
-          worker_last: workers.last_name,
-          worker_first: workers.first_name,
-          worker_middle: workers.middle_name,
-          worker_photo: workers.photo,
-        })
-        .from(usersTable)
-        .leftJoin(workers, eq(workers.id, usersTable.worker_id))
-        .where(where)
-        .limit(perPage)
-        .offset(offset),
-      this.db
-        .select({ total: count() })
-        .from(usersTable)
-        .leftJoin(workers, eq(workers.id, usersTable.worker_id))
-        .where(where),
+    const needWorkerJoin = !!searchCond;
+    const listQuery = this.db
+      .select({
+        id: usersTable.id,
+        uuid: usersTable.uuid,
+        phone: usersTable.phone,
+        organization_id: usersTable.organization_id,
+        worker_id: workers.id,
+        worker_uuid: workers.uuid,
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        worker_birthday: workers.birthday,
+        worker_photo: workers.photo,
+        worker_pin: workers.pin,
+        o_id: organizations.id,
+        o_name: organizations.name,
+        o_name_ru: organizations.name_ru,
+        o_name_en: organizations.name_en,
+        o_group: organizations.group,
+      })
+      .from(usersTable)
+      .leftJoin(workers, eq(workers.id, usersTable.worker_id))
+      .leftJoin(organizations, eq(organizations.id, usersTable.organization_id))
+      .where(where)
+      .limit(perPage)
+      .offset(offset);
+
+    const countBase = this.db.select({ total: count() }).from(usersTable);
+    const countQuery = needWorkerJoin
+      ? countBase
+          .leftJoin(workers, eq(workers.id, usersTable.worker_id))
+          .where(where)
+      : countBase.where(where);
+
+    const [rows, [{ total }]] = await Promise.all([listQuery, countQuery]);
+    const userIds = rows.map((r) => r.id);
+    const workerIds = rows
+      .map((r) => r.worker_id)
+      .filter((v): v is number => v != null);
+
+    // phones (worker.phones), roles+organizations (getRoles) batch.
+    const [phoneRows, mhrRows] = await Promise.all([
+      workerIds.length
+        ? this.db
+            .select({
+              worker_id: worker_phones.worker_id,
+              phone: worker_phones.phone,
+            })
+            .from(worker_phones)
+            .where(
+              and(
+                inArray(worker_phones.worker_id, workerIds),
+                notDeleted(worker_phones),
+              ),
+            )
+        : [],
+      userIds.length
+        ? this.db
+            .select({
+              user_id: model_has_roles.model_id,
+              role_id: roles.id,
+              role_name: roles.name,
+              org_id: organizations.id,
+              org_name: organizations.name,
+              org_full_name: organizations.full_name,
+            })
+            .from(model_has_roles)
+            .innerJoin(roles, eq(roles.id, model_has_roles.role_id))
+            .innerJoin(
+              organizations,
+              eq(organizations.id, model_has_roles.organization_id),
+            )
+            .where(inArray(model_has_roles.model_id, userIds))
+        : [],
     ]);
 
-    // Batch load roles per user.
-    const userIds = rows.map((r) => r.id);
-    const roleRows = userIds.length
-      ? await this.db
-          .select({
-            user_id: model_has_roles.model_id,
-            organization_id: model_has_roles.organization_id,
-            role_id: roles.id,
-            role_name: roles.name,
-          })
-          .from(model_has_roles)
-          .innerJoin(roles, eq(roles.id, model_has_roles.role_id))
-          .where(inArray(model_has_roles.model_id, userIds))
-      : [];
-
-    const rolesByUser = new Map<number, typeof roleRows>();
-    for (const r of roleRows) {
-      const arr = rolesByUser.get(r.user_id) ?? [];
-      arr.push(r);
-      rolesByUser.set(r.user_id, arr);
+    const phonesByWorker = new Map<number, number[]>();
+    for (const p of phoneRows) {
+      const arr = phonesByWorker.get(p.worker_id) ?? [];
+      if (p.phone != null) arr.push(p.phone);
+      phonesByWorker.set(p.worker_id, arr);
+    }
+    const mhrByUser = new Map<number, typeof mhrRows>();
+    for (const m of mhrRows) {
+      const arr = mhrByUser.get(m.user_id) ?? [];
+      arr.push(m);
+      mhrByUser.set(m.user_id, arr);
     }
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({
           id: r.id,
           uuid: r.uuid,
           phone: r.phone,
-          organization_id: r.organization_id,
+          phones: r.worker_id ? (phonesByWorker.get(r.worker_id) ?? []) : [],
           worker: r.worker_id
             ? {
                 id: r.worker_id,
+                uuid: r.worker_uuid,
+                photo: await this.minio.fileUrl(r.worker_photo),
                 last_name: r.worker_last,
                 first_name: r.worker_first,
                 middle_name: r.worker_middle,
-                photo: await this.minio.fileUrl(r.worker_photo),
+                birthday: r.worker_birthday,
+                pin: r.worker_pin,
               }
             : null,
-          roles: (rolesByUser.get(r.id) ?? []).map((rr) => ({
-            id: rr.role_id,
-            name: rr.role_name,
-            organization_id: rr.organization_id,
-          })),
+          current_organization: r.o_id
+            ? {
+                id: r.o_id,
+                name: this.orgName(
+                  {
+                    name: r.o_name,
+                    name_ru: r.o_name_ru,
+                    name_en: r.o_name_en,
+                  },
+                  lang,
+                ),
+                group: r.o_group,
+              }
+            : null,
+          roles: this.buildRoles(
+            mhrByUser.get(r.id) ?? [],
+            r.organization_id,
+            lang,
+          ),
         })),
       ),
     };
+  }
+
+  // Laravel UserHelper::getRoles — (org, role) juftlarini role_id bo'yicha guruhlash.
+  private buildRoles(
+    mhr: {
+      role_id: number;
+      role_name: string | null;
+      org_id: number;
+      org_name: string | null;
+      org_full_name: string | null;
+    }[],
+    currentOrgId: number | null,
+    lang: string,
+  ) {
+    const grouped = new Map<
+      number,
+      {
+        id: number;
+        name: string | null;
+        organizations: {
+          id: number;
+          name: string | null;
+          full_name: string | null;
+          current: boolean;
+        }[];
+      }
+    >();
+    for (const m of mhr) {
+      let entry = grouped.get(m.role_id);
+      if (!entry) {
+        entry = {
+          id: m.role_id,
+          name: this.roleName(m.role_id, m.role_name, lang),
+          organizations: [],
+        };
+        grouped.set(m.role_id, entry);
+      }
+      entry.organizations.push({
+        id: m.org_id,
+        name: m.org_name,
+        full_name: m.org_full_name,
+        current: m.org_id === currentOrgId,
+      });
+    }
+    return [...grouped.values()];
   }
 
   // POST /api/v1/hr/users/attach-role

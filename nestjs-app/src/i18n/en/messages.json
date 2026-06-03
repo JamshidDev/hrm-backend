@@ -373,7 +373,19 @@
       "total_two": "Payments not included in income structure",
       "total_three": "Types of payments not included in the wage fund",
       "total_four": "Total wage",
-      "total_five": "Deductions from wages"
+      "total_five": "Deductions from wages",
+      "decoding": {
+        "one": "Wage fund reflected in the 1-T report",
+        "two": "Payments not included in the wage fund",
+        "three": "Deductions from salary",
+        "four": "Payment type names",
+        "five": "Type",
+        "six": "Total",
+        "seven": "Overall",
+        "eight": "Payments not included in income",
+        "nine": "Calculated total salary",
+        "in_year": "From the beginning of the year"
+      }
     },
     "tax_four": {
       "reported_salary_income": "Wage-type income during the reporting period",
@@ -578,6 +590,18 @@
   "chat": {
     "notifications": {
       "send_success": "Your message was sent successfully!"
+    },
+    "telegram": {
+      "messages": {
+        "types": {
+          "birthday": "Birthday",
+          "vacations": "Vacation",
+          "med": "Medical check-up",
+          "passport": "Passport",
+          "mobile_app": "Mobile app",
+          "turnstile_stats": "Turnstile statistics"
+        }
+      }
     }
   },
   "turnstile": {
@@ -628,5 +652,39 @@
   },
   "does_not_delete_related_item": "This item is linked to other data, Cannot be deleted...",
   "does_not_delete_approved_document": "Cannot delete an approved document.",
-  "director_not_found": "Director not found."
+  "director_not_found": "Director not found.",
+  "tax_four": {
+    "employee_status": {
+      "one": "Employed",
+      "two": "Unemployed"
+    },
+    "contract_type": {
+      "one": "Main job",
+      "two": "Part-time / Concurrent job",
+      "three": "Individual entrepreneur",
+      "four": "Hired worker"
+    }
+  },
+  "tax_five": {
+    "income_type": {
+      "one": "Property income",
+      "two": "Rental income",
+      "three": "In-kind benefits",
+      "four": "Other"
+    }
+  },
+  "feature_not_available": "This feature is not available yet",
+  "not_allowed_confirmatory_and_director": "The head of the organization and additional signatories should not be selected at the same time.",
+  "roles": {
+    "worker": "Worker",
+    "hr": "HR",
+    "finance": "Accountant",
+    "jurist": "Lawyer",
+    "economist": "Economist",
+    "hr_leader": "HR Manager",
+    "economist_leader": "Chief Economist",
+    "hospital": "Polyclinic employee",
+    "turnstile_viewer": "Turnstile viewer",
+    "turnstile_leader": "Turnstile Leader"
+  }
 }

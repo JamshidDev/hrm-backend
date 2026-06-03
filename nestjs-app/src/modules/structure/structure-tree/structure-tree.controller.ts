@@ -25,6 +25,30 @@ class StructureIndexQueryDto {
   organization_id?: number;
 }
 
+// GET /api/v1/structure/confirmations — paginatsiya (organization_id Laravel'da e'tiborsiz).
+class StructureConfirmationsQueryDto {
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
+
+  @ApiPropertyOptional({ example: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  per_page?: number;
+
+  @ApiPropertyOptional({
+    example: 136,
+    description: 'Laravel parity: e‘tiborsiz',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
+}
+
 // Laravel routes: `/api/v1/structure`, `/all`, `/parents`, ... (auth.hybrid middleware).
 //
 // `getAllStructure` Laravel'da `Helper::response()` ishlatmaydi — to'g'ridan-to'g'ri
@@ -69,5 +93,28 @@ export class StructureTreeController {
     return this.service.getAncestors();
   }
 
-  // TODO: parent-leaders, confirmations — HR module (WorkerPosition) kerak.
+  // Laravel: StructureController::confirmations — `Helper::response(true, PaginateResource(...))`.
+  // WorkerPosition (lead lavozimlar) → WorkerPositionMinimalResource, paginate(50).
+  @Get('confirmations')
+  @ApiOperation({
+    summary:
+      'Lead-position worker_positions (confirmatory candidates), paginated',
+  })
+  @ApiOkResponse()
+  async confirmations(@Query() q: StructureConfirmationsQueryDto) {
+    return this.service.confirmations(q.per_page, q.page);
+  }
+
+  // Laravel: StructureController::parentLeaders — `Helper::response(true, PaginateResource(...))`.
+  // Lead-position worker_positions ∈ ancestorsAndSelf(auth user org). organization_id/parent_id
+  // query'lari Laravel'da e'tiborsiz (org-scope auth user'dan).
+  @Get('parent-leaders')
+  @ApiOperation({
+    summary:
+      'Lead-position worker_positions within user org ancestors-and-self, paginated',
+  })
+  @ApiOkResponse()
+  async parentLeaders(@Query() q: StructureConfirmationsQueryDto) {
+    return this.service.parentLeaders(q.per_page, q.page);
+  }
 }

@@ -36,7 +36,7 @@ export class WorkerUserController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('extra-worker-user')
   @ApiOperation({ summary: 'List worker users with roles' })
   async findAll(@Query() query: QueryWorkerUserDto) {
     return buildSuccess(true, await this.service.findAll(query));
@@ -44,7 +44,7 @@ export class WorkerUserController {
 
   @Post('attach-role')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('extra-worker-user')
   async attachRole(@Body() dto: AttachWorkerRoleDto) {
     await this.service.attachRole(dto);
     return buildSuccess(this.i18n.t('messages.role_successfully_assigned'), []);
@@ -52,7 +52,7 @@ export class WorkerUserController {
 
   @Post('detach-role')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('extra-worker-user')
   async detachRole(@Body() dto: DetachWorkerRoleDto) {
     await this.service.detachRole(dto);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
@@ -60,7 +60,7 @@ export class WorkerUserController {
 
   @Post('update-password')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('extra-worker-user')
   async updatePassword(@Body() dto: UpdatePasswordDto) {
     await this.service.updatePassword(dto);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
@@ -68,7 +68,7 @@ export class WorkerUserController {
 
   @Put('update')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('extra-worker-user')
   async updateProfile(@Body() dto: UpdateProfileDto) {
     await this.service.updateProfile(dto);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);

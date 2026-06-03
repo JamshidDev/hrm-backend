@@ -31,7 +31,6 @@ export class ExportTaskItemDto {
 
 export class ExportTaskListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [ExportTaskItemDto] }) data!: ExportTaskItemDto[];
 }

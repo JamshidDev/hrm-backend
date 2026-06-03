@@ -79,7 +79,6 @@ export class VacancyItemDto {
 
 export class VacancyListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [VacancyItemDto] }) data!: VacancyItemDto[];
 }

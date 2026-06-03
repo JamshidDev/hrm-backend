@@ -1,14 +1,17 @@
-// Chat telegram service. Laravel: TelegramController.
+// Chat telegram service. Laravel: Modules\Chat\...\TelegramController.
 //
-// `telegram_messages` jadvali — backend bot orqali yuborgan xabarlar tarixi.
-// Laravel'da WorkerPosition filtri orqali user scoping qilingan, biz hozircha
-// soddalashtirilgan variantni qaytaramiz (organization_id filter ixtiyoriy).
+// `telegram_messages` — backend bot yuborgan xabarlar tarixi. Org-scope:
+// WorkerPosition::filter($user)->select('worker_id') → user.worker_id ∈ shu worker_id'lar.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
+import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
 import {
   telegram_messages,
   users,
@@ -17,46 +20,77 @@ import {
 } from '@/db/schema';
 import type { TelegramMessagesQueryDto } from '@/modules/chat/telegram/dto/telegram.dto';
 
-/** Laravel `TelegramMessageTypeEnum`. */
-const TELEGRAM_TYPES = [
-  { id: 1, type: 'General' },
-  { id: 2, type: 'Notification' },
-  { id: 3, type: 'System' },
-];
+// Laravel App\Enums\TelegramMessageTypeEnum (1..6) → i18n label kalitlari.
+const TELEGRAM_TYPE_LABELS: Record<number, string> = {
+  1: 'messages.chat.telegram.messages.types.birthday',
+  2: 'messages.chat.telegram.messages.types.vacations',
+  3: 'messages.chat.telegram.messages.types.med',
+  4: 'messages.chat.telegram.messages.types.passport',
+  5: 'messages.chat.telegram.messages.types.mobile_app',
+  6: 'messages.chat.telegram.messages.types.turnstile_stats',
+};
+const TELEGRAM_TYPE_IDS = [1, 2, 3, 4, 5, 6];
 
 @Injectable()
 export class ChatTelegramService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly scope: OrgScopeService,
+    private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
+    private readonly minio: MinioService,
+  ) {}
+
+  // Laravel: $userIds = WorkerPosition::filter($user, request)->select('worker_id');
+  //          TelegramMessage::whereHas('user', whereIn('worker_id', $userIds)).
+  // → telegram_messages.user_id ∈ (users whose worker_id ∈ scoped worker_positions).
+  private async scopedUserCond(q: TelegramMessagesQueryDto) {
+    const orgCond = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {
+        organizations: q.organizations,
+        organization_id: q.organization_id,
+      },
+    );
+    const scopedWorkerIds = this.db
+      .select({ worker_id: worker_positions.worker_id })
+      .from(worker_positions)
+      .where(and(notDeleted(worker_positions), orgCond));
+    const scopedUserIds = this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.worker_id, scopedWorkerIds));
+    return inArray(telegram_messages.user_id, scopedUserIds);
+  }
+
+  // i18n type label.
+  private typeName(id: number | null, lang: string): string {
+    const key = id != null ? TELEGRAM_TYPE_LABELS[id] : undefined;
+    if (!key) return '';
+    const v = this.i18n.t(key, { lang });
+    return typeof v === 'string' ? v : '';
+  }
+
+  private toDateTimeString(v: string | null): string | null {
+    if (!v) return null;
+    const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(v);
+    return m ? `${m[1]} ${m[2]}` : v;
+  }
 
   /**
-   * GET /telegram/messages — backend bot xabarlari tarixi.
-   * User + worker bilan join (Laravel `whereHas('user', whereIn worker_id)`).
+   * GET /telegram/messages — TelegramMessageResource, org-scope (WorkerPosition::filter),
+   * orderByDesc('id'), paginate.
    */
   async messages(q: TelegramMessagesQueryDto) {
     const page = Number(q?.page ?? 1);
     const perPage = Number(q?.per_page ?? 10);
     const offset = (page - 1) * perPage;
+    const lang = this.ctx.lang;
 
-    let where: SQL = notDeleted(telegram_messages);
-
-    // Organization_id berilgan bo'lsa — WorkerPosition orqali user'larni filter
-    if (q.organization_id !== undefined) {
-      const userIds = await this.db
-        .selectDistinct({ user_id: users.id })
-        .from(worker_positions)
-        .innerJoin(workers, eq(workers.id, worker_positions.worker_id))
-        .innerJoin(users, eq(users.worker_id, workers.id))
-        .where(eq(worker_positions.organization_id, q.organization_id));
-
-      const ids = userIds.map((u) => u.user_id);
-      if (!ids.length) {
-        return { current_page: page, per_page: perPage, total: 0, data: [] };
-      }
-      where = and(
-        where,
-        sql`${telegram_messages.user_id} = ANY(ARRAY[${sql.raw(ids.join(','))}]::bigint[])`,
-      )!;
-    }
+    const where = and(
+      notDeleted(telegram_messages),
+      await this.scopedUserCond(q),
+    );
 
     const [rows, [{ total }]] = await Promise.all([
       this.db
@@ -69,36 +103,87 @@ export class ChatTelegramService {
       this.db.select({ total: count() }).from(telegram_messages).where(where),
     ]);
 
-    return {
-      current_page: page,
-      per_page: perPage,
-      total: Number(total),
-      data: rows,
-    };
+    // user.worker batch — UserWorkerResource.
+    const userIds = [
+      ...new Set(
+        rows.map((r) => r.user_id).filter((id): id is number => id != null),
+      ),
+    ];
+    const userRows = userIds.length
+      ? await this.db
+          .select({
+            id: users.id,
+            w_id: workers.id,
+            w_photo: workers.photo,
+            w_last: workers.last_name,
+            w_first: workers.first_name,
+            w_middle: workers.middle_name,
+          })
+          .from(users)
+          .leftJoin(workers, eq(workers.id, users.worker_id))
+          .where(inArray(users.id, userIds))
+      : [];
+    const userMap = new Map(userRows.map((u) => [u.id, u]));
+
+    const data = await Promise.all(
+      rows.map(async (r) => {
+        const u = userMap.get(r.user_id);
+        const user = u
+          ? {
+              id: u.id,
+              worker: u.w_id
+                ? {
+                    id: u.w_id,
+                    photo: await this.minio.fileUrl(u.w_photo),
+                    last_name: u.w_last,
+                    first_name: u.w_first,
+                    middle_name: u.w_middle,
+                  }
+                : null,
+            }
+          : null;
+        return {
+          id: r.id,
+          user,
+          type: { id: r.type, name: this.typeName(r.type, lang) },
+          created_at: this.toDateTimeString(r.created_at),
+          message: r.message,
+          status: r.status,
+          // Laravel TelegramMessageResource `$this->error` — DB ustuni `error_msg`,
+          // `error` atributi yo'q → Laravel null qaytaradi (parity).
+          error: null,
+        };
+      }),
+    );
+
+    return { current_page: page, total: Number(total), data };
   }
 
   /**
-   * GET /telegram/dashboard — type bo'yicha xabarlar soni.
-   * Laravel: GROUP BY type COUNT(*) — barcha turlar uchun, 0 ham ko'rsatiladi.
+   * GET /telegram/dashboard — Laravel: type bo'yicha GROUP BY COUNT, barcha enum
+   * turlari uchun (0 ham). Org-scope WorkerPosition::filter.
    */
-  async dashboard() {
+  async dashboard(q: TelegramMessagesQueryDto) {
+    const lang = this.ctx.lang;
+    const where = and(
+      notDeleted(telegram_messages),
+      await this.scopedUserCond(q),
+    );
+
     const rows = await this.db
-      .select({
-        type: telegram_messages.type,
-        count: sql<number>`COUNT(*)`,
-      })
+      .select({ type: telegram_messages.type, c: sql<number>`COUNT(*)` })
       .from(telegram_messages)
-      .where(notDeleted(telegram_messages))
+      .where(where)
       .groupBy(telegram_messages.type);
 
-    const countsByType = new Map<number, number>();
-    for (const r of rows) countsByType.set(r.type, Number(r.count));
+    const counts = new Map<number, number>();
+    for (const r of rows) counts.set(r.type, Number(r.c));
 
     return {
-      by_types: TELEGRAM_TYPES.map((t) => ({
-        id: t.id,
-        type: t.type,
-        count: countsByType.get(t.id) ?? 0,
+      by_types: TELEGRAM_TYPE_IDS.map((id) => ({
+        id,
+        type: this.typeName(id, lang),
+        count: counts.get(id) ?? 0,
       })),
     };
   }

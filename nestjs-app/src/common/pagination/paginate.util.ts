@@ -45,7 +45,6 @@ export interface PaginateOptions<TRow, TItem> {
 
 export interface PaginatedResult<T> {
   current_page: number;
-  per_page: number;
   total: number;
   data: T[];
 }
@@ -68,7 +67,6 @@ export async function paginate<TRow, TItem>(
 
   return {
     current_page: page,
-    per_page: perPage,
     total: Number(total),
     data: rows.map(mapper),
   };

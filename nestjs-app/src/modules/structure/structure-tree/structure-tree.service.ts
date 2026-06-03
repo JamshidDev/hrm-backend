@@ -1,29 +1,52 @@
-// Structure tree views. Laravel: StructureController::index/all/parents/...
+// Structure tree views. Laravel: StructureController::index/all/parents/confirmations/parentLeaders.
 //
-// Hozirgi qamrov:
-//   - all      — barcha organizations tree (OrganizationChildResource recursive).
-//   - parents  — user.organization_id ancestorsAndSelf chain (OrganizationListResource).
-//
-// Skip (HR modul kerak): index, leaders, parent-leaders, confirmations.
+// Qamrov:
+//   - index          — `/structure` (rol-asosli org tree: admin/leader/own).
+//   - all            — barcha organizations tree (OrganizationChildResource recursive).
+//   - parents        — user.organization_id ancestorsAndSelf chain (OrganizationListResource).
+//   - confirmations  — lead-lavozim worker_position'lar (org-scopesiz), WorkerPositionMinimalResource.
+//   - parentLeaders  — lead-lavozim worker_position'lar ∈ ancestorsAndSelf(user org).
 
 import { Injectable } from '@nestjs/common';
 import {
   and,
   asc,
   between,
+  count,
   eq,
   gt,
+  gte,
   ilike,
+  inArray,
+  isNull,
   lt,
+  lte,
   or,
   type SQL,
 } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
-import { organizations } from '@/db/schema';
+import {
+  organizations,
+  worker_positions,
+  workers,
+  departments,
+  positions as positionsTable,
+} from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { PermissionService } from '@/shared/permission/permission.service';
+import { MinioService } from '@/shared/minio/minio.service';
+import {
+  getFullPosition,
+  getShortPosition,
+} from '@/modules/hr/_shared/position-helper';
+
+// Laravel App\Helpers\Helper::leadPositionIds() — [$leadIds, $leadDeputyIds].
+// confirmations faqat $leadIds (rahbar lavozimlari) ishlatadi.
+const LEAD_POSITION_IDS = [
+  84, 399, 934, 144, 171, 232, 1546, 21, 8, 12, 16, 218, 437, 499, 822, 1503,
+];
 
 // Tree response item.
 export interface OrgTreeNode {
@@ -47,6 +70,7 @@ export class StructureTreeService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly permissions: PermissionService,
+    private readonly minio: MinioService,
   ) {}
 
   // Laravel: StructureController::getAllStructure() — barcha orglar tree.
@@ -246,6 +270,185 @@ export class StructureTreeService {
     return this.buildTree(flat, lang);
   }
 
+  /**
+   * Laravel: StructureController::confirmations() — `/api/v1/structure/confirmations`.
+   *
+   * WorkerPosition::whereIn('position_id', $leadIds)   // Helper::leadPositionIds()[0]
+   *   ->with([worker, organization, department, position])
+   *   ->paginate(per_page ?? 50)
+   *   → PaginateResource(WorkerPositionMinimalResource).
+   *
+   * Diqqat: Laravel `organization_id` query'sini E'TIBORGA OLMAYDI (filter yo'q) —
+   * faqat lead lavozimdagi barcha worker_position'lar (org-scopesiz). Parity uchun
+   * NestJS ham organization_id'ni e'tiborsiz qoldiradi.
+   */
+  async confirmations(perPage?: number, page?: number) {
+    return this.listLeadPositions(perPage ?? 50, page ?? 1);
+  }
+
+  /**
+   * Laravel: StructureController::parentLeaders — `/api/v1/structure/parent-leaders`.
+   *
+   * $orgIds = Organization::ancestorsAndSelf($user->organization_id)->select('id');
+   * WorkerPosition::whereIn('position_id', $leadIds)->whereIn('organization_id', $orgIds)
+   *   ->with([worker, organization, department, position])->paginate(per_page ?? 50)
+   *   → PaginateResource(WorkerPositionMinimalResource).
+   *
+   * Diqqat: Laravel `organization_id`/`parent_id` query'sini E'TIBORGA OLMAYDI — org-scope
+   * AUTH foydalanuvchining organization_id ancestorsAndSelf (ajdodlar + o'zi) zanjiri bo'yicha.
+   */
+  async parentLeaders(perPage?: number, page?: number) {
+    const orgId = this.ctx.user?.organization_id;
+    if (!orgId) return { current_page: page ?? 1, total: 0, data: [] };
+    const orgIds = await this.getAncestorAndSelfOrgIds(orgId);
+    return this.listLeadPositions(perPage ?? 50, page ?? 1, orgIds);
+  }
+
+  // ancestorsAndSelf(orgId) — NestedSet: ajdodlar + o'zi (_lft <= node._lft AND _rgt >= node._rgt).
+  private async getAncestorAndSelfOrgIds(orgId: number): Promise<number[]> {
+    const [node] = await this.db
+      .select({ _lft: organizations._lft, _rgt: organizations._rgt })
+      .from(organizations)
+      .where(eq(organizations.id, orgId))
+      .limit(1);
+    if (!node) return [];
+    const rows = await this.db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(
+        and(
+          notDeleted(organizations),
+          lte(organizations._lft, node._lft),
+          gte(organizations._rgt, node._rgt),
+        ),
+      );
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * Lead-position worker_positions — `confirmations` (org-scopesiz) va `parent-leaders`
+   * (ancestorsAndSelf org-scope) uchun umumiy. WorkerPositionMinimalResource shape, paginate(50).
+   */
+  private async listLeadPositions(
+    perPage: number,
+    page: number,
+    orgIds?: number[],
+  ) {
+    const lang = this.ctx.lang;
+    const pp = perPage;
+    const pg = page;
+    const offset = (pg - 1) * pp;
+
+    if (orgIds && orgIds.length === 0) {
+      return { current_page: pg, total: 0, data: [] };
+    }
+
+    // WorkerPosition SoftDeletes — default scope deleted'larni chiqarib tashlaydi.
+    const where = and(
+      notDeleted(worker_positions),
+      inArray(worker_positions.position_id, LEAD_POSITION_IDS),
+      orgIds ? inArray(worker_positions.organization_id, orgIds) : undefined,
+    );
+
+    // Laravel paginate() — count-first.
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(worker_positions)
+      .where(where);
+    const totalNum = Number(total);
+    if (totalNum === 0) {
+      return { current_page: pg, total: 0, data: [] };
+    }
+
+    // Laravel index'da orderBy yo'q → natural Postgres tartibi.
+    const rows = await this.db
+      .select({
+        id: worker_positions.id,
+        worker_id: workers.id,
+        worker_photo: workers.photo,
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        org_id: organizations.id,
+        org_name: organizations.name,
+        org_name_ru: organizations.name_ru,
+        org_name_en: organizations.name_en,
+        org_group: organizations.group,
+        org_full_name: organizations.full_name,
+        dept_name: departments.name,
+        dept_level: departments.level,
+        pos_name: positionsTable.name,
+      })
+      .from(worker_positions)
+      .leftJoin(
+        workers,
+        and(
+          eq(workers.id, worker_positions.worker_id),
+          isNull(workers.deleted_at),
+        ),
+      )
+      .leftJoin(
+        organizations,
+        and(
+          eq(organizations.id, worker_positions.organization_id),
+          isNull(organizations.deleted_at),
+        ),
+      )
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(
+        positionsTable,
+        eq(positionsTable.id, worker_positions.position_id),
+      )
+      .where(where)
+      .limit(pp)
+      .offset(offset);
+
+    // Laravel HR\Transformers\WorkerPosition\WorkerPositionMinimalResource:
+    // {id, worker(WorkerMinimalResource), organization(OrganizationListResource),
+    //  post_name, post_short_name}.
+    const data = await Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        worker: r.worker_id
+          ? {
+              id: r.worker_id,
+              photo: await this.minio.fileUrl(r.worker_photo),
+              last_name: r.worker_last,
+              first_name: r.worker_first,
+              middle_name: r.worker_middle,
+            }
+          : null,
+        organization: r.org_id
+          ? {
+              id: r.org_id,
+              // OrganizationListResource: ru→name_ru, en→name_en, default→name (fallback YO'Q).
+              name:
+                lang === 'ru'
+                  ? r.org_name_ru
+                  : lang === 'en'
+                    ? r.org_name_en
+                    : r.org_name,
+              group: r.org_group ?? false,
+            }
+          : null,
+        post_name: getFullPosition({
+          position_name: r.pos_name,
+          department_name: r.dept_name,
+          department_level: r.dept_level,
+          organization_full_name: r.org_full_name,
+        }),
+        post_short_name: getShortPosition({
+          position_name: r.pos_name,
+          department_name: r.dept_name,
+          department_level: r.dept_level,
+          organization_full_name: r.org_full_name,
+        }),
+      })),
+    );
+
+    return { current_page: pg, total: totalNum, data };
+  }
+
   // ---- Helpers ----
 
   // Flat list → nested tree via parent_id chain. Root nodes have parent_id IS NULL.
@@ -262,8 +465,7 @@ export class StructureTreeService {
     }[],
     lang: string,
   ): OrgTreeNode[] {
-    // Group by parent_id.
-    const childrenByParent = new Map<number | null, OrgTreeNode[]>();
+    // parent_id chain bo'yicha tree.
     const allNodes = new Map<number, OrgTreeNode>();
 
     // First pass — create nodes (children empty).

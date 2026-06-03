@@ -241,7 +241,7 @@ export class AdminUserService {
     const directUserIds = directUserIdsRows.map((r) => r.id);
 
     if (directUserIds.length === 0) {
-      return { current_page: page, per_page: perPage, total: 0, data: [] };
+      return { current_page: page, total: 0, data: [] };
     }
 
     const userList = await this.db.query.users.findMany({
@@ -292,7 +292,6 @@ export class AdminUserService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: directUserIds.length,
       data,
     };

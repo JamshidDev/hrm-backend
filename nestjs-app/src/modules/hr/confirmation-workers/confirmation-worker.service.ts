@@ -1,17 +1,7 @@
 // ConfirmationWorker service. ConfirmationWorkerLevelEnum 1..2.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -115,7 +105,6 @@ export class ConfirmationWorkerService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => {

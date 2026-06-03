@@ -78,7 +78,6 @@ export class TimeSheetWorkerItemDto {
 
 export class TimeSheetWorkerListResponseDto {
   @ApiProperty() current_page!: number;
-  @ApiProperty() per_page!: number;
   @ApiProperty() total!: number;
   @ApiProperty({ type: [TimeSheetWorkerItemDto] })
   data!: TimeSheetWorkerItemDto[];

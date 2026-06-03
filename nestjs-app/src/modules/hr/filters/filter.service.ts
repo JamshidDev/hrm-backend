@@ -192,11 +192,13 @@ export class FilterService {
         organization: r.org_id
           ? {
               id: r.org_id,
+              // Laravel OrganizationListResource: ru→name_ru, en→name_en,
+              // default→name (fallback YO'Q — name_ru/name_en null bo'lsa null).
               name:
                 lang === 'ru'
-                  ? (r.org_name_ru ?? r.org_name)
+                  ? r.org_name_ru
                   : lang === 'en'
-                    ? (r.org_name_en ?? r.org_name)
+                    ? r.org_name_en
                     : r.org_name,
               group: r.org_group ?? false,
             }
@@ -260,11 +262,13 @@ export class FilterService {
         organization: r.org_id
           ? {
               id: r.org_id,
+              // Laravel OrganizationListResource: ru→name_ru, en→name_en,
+              // default→name (fallback YO'Q — name_ru/name_en null bo'lsa null).
               name:
                 lang === 'ru'
-                  ? (r.org_name_ru ?? r.org_name)
+                  ? r.org_name_ru
                   : lang === 'en'
-                    ? (r.org_name_en ?? r.org_name)
+                    ? r.org_name_en
                     : r.org_name,
               group: r.org_group ?? false,
             }

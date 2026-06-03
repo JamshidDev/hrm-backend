@@ -20,6 +20,18 @@ export class QueryWorkerUserDto extends SearchPaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   organization_id?: number;
+
+  // Laravel: when(role) → whereHas('roles', name = role).
+  @ApiPropertyOptional({ description: 'Role name (e.g. Finance)' })
+  @IsOptional()
+  @IsString()
+  role?: string;
+
+  // WorkerPosition::filter / User::filter — org-scope csv.
+  @ApiPropertyOptional({ description: 'CSV organization ids' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
 }
 
 export class AttachWorkerRoleDto {

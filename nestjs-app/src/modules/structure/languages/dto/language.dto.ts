@@ -50,9 +50,6 @@ export class LanguageListResponseDto {
   @ApiProperty({ example: 1 })
   current_page!: number;
 
-  @ApiProperty({ example: 10 })
-  per_page!: number;
-
   @ApiProperty({ example: 20 })
   total!: number;
 
