@@ -14,6 +14,8 @@ import {
   organizations,
   cities,
   regions,
+  model_has_roles,
+  roles,
 } from '@/db/schema';
 import type {
   AccessForAdminDto,
@@ -185,10 +187,61 @@ export class UserExtrasService {
     return { success: true, marked: (res as any).rowCount ?? 0 };
   }
 
-  /** GET /user/roles — joriy user'ning rollari (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  /**
+   * GET /user/roles — Laravel UserService::rolesWithOrganizations →
+   * UserHelper::getRoles → UserRolesWithOrganizationsResource:
+   * [{id, name (XOM role nomi), organizations:[{id, name, full_name, current}]}].
+   * (extra/users RoleOrganizationsResource'dan farqi: name enum label EMAS, xom.)
+   */
   async roles() {
-    return [];
+    const userId = this.ctx.user?.id;
+    if (!userId) return [];
+    const currentOrgId = this.ctx.user?.organization_id ?? null;
+
+    const mhr = await this.db
+      .select({
+        role_id: roles.id,
+        role_name: roles.name,
+        org_id: organizations.id,
+        org_name: organizations.name,
+        org_full_name: organizations.full_name,
+      })
+      .from(model_has_roles)
+      .innerJoin(roles, eq(roles.id, model_has_roles.role_id))
+      .innerJoin(
+        organizations,
+        eq(organizations.id, model_has_roles.organization_id),
+      )
+      .where(eq(model_has_roles.model_id, userId));
+
+    // UserHelper::getRoles — (org, role) juftlarini role_id bo'yicha guruhlash.
+    const grouped = new Map<
+      number,
+      {
+        id: number;
+        name: string | null;
+        organizations: {
+          id: number;
+          name: string | null;
+          full_name: string | null;
+          current: boolean;
+        }[];
+      }
+    >();
+    for (const m of mhr) {
+      let entry = grouped.get(m.role_id);
+      if (!entry) {
+        entry = { id: m.role_id, name: m.role_name, organizations: [] };
+        grouped.set(m.role_id, entry);
+      }
+      entry.organizations.push({
+        id: m.org_id,
+        name: m.org_name,
+        full_name: m.org_full_name,
+        current: m.org_id === currentOrgId,
+      });
+    }
+    return [...grouped.values()];
   }
 
   /** PUT /user/change-organization — joriy organization'ni o'zgartirish. */
