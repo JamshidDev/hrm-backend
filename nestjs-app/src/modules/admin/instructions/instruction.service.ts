@@ -8,6 +8,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { MinioService } from '@/shared/minio/minio.service';
 import { app_instruction_photos, app_instructions } from '@/db/schema';
 import {
   InstructionMapper,
@@ -22,7 +23,49 @@ import type {
 
 @Injectable()
 export class InstructionService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly minio: MinioService,
+  ) {}
+
+  /**
+   * PUT /admin/instructions/:id (multipart, _method=PUT) — Laravel AppInstructionController::update.
+   * menu/sub_menu/title/text (sometimes) yangilaydi + yangi photos qo'shadi (replace emas).
+   */
+  async updateFromForm(
+    id: number,
+    body: Record<string, unknown>,
+    files: Express.Multer.File[],
+  ): Promise<void> {
+    const data: Record<string, unknown> = { updated_at: sql`NOW()` };
+    if (body.menu !== undefined) data.menu = String(body.menu);
+    if (body.sub_menu !== undefined) data.sub_menu = String(body.sub_menu);
+    if (body.title !== undefined) data.title = String(body.title);
+    if (body.text !== undefined) data.text = String(body.text);
+
+    const [row] = await this.db
+      .update(app_instructions)
+      .set(data)
+      .where(and(eq(app_instructions.id, id), notDeleted(app_instructions)))
+      .returning({ id: app_instructions.id });
+    if (!row) throw new BusinessException(404, 'not_found');
+
+    // Laravel: $request->photos bo'lsa har birini upload qilib photos()->create.
+    for (const f of files) {
+      const path = await this.minio.uploadFormFile(f, 'app_instructions', [
+        'jpeg',
+        'png',
+        'jpg',
+        'svg',
+      ]);
+      await this.db.insert(app_instruction_photos).values({
+        app_instruction_id: id,
+        photo: path,
+        created_at: sql`NOW()`,
+        updated_at: sql`NOW()`,
+      });
+    }
+  }
 
   /** GET /admin/instructions — paginated. Filter: menu, sub_menu. */
   async list(q: InstructionListQueryDto) {
@@ -49,7 +92,6 @@ export class InstructionService {
     const data = await this.enrichWithPhotos(rows);
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data,
     };
