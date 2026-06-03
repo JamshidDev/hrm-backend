@@ -7,7 +7,14 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
-import { notifications, users, workers } from '@/db/schema';
+import {
+  notifications,
+  users,
+  workers,
+  organizations,
+  cities,
+  regions,
+} from '@/db/schema';
 import type {
   AccessForAdminDto,
   ChangeCurrentOrganizationDto,
@@ -166,7 +173,9 @@ export class UserExtrasService {
       return { success: true, marked: (res as any).rowCount ?? 0 };
     }
 
-    const ids = (dto.ids ?? []).filter((s) => typeof s === 'string' && s.length);
+    const ids = (dto.ids ?? []).filter(
+      (s) => typeof s === 'string' && s.length,
+    );
     if (!ids.length) return { success: true, marked: 0 };
 
     const res = await this.db
@@ -200,15 +209,88 @@ export class UserExtrasService {
   }
 
   /** GET /user/organization-info — joriy organization tafsiloti (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  /**
+   * GET /user/organization-info — Laravel UserService::organizationInfo →
+   * UserOrganizationEditResource(user.organization): {id, command_name
+   * (command_address ?? city.name), address, city (CityResource)}.
+   */
   async organizationInfo() {
-    return { organization: null, stub: true };
+    const orgId = this.ctx.user?.organization_id;
+    if (!orgId) return null; // Laravel new Resource(null) → null.
+
+    const [org] = await this.db
+      .select({
+        id: organizations.id,
+        command_address: organizations.command_address,
+        address: organizations.address,
+        city_id: organizations.city_id,
+      })
+      .from(organizations)
+      .where(eq(organizations.id, orgId))
+      .limit(1);
+    if (!org) return null;
+
+    // city (CityResource) + region (RegionMinimalResource {id, name}).
+    let city: Record<string, unknown> | null = null;
+    if (org.city_id) {
+      const [c] = await this.db
+        .select({
+          id: cities.id,
+          region_id: cities.region_id,
+          name: cities.name,
+          name_ru: cities.name_ru,
+          name_en: cities.name_en,
+          lat: cities.lat,
+          long: cities.long,
+        })
+        .from(cities)
+        .where(eq(cities.id, org.city_id))
+        .limit(1);
+      if (c) {
+        let region: { id: number; name: string | null } | null = null;
+        if (c.region_id) {
+          const [r] = await this.db
+            .select({ id: regions.id, name: regions.name })
+            .from(regions)
+            .where(eq(regions.id, c.region_id))
+            .limit(1);
+          region = r ? { id: r.id, name: r.name } : null;
+        }
+        city = {
+          id: c.id,
+          region,
+          name: c.name,
+          name_ru: c.name_ru,
+          name_en: c.name_en,
+          lat: c.lat,
+          long: c.long,
+        };
+      }
+    }
+
+    return {
+      id: org.id,
+      command_name: org.command_address ?? city?.name ?? null,
+      address: org.address,
+      city,
+    };
   }
 
-  /** PUT /user/organization-info — organization yangilash (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async updateOrganizationInfo(_dto: UpdateOrganizationInfoDto) {
-    return { success: true, stub: true };
+  /** PUT /user/organization-info — Laravel: org command_address/city_id/address yangilash. */
+  async updateOrganizationInfo(dto: UpdateOrganizationInfoDto): Promise<void> {
+    const orgId = this.ctx.user_or_fail.organization_id;
+    if (!orgId) {
+      throw new BusinessException(404, 'organization_not_found');
+    }
+    await this.db
+      .update(organizations)
+      .set({
+        command_address: dto.command_address,
+        city_id: dto.city_id,
+        address: dto.address,
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(organizations.id, orgId));
   }
 
   /** GET /user/organization-hr — organizationdagi HR'lar (stub). */

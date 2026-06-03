@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { UserExtrasService } from '@/modules/user/extras/extras.service';
@@ -29,7 +30,10 @@ import {
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/user')
 export class UserExtrasController {
-  constructor(private readonly service: UserExtrasService) {}
+  constructor(
+    private readonly service: UserExtrasService,
+    private readonly i18n: I18nService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Current user info + worker brief' })
@@ -69,15 +73,18 @@ export class UserExtrasController {
   }
 
   @Get('organization-info')
-  @ApiOperation({ summary: 'Current organization info (stub)' })
+  @ApiOperation({ summary: 'Current user organization edit info' })
   async orgInfo() {
     return buildSuccess(true, await this.service.organizationInfo());
   }
 
   @Put('organization-info')
-  @ApiOperation({ summary: 'Update organization info (stub)' })
+  @ApiOperation({
+    summary: 'Update organization command_address/city_id/address',
+  })
   async updateOrgInfo(@Body() dto: UpdateOrganizationInfoDto) {
-    return buildSuccess(true, await this.service.updateOrganizationInfo(dto));
+    await this.service.updateOrganizationInfo(dto);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 
   @Get('organization-hr')
