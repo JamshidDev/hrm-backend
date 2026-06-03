@@ -22,6 +22,7 @@ import { StructureTreeModule } from '@/modules/structure/structure-tree/structur
 import { UploadModule } from '@/modules/structure/upload/upload.module';
 import { ReportModule } from '@/modules/structure/reports/report.module';
 import { ExportModule } from '@/modules/structure/export/export.module';
+import { StructureSignatureModule } from '@/modules/structure/signature/signature.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ExportModule } from '@/modules/structure/export/export.module';
     UploadModule,
     ReportModule,
     ExportModule,
+    StructureSignatureModule,
   ],
 })
 export class StructureModule {}
