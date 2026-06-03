@@ -45,7 +45,7 @@ export class AdminTelegramService {
       const workerCond = buildWorkerSearchCond(q.search);
       // whereHas('user', worker searchByFullName) OR phone OR chat_id.
       const workerExists = workerCond
-        ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} sw ON sw.id = su.worker_id WHERE su.id = ${user_telegrams.user_id} AND ${workerCond})`
+        ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} ON ${workers.id} = su.worker_id WHERE su.id = ${user_telegrams.user_id} AND ${workerCond})`
         : undefined;
       const orExpr = or(
         ...(workerExists ? [workerExists] : []),

@@ -6,6 +6,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { MinioService } from '@/shared/minio/minio.service';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import {
   liveness_session_photos,
   liveness_sessions,
@@ -43,20 +44,17 @@ export class AdminMobileUserService {
     const perPage = Math.min(100, Math.max(1, Number(q?.per_page ?? 10)));
     const offset = (page - 1) * perPage;
 
-    // search worker fullName orqali — SQL subquery (parametr limitidan qutulish uchun)
+    // Laravel: whereHas('user.worker', searchByFullName) — term-split full-name.
+    // workers ALIASSIZ (buildWorkerSearchCond `workers.*` ishlatadi).
     const conds: SQL[] = [];
-    if (q.search) {
-      const pattern = `%${q.search}%`;
+    const workerCond = q.search ? buildWorkerSearchCond(q.search) : undefined;
+    if (workerCond) {
       conds.push(
         sql`EXISTS (
-          SELECT 1 FROM ${users} u
-          JOIN ${workers} w ON w.id = u.worker_id
-          WHERE u.id = ${user_mobile_keys.user_id}
-            AND (
-              w.last_name ILIKE ${pattern}
-              OR w.first_name ILIKE ${pattern}
-              OR w.middle_name ILIKE ${pattern}
-            )
+          SELECT 1 FROM ${users}
+          JOIN ${workers} ON ${workers.id} = ${users.worker_id}
+          WHERE ${users.id} = ${user_mobile_keys.user_id}
+            AND ${workerCond}
         )`,
       );
     }

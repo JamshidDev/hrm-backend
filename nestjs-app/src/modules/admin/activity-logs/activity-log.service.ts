@@ -46,7 +46,7 @@ export class ActivityLogService {
     // scopeSearch — whereHas('user', search) + description/created_at/subject_type.
     const searchCond = q.search ? buildWorkerSearchCond(q.search) : undefined;
     const userExists = searchCond
-      ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} sw ON sw.id = su.worker_id WHERE su.id = ${activity_log.causer_id} AND ${searchCond})`
+      ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} ON ${workers.id} = su.worker_id WHERE su.id = ${activity_log.causer_id} AND ${searchCond})`
       : sql`EXISTS (SELECT 1 FROM ${users} su WHERE su.id = ${activity_log.causer_id})`;
 
     const conds: SQL[] = [

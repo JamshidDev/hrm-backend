@@ -46,7 +46,7 @@ export class AuthenticationLogService {
     // scopeSearch — whereHas('user', search) + login_at (date) + ip_address (like).
     const searchCond = q.search ? buildWorkerSearchCond(q.search) : undefined;
     const userExists = searchCond
-      ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} sw ON sw.id = su.worker_id WHERE su.id = ${authentication_log.authenticatable_id} AND ${searchCond})`
+      ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} ON ${workers.id} = su.worker_id WHERE su.id = ${authentication_log.authenticatable_id} AND ${searchCond})`
       : sql`EXISTS (SELECT 1 FROM ${users} su WHERE su.id = ${authentication_log.authenticatable_id})`;
 
     const conds: SQL[] = [
