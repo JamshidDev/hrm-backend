@@ -11,6 +11,7 @@ import { AdminMobileUserModule } from '@/modules/admin/mobile-users/mobile-user.
 import { DeployModule } from '@/modules/admin/deploy/deploy.module';
 import { ActivityLogModule } from '@/modules/admin/activity-logs/activity-log.module';
 import { AuthenticationLogModule } from '@/modules/admin/authentication-logs/authentication-log.module';
+import { LogViewerModule } from '@/modules/admin/log-viewer/log-viewer.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuthenticationLogModule } from '@/modules/admin/authentication-logs/aut
     DeployModule,
     ActivityLogModule,
     AuthenticationLogModule,
+    LogViewerModule,
   ],
 })
 export class AdminModule {}
