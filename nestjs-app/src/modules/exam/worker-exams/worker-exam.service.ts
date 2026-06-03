@@ -696,7 +696,9 @@ export class WorkerExamService {
         result: worker_exam_questions.result,
       })
       .from(worker_exam_questions)
-      .where(eq(worker_exam_questions.worker_exam_id, workerExamId));
+      .where(eq(worker_exam_questions.worker_exam_id, workerExamId))
+      // Laravel WorkerExam::questions() hasMany ->orderBy('id').
+      .orderBy(worker_exam_questions.id);
 
     return {
       worker_exam_details: {
