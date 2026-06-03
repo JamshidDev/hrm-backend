@@ -6,6 +6,8 @@ import { and, count, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { MinioService } from '@/shared/minio/minio.service';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { user_telegrams, users, workers } from '@/db/schema';
 import type {
   TelegramAccountsQueryDto,
@@ -23,11 +25,14 @@ interface WorkerBrief {
 
 @Injectable()
 export class AdminTelegramService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly minio: MinioService,
+  ) {}
 
   /**
-   * GET /admin/telegram/users — Laravel: paginateAccounts.
-   * Filter: search (worker name OR phone OR chat_id LIKE).
+   * GET /admin/telegram/users — Laravel paginateAccounts → UserTelegramAccountsResource.
+   * Filter: search (worker fullname OR phone OR chat_id LIKE).
    */
   async listAccounts(q: TelegramAccountsQueryDto) {
     const page = Math.max(1, Number(q?.page ?? 1));
@@ -37,7 +42,13 @@ export class AdminTelegramService {
     const conds: SQL[] = [notDeleted(user_telegrams)];
     if (q.search) {
       const pattern = `%${q.search}%`;
+      const workerCond = buildWorkerSearchCond(q.search);
+      // whereHas('user', worker searchByFullName) OR phone OR chat_id.
+      const workerExists = workerCond
+        ? sql`EXISTS (SELECT 1 FROM ${users} su JOIN ${workers} sw ON sw.id = su.worker_id WHERE su.id = ${user_telegrams.user_id} AND ${workerCond})`
+        : undefined;
       const orExpr = or(
+        ...(workerExists ? [workerExists] : []),
         sql`CAST(${user_telegrams.phone} AS TEXT) ILIKE ${pattern}`,
         sql`CAST(${user_telegrams.chat_id} AS TEXT) ILIKE ${pattern}`,
       );
@@ -56,12 +67,59 @@ export class AdminTelegramService {
       this.db.select({ total: count() }).from(user_telegrams).where(where),
     ]);
 
-    const data = await this.enrichWithUserWorker(rows);
+    // user (UserInfoResource: id, uuid, worker(WorkerMinimal), phone) batch.
+    const userIds = [...new Set(rows.map((r) => r.user_id))];
+    const userRows = userIds.length
+      ? await this.db
+          .select({
+            id: users.id,
+            uuid: users.uuid,
+            phone: users.phone,
+            w_id: workers.id,
+            w_photo: workers.photo,
+            w_last: workers.last_name,
+            w_first: workers.first_name,
+            w_middle: workers.middle_name,
+          })
+          .from(users)
+          .leftJoin(workers, eq(workers.id, users.worker_id))
+          .where(inArray(users.id, userIds))
+      : [];
+    const userMap = new Map(userRows.map((u) => [u.id, u]));
+
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data,
+      data: await Promise.all(
+        rows.map(async (r) => {
+          const u = userMap.get(r.user_id);
+          const user = u
+            ? {
+                id: u.id,
+                uuid: u.uuid,
+                worker: u.w_id
+                  ? {
+                      id: u.w_id,
+                      photo: await this.minio.fileUrl(u.w_photo),
+                      last_name: u.w_last,
+                      first_name: u.w_first,
+                      middle_name: u.w_middle,
+                    }
+                  : null,
+                phone: u.phone,
+              }
+            : null;
+          return {
+            id: r.id,
+            phone: r.phone,
+            user,
+            chat_id: r.chat_id,
+            // user_telegrams'da `tg_id` ustuni yo'q → Laravel $this->tg_id = null (parity).
+            tg_id: null,
+            created_at: r.created_at,
+          };
+        }),
+      ),
     };
   }
 
