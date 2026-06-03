@@ -6,6 +6,7 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createHash, randomBytes } from 'crypto';
@@ -23,9 +24,13 @@ export interface UploadedFile {
 export class MinioService {
   private readonly client: S3Client;
   private readonly bucket: string;
+  // Laravel config('filesystems.disks.minio.url') — env('MINIO_URL'). O'rnatilmagan
+  // bo'lsa Laravel null qaytaradi va `url . '/' . $path` → `/path` (boshida '/').
+  private readonly publicUrl: string;
 
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.get<string>('MINIO_BUCKET', 'hrm-media');
+    this.publicUrl = this.config.get<string>('MINIO_URL', '');
     this.client = new S3Client({
       endpoint: this.config.get<string>('MINIO_ENDPOINT'),
       region: this.config.get<string>('MINIO_REGION', 'us-east-1'),
@@ -51,6 +56,37 @@ export class MinioService {
       new GetObjectCommand({ Bucket: this.bucket, Key: filePath }),
       { expiresIn: 1800 },
     );
+  }
+
+  // Laravel: config('...minio.url') . '/' . $path. Public/upload-target URL
+  // (signed emas) — frontend chunk'larni shu prefix ostiga yuklaydi.
+  objectUrl(path: string): string {
+    return `${this.publicUrl}/${path}`;
+  }
+
+  // Laravel: Storage::disk('minio')->files($dir) — $dir ichidagi fayllar (rekursiv
+  // EMAS, faqat to'g'ridan-to'g'ri bolalar). delimiter '/' bilan CommonPrefixes
+  // (kichik papkalar) chetlab o'tiladi.
+  async listFiles(dir: string): Promise<string[]> {
+    const prefix = dir.endsWith('/') ? dir : `${dir}/`;
+    const keys: string[] = [];
+    let token: string | undefined;
+    do {
+      const res = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          Delimiter: '/',
+          ContinuationToken: token,
+        }),
+      );
+      for (const obj of res.Contents ?? []) {
+        // Prefix'ning o'zi (papka belgisi) fayl emas — chetlab o'tamiz.
+        if (obj.Key && obj.Key !== prefix) keys.push(obj.Key);
+      }
+      token = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (token);
+    return keys;
   }
 
   // Faylni MinIO'dan xom Buffer sifatida yuklab olish (stream → buffer).
@@ -208,8 +244,6 @@ export class MinioService {
     const random = randomBytes(25).toString('base64url');
     const rand = Math.floor(Math.random() * 9999) + 1;
     const time = Math.floor(Date.now() / 1000);
-    return createHash('md5')
-      .update(`${random}${rand}${time}`)
-      .digest('hex');
+    return createHash('md5').update(`${random}${rand}${time}`).digest('hex');
   }
 }
