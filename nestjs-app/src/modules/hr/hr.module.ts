@@ -63,9 +63,11 @@ import { WorkerExportModule } from '@/modules/hr/worker-exports/worker-export.mo
 import { ExportTaskModule } from '@/modules/hr/export-tasks/export-task.module';
 // Filter endpoints.
 import { FilterModule } from '@/modules/hr/filters/filter.module';
+import { HrZoomModule } from '@/modules/hr/zoom/zoom.module';
 
 @Module({
   imports: [
+    HrZoomModule,
     NationalityModule,
     DepartmentModule,
     DepartmentPositionModule,
