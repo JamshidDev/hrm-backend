@@ -1,0 +1,27 @@
+# Lokal OnlyOffice Document Server — prod (office.dasuty.com) bilan bir xil.
+#   versiya 8.3.0 (prod build:94), JWT off (prod konfiguratsiyasi).
+# Doimiy dev-servis: volume + restart bilan o'chmaydi.
+#
+# Ishga tushirish:  cd onlyoffice-local && docker compose up -d
+# To'xtatish:       docker compose stop      (RAM bo'shatish uchun)
+# O'chirish:        docker compose down      (volume saqlanadi)
+# Tozalash:         docker compose down -v   (volume ham o'chadi)
+services:
+  onlyoffice:
+    image: onlyoffice/documentserver:8.3.0
+    container_name: onlyoffice
+    ports:
+      - "8080:80"
+    environment:
+      # Prod'da JWT off (frontend config'da token yo'q — tekshirilgan).
+      - JWT_ENABLED=false
+    volumes:
+      - oo_data:/var/www/onlyoffice/Data
+      - oo_log:/var/log/onlyoffice
+      - oo_db:/var/lib/postgresql
+    restart: unless-stopped
+
+volumes:
+  oo_data:
+  oo_log:
+  oo_db:

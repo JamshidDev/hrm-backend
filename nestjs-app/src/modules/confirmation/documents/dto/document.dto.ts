@@ -1,8 +1,15 @@
 // Document DTO. Laravel: Confirmation/DocumentController + DocumentConfirmationController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
+// OnlyOffice frontend callbackUrl'ida `file_url` query qiymati encode qilinmaydi,
+// shuning uchun uning ichidagi `?expires=&model=&signature=` top-level query'ga
+// "oqib" o'tadi → `model` 2 marta keladi → Express uni massiv qiladi. Laravel
+// takroriy query'da oxirgisini oladi; biz ham massivdan oxirgi qiymatni olamiz.
+const lastIfArray = ({ value }: { value: unknown }): unknown =>
+  Array.isArray(value) ? value[value.length - 1] : value;
 
 // Laravel: $request->model + $request->document_id (show / history / base64).
 export class DocumentQueryDto {
@@ -57,11 +64,13 @@ export class DocumentUpdateDto {
 // OnlyOffice callback URL'iga frontend qo'shadigan query parametrlar.
 export class DocumentUpdateQueryDto {
   @ApiProperty({ description: 'Model (contracts, commands, ...)' })
+  @Transform(lastIfArray)
   @IsString()
   @IsNotEmpty()
   model!: string;
 
   @ApiProperty({ example: 1 })
+  @Transform(lastIfArray)
   @Type(() => Number)
   @IsInt()
   document_id!: number;

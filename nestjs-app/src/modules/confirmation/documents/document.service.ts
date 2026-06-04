@@ -439,7 +439,14 @@ export class DocumentService {
 
   // Laravel Helper::documentSignedUrl — only-office temporarySignedRoute (30 min).
   private buildOnlyOfficeUrl(uuid: string, model: string): string {
-    const baseUrl = this.config.get<string>('APP_URL', 'http://localhost:8001');
+    // OnlyOffice DS bu URL'dan faylni yuklab oladi. Lokalda DS docker
+    // konteynerda — `localhost` unga ko'rinmaydi, shuning uchun
+    // OO_FILE_BASE_URL=http://host.docker.internal:8001 bo'lishi mumkin.
+    // Brauzerga ketadigan boshqa signed URL'lar (signature, application)
+    // APP_URL=localhost'da qoladi. HMAC imzo host'ni o'z ichiga olmaydi.
+    const baseUrl =
+      this.config.get<string>('OO_FILE_BASE_URL') ||
+      this.config.get<string>('APP_URL', 'http://localhost:8001');
     const appKey = this.config.get<string>('APP_KEY', 'dev-secret');
     const expires = Math.floor(Date.now() / 1000) + 60 * 30;
     const params = new URLSearchParams({ expires: String(expires), model });

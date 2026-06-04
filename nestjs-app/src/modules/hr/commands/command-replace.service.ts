@@ -19,6 +19,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
   cities,
+  command_types,
   confirmation_workers,
   contracts,
   departments,
@@ -30,6 +31,7 @@ import {
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
 import { I18nService } from 'nestjs-i18n';
 import type { CreateCommandDto } from '@/modules/hr/commands/dto/command.dto';
 
@@ -54,11 +56,20 @@ export class CommandReplaceService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
+    private readonly minio: MinioService,
   ) {}
 
-  // Hozircha qo'llab-quvvatlanadigan command type'lar (view rejimi).
-  // 31, 32 — handleDeleteType, qo'shimcha bloklarsiz (oddiy bekor qilish).
-  static readonly SUPPORTED_TYPES = [31, 32];
+  // Qo'llab-quvvatlanadigan command type'lar — delete/termination guruhi (31–39).
+  // Laravel dispatchDeleteTypeHandler. 31/32 oddiy; 33–39 qo'shimcha bloklar
+  // (pension/compensation/salary_withholding) bilan — CommandAdditionalTemplateHelper.
+  static readonly SUPPORTED_TYPES = [31, 32, 33, 34, 35, 36, 37, 38, 39];
+
+  // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
+  private static readonly TERMINATION_TYPES = [
+    31, 32, 33, 34, 35, 36, 37, 38, 39,
+  ];
+  // reasonCode qo'shiladigan turlar.
+  private static readonly REASON_CODE_TYPES = [34, 39];
 
   // Delete-group command (31, 32) uchun DOCX hosil qiladi.
   // Laravel handleDeleteType, view rejimi. `{type}.docx` shabloni ishlatiladi.
@@ -152,26 +163,22 @@ export class CommandReplaceService {
         wp.worker_first,
         wp.worker_middle,
       ),
-      finance: finance
-        ? `${this.ucfirst(finance.position ?? '')} ${this.shortName(
-            finance.last_name,
-            finance.first_name,
-            finance.middle_name,
-          )}`
-        : "Moliya bo'limi",
+      // `finance` — Laravel setFinanceValue: scalar EMAS. finance bo'lsa complex
+      // value (Arial 14, lavozim normal + ism BOLD), bo'lmasa "Moliya bo'limi".
+      // Scalar replace'dan keyin alohida ishlanadi (pastga qarang).
       // `signature_director` — Laravel view rejimida o'rnatmaydi (literal qoladi).
       // `photo` — banner rasm, alohida embedBanner() bilan qo'yiladi.
     };
 
-    // 7) Shablonni o'qib, to'ldirish — `{command_type}.docx`.
-    const templatePath = join(
-      process.cwd(),
-      'public',
-      'resumes',
-      'commands',
-      `${dto.command_type}.docx`,
-    );
-    const content = await readFile(templatePath);
+    // 6b) Qo'shimcha bloklar (33–39: pension/compensation/salary_withholding,
+    //     codes, reason, warning/med, base) — CommandAdditionalTemplateHelper.
+    const additional = this.buildDeleteAdditional(dto);
+    Object.assign(scalars, additional.scalars);
+
+    // 7) Shablon manbasi — Laravel getDocumentPath parity:
+    //   tashkilotga xos template (command_types.file, MinIO) bo'lsa o'sha,
+    //   bo'lmasa default public/resumes/commands/{type}.docx.
+    const content = await this.resolveTemplate(orgId, dto.command_type);
     const zip = new PizZip(content);
     const xmlFile = zip.file('word/document.xml');
     if (!xmlFile) {
@@ -179,8 +186,38 @@ export class CommandReplaceService {
     }
     let xml = xmlFile.asText();
     xml = this.normalizePlaceholders(xml);
+
+    // cloneBlock (Laravel PhpWord cloneBlock) — qo'shimcha bloklarni saqlash (1)
+    // yoki o'chirish (0). 31/32 templatelarida bu markerlar yo'q → no-op.
+    xml = this.cloneBlock(xml, 'pension_count', additional.blocks.pension_count);
+    xml = this.cloneBlock(xml, 'compensation', additional.blocks.compensation);
+    xml = this.cloneBlock(
+      xml,
+      'salary_withholding',
+      additional.blocks.salary_withholding,
+    );
+
     for (const [k, v] of Object.entries(scalars)) {
       xml = xml.split(`\${${k}}`).join(this.escapeXml(v));
+    }
+
+    // `finance` — Laravel setFinanceValue parity (PhpWord setComplexValue).
+    //   finance bor  → 2 ta run: "<lavozim> " (Arial 14, normal) + "<ism>" (Arial 14, BOLD)
+    //   finance yo'q → oddiy "Moliya bo'limi"
+    if (finance) {
+      xml = this.setComplexValue(xml, 'finance', [
+        { text: `${this.ucfirst(finance.position ?? '')} ` },
+        {
+          text: this.shortName(
+            finance.last_name,
+            finance.first_name,
+            finance.middle_name,
+          ),
+          bold: true,
+        },
+      ]);
+    } else {
+      xml = xml.split('${finance}').join(this.escapeXml("Moliya bo'limi"));
     }
 
     // Banner rasmni `${photo}` o'rniga joylash (Laravel setImageValue).
@@ -491,7 +528,164 @@ export class CommandReplaceService {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
   }
 
-  // ---- DOCX template engine (scalar-only — resume.service.ts bilan bir xil) ----
+  // Laravel getDocumentPath parity: tashkilotga xos template (command_types.file
+  // → MinIO) bo'lsa o'sha, bo'lmasa default public/resumes/commands/{type}.docx.
+  private async resolveTemplate(
+    orgId: number | null,
+    type: number,
+  ): Promise<Buffer> {
+    if (orgId != null) {
+      const [ct] = await this.db
+        .select({ file: command_types.file })
+        .from(command_types)
+        .where(
+          and(
+            eq(command_types.organization_id, orgId),
+            eq(command_types.type, type),
+            notDeleted(command_types),
+          ),
+        )
+        .limit(1);
+      if (ct?.file) {
+        return this.minio.getObject(ct.file);
+      }
+    }
+    return readFile(
+      join(process.cwd(), 'public', 'resumes', 'commands', `${type}.docx`),
+    );
+  }
+
+  // ---- DOCX template engine ----
+
+  // PhpWord `setComplexValue` parity: `${placeholder}` ni o'z ichiga olgan butun
+  // `<w:r>` run'ini berilgan formatли run'lar bilan almashtiradi. Har bir run
+  // Arial 14pt (w:sz=28 yarim-punkt), kerak bo'lsa BOLD (w:b).
+  // Laravel: TextRun->addText(text, ['name'=>'Arial','size'=>14,'bold'=>...]).
+  private setComplexValue(
+    xml: string,
+    placeholder: string,
+    runs: Array<{ text: string; bold?: boolean }>,
+  ): string {
+    const runsXml = runs
+      .map((r) => {
+        const rPr =
+          `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>` +
+          (r.bold ? `<w:b/><w:bCs/>` : ``) +
+          `<w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>`;
+        return `<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(
+          r.text,
+        )}</w:t></w:r>`;
+      })
+      .join('');
+    // `${placeholder}` joylashgan <w:r>...</w:r> ni butunlay almashtiramiz
+    // (boshqa run'larga kirib ketmasdan).
+    const re = new RegExp(
+      `<w:r\\b[^>]*>(?:(?!<w:r\\b)[\\s\\S])*?\\$\\{${placeholder}\\}(?:(?!</w:r>)[\\s\\S])*?</w:r>`,
+    );
+    return xml.replace(re, runsXml);
+  }
+
+  // PhpWord `cloneBlock` parity: `${name}` ... `${/name}` orasidagi blokni
+  // `count` marta takrorlaydi yoki o'chiradi (count=0). Marker'lar joylashgan
+  // `<w:p>` paragraflar olib tashlanadi (PhpWord default xatti-harakati).
+  //   count=0 → blok butunlay o'chadi (marker'lar + ichidagi kontent)
+  //   count=1 → kontent bir marta qoladi, marker paragraflar o'chadi
+  // Marker topilmasa (masalan 31/32 templateda) — hech narsa qilmaydi.
+  private cloneBlock(xml: string, name: string, count: number): string {
+    const re = new RegExp(
+      `<w:p\\b[^>]*>(?:(?!<w:p\\b)[\\s\\S])*?\\$\\{${name}\\}(?:(?!</w:p>)[\\s\\S])*?</w:p>` +
+        `([\\s\\S]*?)` +
+        `<w:p\\b[^>]*>(?:(?!<w:p\\b)[\\s\\S])*?\\$\\{/${name}\\}(?:(?!</w:p>)[\\s\\S])*?</w:p>`,
+    );
+    return xml.replace(re, (_full, block: string) =>
+      count <= 0 ? '' : block.repeat(count),
+    );
+  }
+
+  // Oy raqami (1–12) → UZ nomi. Laravel Helper::getMonth.
+  private getMonth(month: unknown): string {
+    const n = Number(month);
+    return Number.isInteger(n) && n >= 1 && n <= 12 ? UZ_MONTHS[n - 1] : '';
+  }
+
+  // Laravel CommandAdditionalTemplateHelper::apply parity — delete/termination
+  // (33–39) uchun qo'shimcha scalar'lar + cloneBlock qarorlari.
+  // 31/32 da ham xavfsiz: ortiqcha scalar/blok templateda yo'q → no-op.
+  private buildDeleteAdditional(dto: CreateCommandDto): {
+    scalars: Record<string, string>;
+    blocks: {
+      pension_count: number;
+      compensation: number;
+      salary_withholding: number;
+    };
+  } {
+    const type = dto.command_type;
+    const add = (dto.command_additional ?? {}) as Record<string, any>;
+    const scalars: Record<string, string> = {};
+    const blocks = { pension_count: 0, compensation: 0, salary_withholding: 0 };
+
+    if (CommandReplaceService.TERMINATION_TYPES.includes(type)) {
+      // codes — default 172-modda (NB-hyphen ‑, Laravel bilan bir xil).
+      scalars.codes = '172‑moddasiga';
+
+      // Pension bloki.
+      if (add.pension_count) {
+        scalars.year = String(add.pension_count.year ?? '');
+        scalars.count = `lavozim maoshining ${add.pension_count.count} barobari miqdorida`;
+        blocks.pension_count = 1;
+      } else if (add.pension_coefficient) {
+        scalars.year = String(add.pension_coefficient.year ?? '');
+        scalars.count = `lavozim maoshining ${add.pension_coefficient.count} foizi miqdorida`;
+        scalars.codes = '172,269‑moddalariga';
+        blocks.pension_count = 1;
+      }
+
+      // Salary withholding yoki compensation bloki (biri).
+      if (add.salary_withholding) {
+        const d = add.salary_withholding;
+        scalars.withholding_per1 = this.dateTex(d.period1);
+        scalars.withholding_per2 = this.dateTex(d.period2);
+        scalars.withholding_all_day = String(d.all_day ?? '');
+        scalars.withholding_rest_day = String(d.rest_day ?? '');
+        scalars.withholding_month = this.getMonth(d.month);
+        scalars.codes = '172,234‑moddalariga';
+        blocks.salary_withholding = 1;
+      } else if (add.compensation) {
+        const d = add.compensation;
+        scalars.compensation_per1 = this.dateTex(d.period1);
+        scalars.compensation_per2 = this.dateTex(d.period2);
+        scalars.compensation_all_day = String(d.rest_day ?? '');
+        scalars.codes = '172,234‑moddalariga';
+        blocks.compensation = 1;
+      }
+
+      // Ixtiyoriy sana/qiymatlar (kalit mavjud bo'lsa).
+      if ('warning_date' in add)
+        scalars.warning_date = add.warning_date
+          ? this.dateTex(add.warning_date)
+          : '';
+      if ('med_date' in add)
+        scalars.med_date = add.med_date ? this.dateTex(add.med_date) : '';
+      if ('warning_number' in add)
+        scalars.warning_number = String(add.warning_number ?? '');
+      if ('med_number' in add)
+        scalars.med_number = String(add.med_number ?? '');
+      if ('reason' in add)
+        scalars.reason = String(add.reason ?? '').toLowerCase();
+    }
+
+    if (CommandReplaceService.REASON_CODE_TYPES.includes(type)) {
+      scalars.reasonCode = add.reasonId
+        ? `161-moddasi 2-qismi ${add.reasonId}-bandiga asosan`
+        : '161-moddasi 2-qismiga asosan';
+    }
+
+    if (add && 'base' in add) {
+      scalars.base = String(add.base ?? '');
+    }
+
+    return { scalars, blocks };
+  }
 
   // `${var}` placeholder'lar Word'da bir nechta `<w:t>` run'larga bo'linadi —
   // ularni bitta `<w:t>` ichiga normalize qilamiz.
@@ -537,7 +731,8 @@ export class CommandReplaceService {
       return ans;
     };
 
-    const phRe = /\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+    // `${name}` va blok-yopuvchi `${/name}` markerlari (cloneBlock uchun).
+    const phRe = /\$\{\/?([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
     const merges: Array<{ first: number; last: number; merged: string }> = [];
     let pm: RegExpExecArray | null;
     while ((pm = phRe.exec(fullText)) !== null) {
