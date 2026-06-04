@@ -8,6 +8,7 @@ import { ConfirmationDocumentChatModule } from '@/modules/confirmation/document-
 import { ConfirmationSignatureModule } from '@/modules/confirmation/signature/signature.module';
 import { ConfirmationDashboardModule } from '@/modules/confirmation/dashboard/dashboard.module';
 import { WorkerApplicationExtrasModule } from '@/modules/confirmation/worker-application-extras/worker-application-extras.module';
+import { ApplicationConfirmationModule } from '@/modules/confirmation/application-confirmation/application-confirmation.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { WorkerApplicationExtrasModule } from '@/modules/confirmation/worker-app
     ConfirmationSignatureModule,
     ConfirmationDashboardModule,
     WorkerApplicationExtrasModule,
+    ApplicationConfirmationModule,
   ],
 })
 export class ConfirmationModule {}
