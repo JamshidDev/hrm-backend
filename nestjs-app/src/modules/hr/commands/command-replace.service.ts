@@ -22,6 +22,7 @@ import {
   command_types,
   confirmation_workers,
   contracts,
+  department_positions,
   departments,
   organizations,
   positions as positionsTable,
@@ -63,6 +64,9 @@ export class CommandReplaceService {
   // Laravel dispatchDeleteTypeHandler. 31/32 oddiy; 33–39 qo'shimcha bloklar
   // (pension/compensation/salary_withholding) bilan — CommandAdditionalTemplateHelper.
   static readonly SUPPORTED_TYPES = [31, 32, 33, 34, 35, 36, 37, 38, 39];
+
+  // Create-group (Laravel dispatchCreateTypeHandler) — yangi lavozimga qabul.
+  static readonly CREATE_TYPES = [1, 2, 3, 4, 5, 6, 7, 8];
 
   // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
   private static readonly TERMINATION_TYPES = [
@@ -175,10 +179,35 @@ export class CommandReplaceService {
     const additional = this.buildDeleteAdditional(dto);
     Object.assign(scalars, additional.scalars);
 
-    // 7) Shablon manbasi — Laravel getDocumentPath parity:
-    //   tashkilotga xos template (command_types.file, MinIO) bo'lsa o'sha,
-    //   bo'lmasa default public/resumes/commands/{type}.docx.
-    const content = await this.resolveTemplate(orgId, dto.command_type);
+    // 7) Render — template + scalar + cloneBlock + finance + banner.
+    return this.renderTemplate(
+      orgId,
+      dto.command_type,
+      scalars,
+      finance,
+      additional.blocks,
+    );
+  }
+
+  // Umumiy render: resolveTemplate → normalize → cloneBlock → scalar → finance → banner.
+  // Delete (blocks bilan) va create (blocks'siz) ikkalasi ishlatadi.
+  private async renderTemplate(
+    orgId: number | null,
+    type: number,
+    scalars: Record<string, string>,
+    finance: {
+      position: string | null;
+      last_name: string | null;
+      first_name: string | null;
+      middle_name: string | null;
+    } | null,
+    blocks?: {
+      pension_count: number;
+      compensation: number;
+      salary_withholding: number;
+    },
+  ): Promise<Buffer> {
+    const content = await this.resolveTemplate(orgId, type);
     const zip = new PizZip(content);
     const xmlFile = zip.file('word/document.xml');
     if (!xmlFile) {
@@ -187,23 +216,17 @@ export class CommandReplaceService {
     let xml = xmlFile.asText();
     xml = this.normalizePlaceholders(xml);
 
-    // cloneBlock (Laravel PhpWord cloneBlock) — qo'shimcha bloklarni saqlash (1)
-    // yoki o'chirish (0). 31/32 templatelarida bu markerlar yo'q → no-op.
-    xml = this.cloneBlock(xml, 'pension_count', additional.blocks.pension_count);
-    xml = this.cloneBlock(xml, 'compensation', additional.blocks.compensation);
-    xml = this.cloneBlock(
-      xml,
-      'salary_withholding',
-      additional.blocks.salary_withholding,
-    );
+    if (blocks) {
+      xml = this.cloneBlock(xml, 'pension_count', blocks.pension_count);
+      xml = this.cloneBlock(xml, 'compensation', blocks.compensation);
+      xml = this.cloneBlock(xml, 'salary_withholding', blocks.salary_withholding);
+    }
 
     for (const [k, v] of Object.entries(scalars)) {
       xml = xml.split(`\${${k}}`).join(this.escapeXml(v));
     }
 
-    // `finance` — Laravel setFinanceValue parity (PhpWord setComplexValue).
-    //   finance bor  → 2 ta run: "<lavozim> " (Arial 14, normal) + "<ism>" (Arial 14, BOLD)
-    //   finance yo'q → oddiy "Moliya bo'limi"
+    // finance — Laravel setFinanceValue parity (complex value).
     if (finance) {
       xml = this.setComplexValue(xml, 'finance', [
         { text: `${this.ucfirst(finance.position ?? '')} ` },
@@ -220,11 +243,170 @@ export class CommandReplaceService {
       xml = xml.split('${finance}').join(this.escapeXml("Moliya bo'limi"));
     }
 
-    // Banner rasmni `${photo}` o'rniga joylash (Laravel setImageValue).
     xml = await this.embedBanner(zip, xml, orgId);
-
     zip.file('word/document.xml', xml);
     return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+  }
+
+  // Laravel number_format((int)$x, 2) — "1,500,000.00".
+  private numberFormat(v: number | string | null | undefined): string {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return Math.trunc(n).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  // Create-group command (1–8) DOCX — Laravel handleCreateType +
+  // applyWorkerPositionInfo. Tip 3: contract_to_date, tip 6: temporary_*.
+  async buildCreateTypeDocx(dto: CreateCommandDto): Promise<Buffer> {
+    if (!dto.worker_id) {
+      throw new BusinessException(400, this.i18n.t('messages.worker_not_found'));
+    }
+    const [worker] = await this.db
+      .select({
+        last: workers.last_name,
+        first: workers.first_name,
+        middle: workers.middle_name,
+      })
+      .from(workers)
+      .where(and(eq(workers.id, dto.worker_id), notDeleted(workers)))
+      .limit(1);
+    if (!worker) {
+      throw new BusinessException(400, this.i18n.t('messages.worker_not_found'));
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ?? dto.organization_id ?? null;
+    const address = await this.resolveAddress(orgId);
+
+    // post_name — department_position_id (qisqa lavozim) yoki position_id (nom).
+    let postName = '';
+    if (dto.department_position_id) {
+      const [dp] = await this.db
+        .select({
+          department_id: department_positions.department_id,
+          position_id: department_positions.position_id,
+        })
+        .from(department_positions)
+        .where(eq(department_positions.id, dto.department_position_id))
+        .limit(1);
+      if (dp) {
+        postName = await this.buildShortPosition(
+          dp.department_id,
+          dp.position_id,
+        );
+      }
+    } else if (dto.position_id) {
+      const [pos] = await this.db
+        .select({ name: positionsTable.name })
+        .from(positionsTable)
+        .where(eq(positionsTable.id, dto.position_id))
+        .limit(1);
+      postName = pos?.name ?? '';
+    }
+
+    // probation — Laravel ProbationEnum uz: "{n} oylik" + " sinov muddati bilan".
+    const probation = dto.probation
+      ? `${dto.probation} oylik sinov muddati bilan`
+      : 'sinovsiz';
+    const group = dto.group ?? 1;
+    const rank = dto.rank ?? 7;
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+      post_name: postName.toLowerCase(),
+      probation,
+      position_date: this.dateTex(dto.position_date),
+      worker_full_name: this.fullName(worker.last, worker.first, worker.middle),
+      worker_short_name: this.shortName(
+        worker.last,
+        worker.first,
+        worker.middle,
+      ),
+      group: `${group}-guruh`,
+      rank: `${rank}-razryadi`,
+      salary: this.numberFormat(dto.salary),
+      rate: dto.rate != null ? String(dto.rate) : '',
+      contract_date: this.dateTex(dto.contract_date),
+      contract_number: dto.number ?? '',
+    };
+
+    // Tip 3 — contract_to_date.
+    if (dto.command_type === 3 && dto.contract_to_date) {
+      scalars.contract_to_date = this.dateTex(dto.contract_to_date);
+    }
+
+    // Tip 6 — vaqtinchalik o'rinbosar (WorkerPosition by temporary_worker_id).
+    if (dto.command_type === 6 && dto.temporary_worker_id) {
+      const [twp] = await this.db
+        .select({
+          last: workers.last_name,
+          first: workers.first_name,
+          middle: workers.middle_name,
+          department_id: worker_positions.department_id,
+          position_id: worker_positions.position_id,
+        })
+        .from(worker_positions)
+        .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+        .where(
+          and(
+            eq(worker_positions.id, dto.temporary_worker_id),
+            notDeleted(worker_positions),
+          ),
+        )
+        .limit(1);
+      if (twp) {
+        scalars.temporary_worker_name = this.shortName(
+          twp.last,
+          twp.first,
+          twp.middle,
+        );
+        scalars.temporary_post_name = (
+          await this.buildShortPosition(twp.department_id, twp.position_id)
+        ).toLowerCase();
+      }
+    }
+
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance);
+  }
+
+  // Create-group command (1–8) tasdiqlovchilari — Laravel appendWorkerConfirmation
+  // (hodim type='w' order=1) + imzolovchilar (type='s') + direktor (type='d').
+  async buildCreateTypeConfirmations(dto: CreateCommandDto): Promise<
+    Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }>
+  > {
+    const rows: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
+    if (dto.worker_id) {
+      rows.push({ worker_id: dto.worker_id, position: null, type: 'w', order: 1 });
+    }
+    rows.push(...(await this.buildSignerConfirmations(dto)));
+    return rows;
   }
 
   // Delete-group command (31, 32) uchun `command_confirmations` qatorlari.
@@ -276,7 +458,27 @@ export class CommandReplaceService {
     }
 
     // 2) Imzolovchilar (type='s') + direktor (type='d').
-    // Laravel createConfirmations: confirmations[].id → ConfirmationWorker.
+    rows.push(...(await this.buildSignerConfirmations(dto)));
+
+    return rows;
+  }
+
+  // Imzolovchilar (type='s') + direktor (type='d') — Laravel createConfirmations.
+  // confirmations[].id → ConfirmationWorker. Create va delete ikkalasi ishlatadi.
+  private async buildSignerConfirmations(dto: CreateCommandDto): Promise<
+    Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }>
+  > {
+    const out: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
     const confItems = Array.isArray(dto.confirmations)
       ? (dto.confirmations as Array<{ id?: number; order?: number }>)
       : [];
@@ -290,30 +492,29 @@ export class CommandReplaceService {
     if (Number.isFinite(directorId) && !ids.includes(directorId)) {
       ids.push(directorId);
     }
-    if (ids.length) {
-      const cws = await this.db
-        .select({
-          id: confirmation_workers.id,
-          worker_id: confirmation_workers.worker_id,
-          position: confirmation_workers.position,
-        })
-        .from(confirmation_workers)
-        .where(inArray(confirmation_workers.id, ids));
-      const cwMap = new Map(cws.map((cw) => [cw.id, cw]));
-      for (const id of ids) {
-        const cw = cwMap.get(id);
-        if (!cw || cw.worker_id == null) continue;
-        const order = csMap.get(id)?.order ?? csMap.size + 1;
-        rows.push({
-          worker_id: cw.worker_id,
-          position: cw.position,
-          type: id === directorId ? 'd' : 's',
-          order: Number(order),
-        });
-      }
-    }
+    if (!ids.length) return out;
 
-    return rows;
+    const cws = await this.db
+      .select({
+        id: confirmation_workers.id,
+        worker_id: confirmation_workers.worker_id,
+        position: confirmation_workers.position,
+      })
+      .from(confirmation_workers)
+      .where(inArray(confirmation_workers.id, ids));
+    const cwMap = new Map(cws.map((cw) => [cw.id, cw]));
+    for (const id of ids) {
+      const cw = cwMap.get(id);
+      if (!cw || cw.worker_id == null) continue;
+      const order = csMap.get(id)?.order ?? csMap.size + 1;
+      out.push({
+        worker_id: cw.worker_id,
+        position: cw.position,
+        type: id === directorId ? 'd' : 's',
+        order: Number(order),
+      });
+    }
+    return out;
   }
 
   // `${photo}` placeholder o'rniga banner rasmni inline image qilib joylaydi.

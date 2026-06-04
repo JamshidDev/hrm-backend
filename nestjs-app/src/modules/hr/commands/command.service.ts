@@ -179,6 +179,9 @@ export class CommandService {
     if (CommandReplaceService.SUPPORTED_TYPES.includes(dto.command_type)) {
       docxBuffer = await this.replace.buildDeleteTypeDocx(dto);
       confRows = await this.replace.buildDeleteTypeConfirmations(dto);
+    } else if (CommandReplaceService.CREATE_TYPES.includes(dto.command_type)) {
+      docxBuffer = await this.replace.buildCreateTypeDocx(dto);
+      confRows = await this.replace.buildCreateTypeConfirmations(dto);
     }
 
     // Command + command_confirmations'ni bitta transaction ichida yozamiz.

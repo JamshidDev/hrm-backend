@@ -50,6 +50,30 @@ export class CreateCommandDto {
   finance_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() contract_to_date?: string;
   @ApiPropertyOptional() @IsOptional() command_additional?: unknown;
+
+  // --- Create-type (1–8) maydonlari (Laravel handleCreateType) ---
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  worker_id?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  department_position_id?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  position_id?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  probation?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() position_date?: string;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  group?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  rank?: number;
+  // salary/rate — son yoki satr kelishi mumkin (Laravel raw qiymat).
+  @ApiPropertyOptional() @IsOptional() salary?: number | string;
+  @ApiPropertyOptional() @IsOptional() rate?: number | string;
+  // contract raqami — Laravel `data['number']` (command_number EMAS).
+  @ApiPropertyOptional() @IsOptional() @IsString() number?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() contract_date?: string;
+  // Tip 6 (vaqtinchalik o'rinbosar) uchun.
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  temporary_worker_id?: number;
 }
 
 // GET /api/v1/hr/worker-additional/{id}?type=...

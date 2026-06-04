@@ -75,6 +75,7 @@
   "meet_ended": "Meeting has ended",
   "token_is_expired": "Token has expired",
   "worker_position_not_found": "Worker position not found or does not exist",
+  "worker_not_found": "Worker not found or does not exist",
   "worker_pin_exists": "Worker PIN already exists",
   "worker_phone_exists": "Worker PHONE already exists",
   "worker_has_contract": "This worker has an active employment contract!",

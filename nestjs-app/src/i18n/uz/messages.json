@@ -75,6 +75,7 @@
   "meet_ended": "Uchrashuv yakunlangan",
   "token_is_expired": "Token muddati tugagan",
   "worker_position_not_found": "Xodimning lavozimi topilmadi yoki mavjud emas",
+  "worker_not_found": "Xodim topilmadi yoki mavjud emas",
   "worker_pin_exists": "Bunday JSHSHIR lik xodim allaqachon mavjud",
   "worker_phone_exists": "Bunday telefon raqamlik xodim allaqachon mavjud",
   "worker_has_contract": "Ushbu xodimda faol mehnat shartnomasi mavjud!",
