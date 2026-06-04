@@ -82,8 +82,8 @@ export class CommandReplaceService {
   // Update-group (Laravel dispatchUpdateTypeHandler) — lavozim/shartnoma o'zgarishi.
   static readonly UPDATE_TYPES = [21, 25];
 
-  // Many-worker vacation (Laravel ManyWorkerCommandTypeHandler::handleFortyOneType).
-  static readonly MANY_WORKER_VACATION_TYPES = [41];
+  // Many-worker (Laravel ManyWorkerCommandTypeHandler) — ko'p xodimli buyruqlar.
+  static readonly MANY_WORKER_TYPES = [41, 55, 61, 62, 71, 72, 73];
 
   // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
   private static readonly TERMINATION_TYPES = [
@@ -526,9 +526,10 @@ export class CommandReplaceService {
     return this.renderTemplate(orgId, dto.command_type, scalars, finance);
   }
 
-  // Many-worker vacation command (41) DOCX — Laravel ManyWorkerCommandTypeHandler
-  // ::handleFortyOneType. Har xodim uchun jadval qatori (cloneRowAndSetValues).
-  async buildManyWorkerVacationDocx(dto: CreateCommandDto): Promise<Buffer> {
+  // Many-worker command (41,55,61,62,71,72,73) DOCX — ManyWorkerCommandTypeHandler.
+  // Har xodim uchun jadval qatori (cloneRowAndSetValues); tur bo'yicha row maydonlari.
+  async buildManyWorkerDocx(dto: CreateCommandDto): Promise<Buffer> {
+    const type = dto.command_type;
     const items = Array.isArray(dto.worker_positions)
       ? (dto.worker_positions as Array<Record<string, unknown>>)
       : [];
@@ -547,9 +548,12 @@ export class CommandReplaceService {
             worker_last: workers.last_name,
             worker_first: workers.first_name,
             worker_middle: workers.middle_name,
+            contract_number: contracts.number,
+            contract_date: contracts.contract_date,
           })
           .from(worker_positions)
           .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+          .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
           .where(
             and(
               inArray(worker_positions.id, ids),
@@ -558,6 +562,32 @@ export class CommandReplaceService {
           )
       : [];
     const wpMap = new Map(wps.map((w) => [w.id, w]));
+
+    // Destination org/dept lookuplari (tip 61, 62).
+    const orgMap = new Map<number, string>();
+    const deptMap = new Map<number, string>();
+    if (type === 61 || type === 62) {
+      const orgIds = items
+        .map((i) => Number(i.work_place_id))
+        .filter((n) => Number.isFinite(n));
+      const deptIds = items
+        .map((i) => Number(i.department_id))
+        .filter((n) => Number.isFinite(n));
+      if (orgIds.length) {
+        const orgs = await this.db
+          .select({ id: organizations.id, full_name: organizations.full_name })
+          .from(organizations)
+          .where(inArray(organizations.id, orgIds));
+        orgs.forEach((o) => orgMap.set(o.id, o.full_name ?? ''));
+      }
+      if (deptIds.length) {
+        const depts = await this.db
+          .select({ id: departments.id, name: departments.name })
+          .from(departments)
+          .where(inArray(departments.id, deptIds));
+        depts.forEach((d) => deptMap.set(d.id, d.name ?? ''));
+      }
+    }
 
     const director = await this.loadConfirmationWorker(dto.director_id);
     const finance = dto.finance_id
@@ -570,39 +600,104 @@ export class CommandReplaceService {
       null;
     const address = await this.resolveAddress(orgId);
 
-    const vacationRows: Array<Record<string, string>> = [];
+    const rows: Array<Record<string, string>> = [];
+    const shortNames: string[] = [];
     for (const item of items) {
       const wp = wpMap.get(Number(item.id));
       if (!wp) continue;
-      const additionalArr = Array.isArray(item.additional)
-        ? (item.additional as Array<{ id?: unknown; value?: unknown }>)
-        : [];
-      let vacationAdditional = additionalArr
-        .map(
-          (a) =>
-            `${(VACATION_ADDITIONAL_UZ[Number(a.id)] ?? '').toLowerCase()} ${
-              a.value ?? ''
-            } kun`,
-        )
-        .join(', ');
-      if (vacationAdditional) vacationAdditional = `(${vacationAdditional})`;
-      vacationRows.push({
-        worker_full_name: this.fullName(
-          wp.worker_last,
-          wp.worker_first,
-          wp.worker_middle,
-        ),
-        period_from: this.dateTex(item.period_from as string),
-        period_to: this.dateTex(item.period_to as string),
-        post_name: (
-          await this.buildShortPosition(wp.department_id, wp.position_id)
-        ).toLowerCase(),
-        all_day: String(item.all_day ?? ''),
-        additional: vacationAdditional,
-        from: this.dateTex(item.from as string),
-        to: this.dateTex(item.to as string),
-        work_day: this.dateTex((item.work_day ?? item.to) as string),
-      });
+      const fullName = this.fullName(
+        wp.worker_last,
+        wp.worker_first,
+        wp.worker_middle,
+      );
+      const postName = (
+        await this.buildShortPosition(wp.department_id, wp.position_id)
+      ).toLowerCase();
+      shortNames.push(
+        this.shortName(wp.worker_last, wp.worker_first, wp.worker_middle),
+      );
+
+      if (type === 41) {
+        const addArr = Array.isArray(item.additional)
+          ? (item.additional as Array<{ id?: unknown; value?: unknown }>)
+          : [];
+        let va = addArr
+          .map(
+            (a) =>
+              `${(VACATION_ADDITIONAL_UZ[Number(a.id)] ?? '').toLowerCase()} ${
+                a.value ?? ''
+              } kun`,
+          )
+          .join(', ');
+        if (va) va = `(${va})`;
+        rows.push({
+          worker_full_name: fullName,
+          period_from: this.dateTex(item.period_from as string),
+          period_to: this.dateTex(item.period_to as string),
+          post_name: postName,
+          all_day: String(item.all_day ?? ''),
+          additional: va,
+          from: this.dateTex(item.from as string),
+          to: this.dateTex(item.to as string),
+          work_day: this.dateTex((item.work_day ?? item.to) as string),
+        });
+      } else if (type === 55) {
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          vacation_dates: this.buildVacationTimes(item),
+          work_day: item.work_day
+            ? this.dateTex(item.work_day as string)
+            : this.dateTexPlusDay(item.to as string),
+        });
+      } else if (type === 61 || type === 62) {
+        let toOrg: string;
+        if ('work_place_id' in item) {
+          const wpName = orgMap.get(Number(item.work_place_id)) ?? '';
+          toOrg =
+            'department_id' in item
+              ? `${wpName} ${deptMap.get(Number(item.department_id)) ?? ''}`.trim()
+              : wpName;
+        } else {
+          toOrg = String(item.to_organization ?? '');
+        }
+        rows.push({
+          worker_full_name: fullName,
+          to_organization: `${toOrg}ga`,
+          reason: String(item.reason ?? ''),
+          post_name: postName,
+          contract_date: wp.contract_date ?? '',
+          contract_number: wp.contract_number ?? '',
+          from: this.dateTex(item.from as string),
+          to: this.dateTex(item.to as string),
+        });
+      } else if (type === 71) {
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          reason: String(item.reason ?? '').toLowerCase(),
+          gift: String(item.gift ?? ''),
+        });
+      } else if (type === 72) {
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          reason: String(item.reason ?? ''),
+          fine: String(item.fine ?? ''),
+        });
+      } else if (type === 73) {
+        const amount = item.amount ?? '';
+        const finText =
+          Number(item.type) === 1
+            ? `mehnatga haq to'lash eng kam miqdorining ${amount} barobari ko'rinishida `
+            : `uzluksiz ish stajiga bog'liq ravishda lavozim maoshinining ${amount}% miqdorida `;
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          reason: String(item.reason ?? '').toLowerCase(),
+          financial_assistance: finText,
+        });
+      }
     }
 
     const scalars: Record<string, string> = {
@@ -619,9 +714,53 @@ export class CommandReplaceService {
         : '',
     };
 
-    return this.renderTemplate(orgId, dto.command_type, scalars, finance, undefined, [
-      { anchor: 'worker_full_name', rows: vacationRows },
+    // Qo'shimcha scalar'lar: workers (61/62), base (71 dto.base / 73 additional.base).
+    if (type === 61 || type === 62) {
+      scalars.workers =
+        shortNames.length > 1
+          ? `${shortNames.join(', ')}lar`
+          : (shortNames[0] ?? '');
+    }
+    if (type === 71) {
+      scalars.base = dto.base ?? '';
+    }
+    if (type === 73) {
+      const add = (dto.command_additional ?? {}) as Record<string, unknown>;
+      scalars.base = typeof add.base === 'string' ? add.base : '';
+    }
+
+    return this.renderTemplate(orgId, type, scalars, finance, undefined, [
+      { anchor: 'worker_full_name', rows },
     ]);
+  }
+
+  // Tip 55 — ta'til vaqtlari matni (Laravel handleFiftyFiveType match logikasi).
+  private buildVacationTimes(item: Record<string, unknown>): string {
+    const from = item.from as string;
+    const to = item.to as string;
+    const fromText = this.dateTex(from);
+    const toText = this.dateTex(to);
+    const fromTime = (item.from_time as string) || null;
+    const toTime = (item.to_time as string) || null;
+    const diff = from !== to;
+    if (diff && fromTime && toTime)
+      return `${fromText} ${fromTime} dan ${toText} ${toTime} gacha`;
+    if (diff && fromTime) return `${fromText} ${fromTime} dan ${toText} gacha`;
+    if (diff && toTime) return `${fromText} dan ${toText} ${toTime} gacha`;
+    if (diff) return `${fromText} dan ${toText} gacha`;
+    if (fromTime && toTime) return `${fromText} ${fromTime} dan ${toTime} gacha`;
+    if (fromTime) return `${fromText} ${fromTime} dan`;
+    if (toTime) return `${fromText} ${toTime} gacha`;
+    return `${fromText} kuni`;
+  }
+
+  // getDateTex(sana + 1 kun) — tip 55 work_day default.
+  private dateTexPlusDay(d: string | null | undefined): string {
+    if (!d) return '';
+    const dt = new Date(`${d}T00:00:00Z`);
+    if (isNaN(dt.getTime())) return '';
+    dt.setUTCDate(dt.getUTCDate() + 1);
+    return this.dateTex(dt.toISOString().slice(0, 10));
   }
 
   // Many-worker tasdiqlovchilari — Laravel appendCommandConfirmations: har

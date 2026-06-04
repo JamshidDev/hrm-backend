@@ -187,11 +187,9 @@ export class CommandService {
       // Update tasdiqlovchilari delete bilan bir xil (worker_position'dan).
       confRows = await this.replace.buildDeleteTypeConfirmations(dto);
     } else if (
-      CommandReplaceService.MANY_WORKER_VACATION_TYPES.includes(
-        dto.command_type,
-      )
+      CommandReplaceService.MANY_WORKER_TYPES.includes(dto.command_type)
     ) {
-      docxBuffer = await this.replace.buildManyWorkerVacationDocx(dto);
+      docxBuffer = await this.replace.buildManyWorkerDocx(dto);
       confRows = await this.replace.buildManyWorkerConfirmations(dto);
     }
 
