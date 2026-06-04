@@ -68,6 +68,9 @@ export class CommandReplaceService {
   // Create-group (Laravel dispatchCreateTypeHandler) — yangi lavozimga qabul.
   static readonly CREATE_TYPES = [1, 2, 3, 4, 5, 6, 7, 8];
 
+  // Update-group (Laravel dispatchUpdateTypeHandler) — lavozim/shartnoma o'zgarishi.
+  static readonly UPDATE_TYPES = [21, 25];
+
   // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
   private static readonly TERMINATION_TYPES = [
     31, 32, 33, 34, 35, 36, 37, 38, 39,
@@ -382,6 +385,121 @@ export class CommandReplaceService {
         ).toLowerCase();
       }
     }
+
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance);
+  }
+
+  // Update-group command (21, 25) DOCX — Laravel handleUpdateType.
+  // worker_position'dan worker+contract; applyWorkerPositionInfo (dto'dan);
+  // tip 21 post_name (dept_position). DIQQAT: contract_date RAW (dateTex EMAS).
+  // Tasdiqlovchilar delete bilan bir xil (worker_position'dan) → buildDeleteTypeConfirmations.
+  async buildUpdateTypeDocx(dto: CreateCommandDto): Promise<Buffer> {
+    if (!dto.worker_position_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+    const [wp] = await this.db
+      .select({
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        department_id: worker_positions.department_id,
+        position_id: worker_positions.position_id,
+        organization_id: worker_positions.organization_id,
+        contract_number: contracts.number,
+        contract_date: contracts.contract_date,
+        contract_to_date: contracts.contract_to_date,
+      })
+      .from(worker_positions)
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
+      .where(
+        and(
+          eq(worker_positions.id, dto.worker_position_id),
+          notDeleted(worker_positions),
+        ),
+      )
+      .limit(1);
+    if (!wp) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ??
+      dto.organization_id ??
+      wp.organization_id;
+    const address = await this.resolveAddress(orgId);
+
+    // post_name — faqat tip 21 (department_position_id, qisqa lavozim, kichik harf).
+    let postName = '';
+    if (dto.command_type === 21 && dto.department_position_id) {
+      const [dp] = await this.db
+        .select({
+          department_id: department_positions.department_id,
+          position_id: department_positions.position_id,
+        })
+        .from(department_positions)
+        .where(eq(department_positions.id, dto.department_position_id))
+        .limit(1);
+      if (dp) {
+        postName = (
+          await this.buildShortPosition(dp.department_id, dp.position_id)
+        ).toLowerCase();
+      }
+    }
+
+    const group = dto.group ?? 1;
+    const rank = dto.rank ?? 7;
+    // worker_position — getShortPosition (kichik harf EMAS, Laravel kabi).
+    const workerPositionShort = await this.buildShortPosition(
+      wp.department_id,
+      wp.position_id,
+    );
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+      // applyWorkerPositionInfo — dto'dan.
+      position_date: this.dateTex(dto.position_date),
+      worker_full_name: this.fullName(
+        wp.worker_last,
+        wp.worker_first,
+        wp.worker_middle,
+      ),
+      worker_short_name: this.shortName(
+        wp.worker_last,
+        wp.worker_first,
+        wp.worker_middle,
+      ),
+      group: `${group}-guruh`,
+      rank: `${rank}-razryadi`,
+      salary: this.numberFormat(dto.salary),
+      rate: dto.rate != null ? String(dto.rate) : '',
+      // contract_date — RAW (Laravel update raw qiymat, dateTex EMAS).
+      contract_date: wp.contract_date ?? '',
+      contract_number: wp.contract_number ?? '',
+      worker_position: workerPositionShort,
+      position_to_date: wp.contract_to_date ?? '',
+      post_name: postName,
+    };
 
     return this.renderTemplate(orgId, dto.command_type, scalars, finance);
   }
