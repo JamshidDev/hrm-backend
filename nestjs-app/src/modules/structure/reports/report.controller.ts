@@ -36,6 +36,9 @@ import {
   UpdateReportMonthDto,
   ReportListResponseDto,
   ReportMonthPerListResponseDto,
+  ReportUpdateDto,
+  ReportDetailUpdateDto,
+  ReportCreateConfirmationDto,
 } from '@/modules/structure/reports/dto/report.dto';
 
 const XLSX_MIME =
@@ -165,5 +168,49 @@ export class ReportController {
   async removeMonthPer(@Param('id', ParseIntPipe) id: number) {
     await this.service.removeMonthPer(id);
     return buildSuccess(this.i18n.t('messages.successfully_deleted'), []);
+  }
+
+  // POST /report/store — Laravel ReportController::store (apiResource POST reports alias).
+  @Post('report/store')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit (store) a generated report — alias' })
+  async storeAlias(@Body() dto: ReportStoreDto) {
+    await this.service.store(dto);
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
+  }
+
+  // POST /report/create-confirmation — Laravel ReportController::createConfirmation.
+  @Post('report/create-confirmation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Add director confirmation worker to report' })
+  async createConfirmation(@Body() dto: ReportCreateConfirmationDto) {
+    await this.service.createConfirmation(dto);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
+  }
+
+  // PUT /reports-detail/:detailId — Laravel ReportController::updateDetail.
+  @Put('reports-detail/:detailId')
+  @ApiOperation({ summary: 'Update report detail data + regenerate document' })
+  async updateDetail(
+    @Param('detailId', ParseIntPipe) detailId: number,
+    @Body() dto: ReportDetailUpdateDto,
+  ) {
+    await this.service.updateDetail(detailId, dto);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
+  }
+
+  // GET /reports/:uuid — Laravel ReportController::show.
+  @Get('reports/:uuid')
+  @ApiOperation({ summary: 'Report detail (show) by uuid' })
+  async findOne(@Param('uuid') uuid: string) {
+    return buildSuccess(true, await this.service.findOne(uuid));
+  }
+
+  // PUT /reports/:uuid — Laravel ReportController::update (director_id).
+  @Put('reports/:uuid')
+  @ApiOperation({ summary: 'Update report director' })
+  async update(@Param('uuid') uuid: string, @Body() dto: ReportUpdateDto) {
+    await this.service.update(uuid, dto);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 }
