@@ -35,6 +35,8 @@ export class CreateCommandDto {
   @ApiPropertyOptional() @IsOptional() @IsString() command_number?: string;
   @ApiPropertyOptional() @IsOptional() confirmations?: unknown[];
   @ApiPropertyOptional() @IsOptional() workers?: unknown[];
+  // Ko'p ishchili (many-worker) buyruqlar uchun (41,55,61,62,71,72,73).
+  @ApiPropertyOptional() @IsOptional() worker_positions?: unknown[];
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)

@@ -51,6 +51,17 @@ const UZ_MONTHS = [
   'dekabr',
 ];
 
+// VacationAdditionalEnum (uz) — Laravel messages.vacations.additional_types.
+// Hujjat har doim uz'da yasaladi (VacationAdditionalEnum::get default 'uz').
+const VACATION_ADDITIONAL_UZ: Record<number, string> = {
+  1: 'Bitta tashkilotda yoki tarmoqda ko‘p yillik ish staji uchun',
+  2: "12 yoshga to'lmagan 2 va undan ortiq farzandi borligi uchun",
+  3: '16 yoshga to‘lmagan nogironligi bo‘lgan farzandi borligi uchun',
+  4: 'Noqulay mehnat sharoitlaridagi ish uchun',
+  5: 'Noqulay tabiiy-iqlim sharoitlaridagi ish uchun',
+  6: 'Donorlarga beriladigan dam olish kuni',
+};
+
 @Injectable()
 export class CommandReplaceService {
   constructor(
@@ -70,6 +81,9 @@ export class CommandReplaceService {
 
   // Update-group (Laravel dispatchUpdateTypeHandler) — lavozim/shartnoma o'zgarishi.
   static readonly UPDATE_TYPES = [21, 25];
+
+  // Many-worker vacation (Laravel ManyWorkerCommandTypeHandler::handleFortyOneType).
+  static readonly MANY_WORKER_VACATION_TYPES = [41];
 
   // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
   private static readonly TERMINATION_TYPES = [
@@ -209,6 +223,7 @@ export class CommandReplaceService {
       compensation: number;
       salary_withholding: number;
     },
+    rowSets?: Array<{ anchor: string; rows: Array<Record<string, string>> }>,
   ): Promise<Buffer> {
     const content = await this.resolveTemplate(orgId, type);
     const zip = new PizZip(content);
@@ -223,6 +238,13 @@ export class CommandReplaceService {
       xml = this.cloneBlock(xml, 'pension_count', blocks.pension_count);
       xml = this.cloneBlock(xml, 'compensation', blocks.compensation);
       xml = this.cloneBlock(xml, 'salary_withholding', blocks.salary_withholding);
+    }
+
+    // Ko'p ishchili (many-worker) jadval qatorlari — cloneRowAndSetValues.
+    if (rowSets) {
+      for (const rs of rowSets) {
+        xml = this.cloneRowAndSetValues(xml, rs.anchor, rs.rows);
+      }
     }
 
     for (const [k, v] of Object.entries(scalars)) {
@@ -502,6 +524,151 @@ export class CommandReplaceService {
     };
 
     return this.renderTemplate(orgId, dto.command_type, scalars, finance);
+  }
+
+  // Many-worker vacation command (41) DOCX — Laravel ManyWorkerCommandTypeHandler
+  // ::handleFortyOneType. Har xodim uchun jadval qatori (cloneRowAndSetValues).
+  async buildManyWorkerVacationDocx(dto: CreateCommandDto): Promise<Buffer> {
+    const items = Array.isArray(dto.worker_positions)
+      ? (dto.worker_positions as Array<Record<string, unknown>>)
+      : [];
+    const ids = items
+      .map((i) => Number(i.id))
+      .filter((n) => Number.isFinite(n));
+
+    const wps = ids.length
+      ? await this.db
+          .select({
+            id: worker_positions.id,
+            worker_id: worker_positions.worker_id,
+            organization_id: worker_positions.organization_id,
+            department_id: worker_positions.department_id,
+            position_id: worker_positions.position_id,
+            worker_last: workers.last_name,
+            worker_first: workers.first_name,
+            worker_middle: workers.middle_name,
+          })
+          .from(worker_positions)
+          .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+          .where(
+            and(
+              inArray(worker_positions.id, ids),
+              notDeleted(worker_positions),
+            ),
+          )
+      : [];
+    const wpMap = new Map(wps.map((w) => [w.id, w]));
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ??
+      dto.organization_id ??
+      wps[0]?.organization_id ??
+      null;
+    const address = await this.resolveAddress(orgId);
+
+    const vacationRows: Array<Record<string, string>> = [];
+    for (const item of items) {
+      const wp = wpMap.get(Number(item.id));
+      if (!wp) continue;
+      const additionalArr = Array.isArray(item.additional)
+        ? (item.additional as Array<{ id?: unknown; value?: unknown }>)
+        : [];
+      let vacationAdditional = additionalArr
+        .map(
+          (a) =>
+            `${(VACATION_ADDITIONAL_UZ[Number(a.id)] ?? '').toLowerCase()} ${
+              a.value ?? ''
+            } kun`,
+        )
+        .join(', ');
+      if (vacationAdditional) vacationAdditional = `(${vacationAdditional})`;
+      vacationRows.push({
+        worker_full_name: this.fullName(
+          wp.worker_last,
+          wp.worker_first,
+          wp.worker_middle,
+        ),
+        period_from: this.dateTex(item.period_from as string),
+        period_to: this.dateTex(item.period_to as string),
+        post_name: (
+          await this.buildShortPosition(wp.department_id, wp.position_id)
+        ).toLowerCase(),
+        all_day: String(item.all_day ?? ''),
+        additional: vacationAdditional,
+        from: this.dateTex(item.from as string),
+        to: this.dateTex(item.to as string),
+        work_day: this.dateTex((item.work_day ?? item.to) as string),
+      });
+    }
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+    };
+
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance, undefined, [
+      { anchor: 'worker_full_name', rows: vacationRows },
+    ]);
+  }
+
+  // Many-worker tasdiqlovchilari — Laravel appendCommandConfirmations: har
+  // worker_position uchun type='w' (position bilan) + imzolovchilar.
+  async buildManyWorkerConfirmations(dto: CreateCommandDto): Promise<
+    Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }>
+  > {
+    const rows: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
+    const items = Array.isArray(dto.worker_positions)
+      ? (dto.worker_positions as Array<Record<string, unknown>>)
+      : [];
+    const ids = items
+      .map((i) => Number(i.id))
+      .filter((n) => Number.isFinite(n));
+    if (ids.length) {
+      const wps = await this.db
+        .select({
+          id: worker_positions.id,
+          worker_id: worker_positions.worker_id,
+          department_id: worker_positions.department_id,
+          position_id: worker_positions.position_id,
+        })
+        .from(worker_positions)
+        .where(
+          and(inArray(worker_positions.id, ids), notDeleted(worker_positions)),
+        );
+      for (const wp of wps) {
+        if (wp.worker_id == null) continue;
+        const position = await this.buildShortPosition(
+          wp.department_id,
+          wp.position_id,
+        );
+        rows.push({ worker_id: wp.worker_id, position, type: 'w', order: 1 });
+      }
+    }
+    rows.push(...(await this.buildSignerConfirmations(dto)));
+    return rows;
   }
 
   // Create-group command (1–8) tasdiqlovchilari — Laravel appendWorkerConfirmation
@@ -919,6 +1086,32 @@ export class CommandReplaceService {
     return xml.replace(re, (_full, block: string) =>
       count <= 0 ? '' : block.repeat(count),
     );
+  }
+
+  // PhpWord `cloneRowAndSetValues` parity: `${anchor}` ni o'z ichiga olgan jadval
+  // qatorini (`<w:tr>`) har bir `rows[i]` uchun takrorlaydi va `${key}` larni
+  // to'ldiradi. rows bo'sh bo'lsa qator o'chadi.
+  private cloneRowAndSetValues(
+    xml: string,
+    anchor: string,
+    rows: Array<Record<string, string>>,
+  ): string {
+    const re = new RegExp(
+      `<w:tr\\b[^>]*>(?:(?!</w:tr>)[\\s\\S])*?\\$\\{${anchor}\\}(?:(?!</w:tr>)[\\s\\S])*?</w:tr>`,
+    );
+    const m = xml.match(re);
+    if (!m) return xml;
+    const rowTpl = m[0];
+    const filled = rows
+      .map((r) => {
+        let row = rowTpl;
+        for (const [k, v] of Object.entries(r)) {
+          row = row.split(`\${${k}}`).join(this.escapeXml(v));
+        }
+        return row;
+      })
+      .join('');
+    return xml.replace(re, () => filled);
   }
 
   // Oy raqami (1–12) → UZ nomi. Laravel Helper::getMonth.
