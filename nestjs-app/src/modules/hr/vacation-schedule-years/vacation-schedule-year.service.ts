@@ -441,10 +441,12 @@ export class VacationScheduleYearService {
   // Laravel DocumentReplace::generate — `vacation_schedule.docx` shabloni,
   // faqat `${year}` to'ldiriladi (qolgan placeholderlar keyingi bosqich uchun).
   private async buildScheduleDocx(year: number): Promise<Buffer> {
+    // Laravel: public_path('resumes/vacations/vacation_schedule.docx').
     const templatePath = join(
       process.cwd(),
       'public',
       'resumes',
+      'vacations',
       'vacation_schedule.docx',
     );
     const content = await readFile(templatePath);
