@@ -1224,6 +1224,17 @@ export class CommandReplaceService {
     }
     const imgBuffer = await readFile(bannerPath);
 
+    // Banner o'lchamlari (EMU) — Laravel `ratio=true` ekvivalenti:
+    //   - kenglik sahifa kontent kengligiga sig'sin (margin'lar: ~6.69") — aks
+    //     holda LibreOffice rasmni qayta o'lchamlab aspect'ni buzadi (siqilib/
+    //     qirqilib chiqadi).
+    //   - balandlik = kenglik × (rasmH / rasmW) — rasm proporsiyasi saqlanadi.
+    // PNG IHDR: width = byte[16..19], height = byte[20..23] (big-endian).
+    const imgW = imgBuffer.length >= 24 ? imgBuffer.readUInt32BE(16) : 1962;
+    const imgH = imgBuffer.length >= 24 ? imgBuffer.readUInt32BE(20) : 261;
+    const cx = 6120000; // ≈6.69" — A4 kontent kengligi (margin ichida)
+    const cy = imgW > 0 ? Math.round((cx * imgH) / imgW) : 814000;
+
     // 1) Rasmni zip ichiga qo'shish.
     zip.file('word/media/banner.png', imgBuffer);
 
@@ -1254,13 +1265,18 @@ export class CommandReplaceService {
       }
     }
 
-    // 4) `${photo}` run'ini drawing bilan almashtirish.
-    //    Textbox o'lchamlari: cx=6257160, cy=828360 EMU.
+    // 4) `${photo}` o'rniga drawing — FLOATING (anchored, wrapTopAndBottom).
+    //    Inline rasm LibreOffice'da qator balandligiga qirqilardi; floating rasm
+    //    matn oqimidan tashqari joylashadi → to'liq ko'rinadi.
     const drawing =
       `<w:drawing>` +
-      `<wp:inline distT="0" distB="0" distL="0" distR="0">` +
-      `<wp:extent cx="6257160" cy="828360"/>` +
+      `<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">` +
+      `<wp:simplePos x="0" y="0"/>` +
+      `<wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH>` +
+      `<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>` +
+      `<wp:extent cx="${cx}" cy="${cy}"/>` +
       `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+      `<wp:wrapTopAndBottom/>` +
       `<wp:docPr id="900" name="banner"/>` +
       `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
       `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
@@ -1268,12 +1284,23 @@ export class CommandReplaceService {
       `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
       `<pic:nvPicPr><pic:cNvPr id="900" name="banner"/><pic:cNvPicPr/></pic:nvPicPr>` +
       `<pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
-      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6257160" cy="828360"/></a:xfrm>` +
+      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
       `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
-      `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
+      `</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>`;
 
-    // `<w:t...>${photo}</w:t>` ni topib, `<w:t>` ni drawing bilan almashtirish.
-    return xml.replace(/<w:t(?:\s+[^>]*)?>\$\{photo\}<\/w:t>/, drawing);
+    // `${photo}` joylashgan BUTUN paragrafni toza paragraf bilan almashtiramiz.
+    // Sabab: template paragrafida `<w:spacing line="286" lineRule="auto">` bor —
+    // LibreOffice inline rasmni shu line balandligiga qirqadi (banner pastdan
+    // kesiladi). Toza paragrafda (line cheklovisiz) rasm to'liq ko'rinadi.
+    // Template'da `${photo}` 2 marta: 1-chisi banner, 2-chisi olib tashlanadi.
+    const photoParaRe =
+      /<w:p\b[^>]*>(?:(?!<w:p\b)[\s\S])*?\$\{photo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g;
+    let placed = false;
+    return xml.replace(photoParaRe, () => {
+      if (placed) return '';
+      placed = true;
+      return `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r>${drawing}</w:r></w:p>`;
+    });
   }
 
   // ---- DB helpers ----
