@@ -14,18 +14,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  inArray,
-  isNull,
-  ne,
-  sql,
-} from 'drizzle-orm';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString } from 'class-validator';
@@ -39,12 +29,14 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
   confirmation_workers,
-  organizations,
+  worker_application_confirmations,
   worker_applications,
   worker_positions,
   workers,
 } from '@/db/schema';
 import { MinioService } from '@/shared/minio/minio.service';
+import { ConvertService } from '@/shared/convert/convert.service';
+import { WorkerApplicationReplaceService } from '@/modules/hr/worker-applications/worker-application-replace.service';
 import { randomUUID } from 'crypto';
 
 // ---- DTOs ----
@@ -74,7 +66,7 @@ class WorkerAppQueryDto {
   director_id?: number;
 }
 
-class WorkerAppStoreDto {
+export class WorkerAppStoreDto {
   @ApiProperty() @Type(() => Number) @IsInt() type!: number;
   @ApiProperty() @Type(() => Number) @IsInt() director_id!: number;
   @ApiPropertyOptional()
@@ -83,6 +75,35 @@ class WorkerAppStoreDto {
   @IsInt()
   worker_position_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
+
+  // --- Ariza DOCX'i uchun tur-specific maydonlar (Laravel dto[...]) ---
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  department_position_id?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() from_date?: string;
+  @ApiPropertyOptional() @IsOptional() rate?: number | string;
+  @ApiPropertyOptional() @IsOptional() @IsString() reason?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() contract_to_date?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  temporarily_absent?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() from?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() to?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() period_from?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() period_to?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() from_time?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() to_time?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() univer_date?: string;
+  @ApiPropertyOptional() @IsOptional() univer_number?: number | string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  education_type?: number;
 }
 
 // ---- Application Education Type Enum (Confirmation/Enums) ----
@@ -112,6 +133,8 @@ class WorkerApplicationExtrasService {
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
     private readonly minio: MinioService,
+    private readonly replace: WorkerApplicationReplaceService,
+    private readonly convert: ConvertService,
   ) {}
 
   // GET /api/v1/worker-application/enums
@@ -275,25 +298,84 @@ class WorkerApplicationExtrasService {
   async store(dto: WorkerAppStoreDto): Promise<void> {
     const userId = this.ctx.user_or_fail.id;
     const workerId = this.ctx.user_or_fail.worker_id;
-    const orgId = this.ctx.user_or_fail.organization_id;
+    const uuid = randomUUID();
+    const docxKey = `worker-application/${uuid}.docx`;
+    const pdfKey = `documents/worker-application/${uuid}.pdf`;
+
+    // DOCX'ni OLDIN tayyorlaymiz (Laravel generateFile → workerApplicationReplace).
+    const { buffer, director } = await this.replace.buildDocx(dto, workerId);
+
+    // Laravel: organization_id = director->organization_id.
+    const orgId =
+      director.organizationId || this.ctx.user_or_fail.organization_id;
     if (!orgId) {
       throw new BusinessException(
         400,
         this.i18n.t('messages.organization_not_found'),
       );
     }
-    await this.db.insert(worker_applications).values({
-      uuid: randomUUID(),
-      organization_id: orgId,
-      worker_id: workerId,
-      worker_position_id: dto.worker_position_id ?? null,
-      user_id: userId,
-      director_id: dto.director_id,
-      number: Math.floor(Math.random() * 100000),
-      year: new Date().getFullYear(),
-      application_date: new Date().toISOString().split('T')[0],
-      type: dto.type,
+
+    await this.db.transaction(async (tx) => {
+      const [app] = await tx
+        .insert(worker_applications)
+        .values({
+          uuid,
+          organization_id: orgId,
+          worker_id: workerId,
+          worker_position_id: dto.worker_position_id ?? null,
+          user_id: userId,
+          director_id: dto.director_id,
+          number: Math.floor(Math.random() * 100000),
+          year: new Date().getFullYear(),
+          application_date: new Date().toISOString().split('T')[0],
+          type: dto.type,
+          generate: 3,
+          file: docxKey,
+          confirmation_file: pdfKey,
+        })
+        .returning({ id: worker_applications.id });
+
+      // Confirmations — Laravel storeConfirmations: hodim 'w' + direktor 'd'.
+      const confRows: Array<{
+        worker_application_id: number;
+        type: string;
+        worker_id: number | null;
+        position: string | null;
+      }> = [
+        {
+          worker_application_id: app.id,
+          type: 'w',
+          worker_id: workerId,
+          position: null,
+        },
+      ];
+      if (director.directorWorkerId) {
+        confRows.push({
+          worker_application_id: app.id,
+          type: 'd',
+          worker_id: director.directorWorkerId,
+          position: director.directorPosition,
+        });
+      }
+      await tx.insert(worker_application_confirmations).values(confRows);
     });
+
+    await this.minio.putObject(
+      docxKey,
+      buffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    void this.generatePdf(buffer, pdfKey);
+  }
+
+  // DOCX→PDF konvertatsiya + MinIO yuklash (fon).
+  private async generatePdf(buffer: Buffer, pdfKey: string): Promise<void> {
+    try {
+      const pdf = await this.convert.docxToPdf(buffer);
+      await this.minio.putObject(pdfKey, pdf, 'application/pdf');
+    } catch {
+      // PDF muvaffaqiyatsiz — DOCX baribir saqlangan.
+    }
   }
 
   // GET /api/v1/worker-application/applications/{id}/edit

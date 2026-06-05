@@ -5,10 +5,11 @@ import {
   WorkerApplicationExtrasController,
   WorkerApplicationExtrasService,
 } from '@/modules/confirmation/worker-application-extras/worker-application-extras.controller';
+import { WorkerApplicationReplaceService } from '@/modules/hr/worker-applications/worker-application-replace.service';
 
 @Module({
   imports: [AuthModule, MinioModule],
   controllers: [WorkerApplicationExtrasController],
-  providers: [WorkerApplicationExtrasService],
+  providers: [WorkerApplicationExtrasService, WorkerApplicationReplaceService],
 })
 export class WorkerApplicationExtrasModule {}

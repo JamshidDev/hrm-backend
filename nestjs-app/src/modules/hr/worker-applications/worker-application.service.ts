@@ -2,18 +2,7 @@
 // Endpoints: index, accept, generate-url.
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { createHmac } from 'crypto';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
