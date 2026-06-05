@@ -5,7 +5,8 @@
 //   - Bu yerda asosiy stub'lar: document base64 return, signature record,
 //     forward, generate-url, history, files.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { CommandConfirmationService } from '@/modules/hr/commands/command-confirmation.service';
 import { and, count, desc, eq, gt, ne, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
@@ -126,6 +127,8 @@ const CONFIRMATION_STATUS_KEYS: Record<number, string> = {
 
 @Injectable()
 export class DocumentService {
+  private readonly logger = new Logger(DocumentService.name);
+
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
@@ -133,7 +136,27 @@ export class DocumentService {
     private readonly minio: MinioService,
     private readonly config: ConfigService,
     private readonly convert: ConvertService,
+    private readonly commandConfirmation: CommandConfirmationService,
   ) {}
+
+  // Hujjat TO'LIQ tasdiqlanganda (confirmation=SUCCESS) model bo'yicha
+  // biznes-logika (Laravel DocumentFinalizeService::applyModelConfirmation).
+  private async applyModelSideEffect(
+    model: string,
+    docId: number,
+  ): Promise<void> {
+    try {
+      if (model === 'commands') {
+        await this.commandConfirmation.applyConfirmation(docId);
+      }
+      // Phase 2: contracts, contract-additional side-effectlari.
+    } catch (e) {
+      // Side-effect xatosi tasdiqni bekor qilmaydi (Laravel report()).
+      this.logger.error(
+        `applyModelSideEffect(${model}, ${docId}) xato: ${String(e)}`,
+      );
+    }
+  }
 
   // GET /api/v1/confirmation/document/base64
   async documentBase64(query: DocumentBase64QueryDto) {
@@ -141,7 +164,7 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
       .select({ file: dTable.file })
@@ -166,7 +189,7 @@ export class DocumentService {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
     const userId = this.ctx.user_or_fail.id;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
       .select({ id: dTable.id })
@@ -192,7 +215,7 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const cTable = map.conf as any;
     const [conf] = await this.db
       .select({ id: cTable.id })
@@ -214,10 +237,9 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+
     const dTable = map.doc as any;
     const confTable = map.conf as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const [doc] = await this.db
       .select()
@@ -480,10 +502,9 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(404, this.i18n.t('error.model_not_found'));
     }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+
     const confTable = map.conf as any;
     const dTable = map.doc as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // 1) Confirmation — model'ning {fk} (masalan command_id) ustunini olamiz.
     const [conf] = await this.db
@@ -575,10 +596,9 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(404, this.i18n.t('error.model_not_found'));
     }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+
     const confTable = map.conf as any;
     const dTable = map.doc as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // 2) Confirmation + worker.
     const [conf] = await this.db
@@ -675,6 +695,8 @@ export class DocumentService {
         .update(dTable)
         .set({ confirmation: 3, updated_at: sql`NOW()` })
         .where(eq(dTable.id, conf.doc_id));
+      // Hujjat to'liq tasdiqlandi — model side-effect (Laravel finalize).
+      await this.applyModelSideEffect(record.model, conf.doc_id);
     }
 
     return { message: this.i18n.t('messages.document.signed_successfully') };
@@ -687,7 +709,7 @@ export class DocumentService {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
     const userId = this.ctx.user_or_fail.id;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
       .select({ id: dTable.id })
@@ -702,6 +724,11 @@ export class DocumentService {
       .update(dTable)
       .set({ confirmation: dto.status, updated_at: sql`NOW()` })
       .where(eq(dTable.id, dto.model_id));
+
+    // SUCCESS (3) bo'lsa — model side-effect (Laravel finalize).
+    if (dto.status === 3) {
+      await this.applyModelSideEffect(dto.model_type, dto.model_id);
+    }
 
     await this.db.insert(document_histories).values({
       model_id: dto.model_id,
@@ -746,7 +773,7 @@ export class DocumentService {
     // Hujjatni topish.
     const map = MODEL_TYPE_TABLE_MAP[query.model];
     if (!map) return { error: 1 };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
       .select()

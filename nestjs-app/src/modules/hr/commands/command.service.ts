@@ -235,6 +235,11 @@ export class CommandService {
       return created;
     });
 
+    // Tasdiqlash side-effect'i uchun `data` JSON saqlaymiz (Laravel
+    // json/commands/{id}.json). Tasdiq tugaganda CommandConfirmationService
+    // shu data'ni o'qib worker_position/vacation/trip o'zgartiradi.
+    await this.storeCommandData(cmd.id, dto);
+
     // DOCX'ni MinIO'ga yuklash (sinxron — `doc_url` darhol ishlashi uchun).
     if (docxBuffer) {
       await this.minio.putObject(
@@ -248,6 +253,57 @@ export class CommandService {
     }
 
     return { command_id: cmd.id };
+  }
+
+  // Tasdiqlash side-effect'i uchun buyruq `data`sini json/commands/{id}.json
+  // ga saqlaydi. Termination/transfer uchun contract_id worker_position'dan
+  // hal qilinadi (commands jadvalida bu maydonlar yo'q).
+  private async storeCommandData(
+    commandId: number,
+    dto: CreateCommandDto,
+  ): Promise<void> {
+    let contractId: number | null = null;
+    if (dto.worker_position_id) {
+      const [wp] = await this.db
+        .select({ contract_id: worker_positions.contract_id })
+        .from(worker_positions)
+        .where(eq(worker_positions.id, dto.worker_position_id))
+        .limit(1);
+      contractId = wp?.contract_id ?? null;
+    }
+    const data: Record<string, unknown> = {
+      type: dto.command_type,
+      worker_id: dto.worker_id ?? null,
+      worker_position_id: dto.worker_position_id ?? null,
+      department_position_id: dto.department_position_id ?? null,
+      position_id: dto.position_id ?? null,
+      contract_id: contractId,
+      contract_to_date: dto.contract_to_date ?? null,
+      command_date: dto.command_date,
+      position_date: dto.position_date ?? null,
+      salary: dto.salary ?? null,
+      rate: dto.rate ?? null,
+      group: dto.group ?? null,
+      rank: dto.rank ?? null,
+      probation: dto.probation ?? null,
+      // Ta'til / many-worker / boshqa side-effectlar uchun xom maydonlar.
+      from: dto.from ?? null,
+      to: dto.to ?? null,
+      work_day: dto.work_day ?? null,
+      new_date: dto.new_date ?? null,
+      rest_day: dto.rest_day ?? null,
+      all_day: dto.all_day ?? null,
+      reason: dto.reason ?? null,
+      period_from: dto.period_from ?? null,
+      period_to: dto.period_to ?? null,
+      worker_positions: dto.worker_positions ?? null,
+    };
+    const body = Buffer.from(JSON.stringify({ data }), 'utf-8');
+    await this.minio.putObject(
+      `json/commands/${commandId}.json`,
+      body,
+      'application/json',
+    );
   }
 
   // DOCX→PDF konvertatsiya + MinIO yuklash + `generate` statusini yangilash.
