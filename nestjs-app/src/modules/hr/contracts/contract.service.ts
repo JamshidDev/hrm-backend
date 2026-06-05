@@ -1,17 +1,7 @@
 // Contract service. Laravel: ContractController::index() (only).
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -196,7 +186,7 @@ export class ContractService {
 
     // DOCX'ni OLDIN tayyorlaymiz — generatsiya xato bo'lsa contract yozilmaydi
     // (Laravel ContractService::store → contractReplace transaction ichida).
-    const docxBuffer = await this.replace.buildContractDocx(dto, uuid);
+    const docxBuffer = await this.replace.buildContractDocx(dto);
 
     // Director (ContractConfirmation type='d' uchun worker_id + position).
     const [director] = await this.db

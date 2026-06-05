@@ -63,10 +63,7 @@ export class ContractReplaceService {
   ) {}
 
   // Shartnoma DOCX'ini hosil qiladi (Laravel contractReplace).
-  async buildContractDocx(
-    dto: CreateContractDto,
-    uuid: string,
-  ): Promise<Buffer> {
+  async buildContractDocx(dto: CreateContractDto): Promise<Buffer> {
     // 1) Worker + passport + joriy region/shahar.
     const [worker] = await this.db
       .select({
@@ -84,7 +81,10 @@ export class ContractReplaceService {
       .where(and(eq(workers.id, dto.worker_id), notDeleted(workers)))
       .limit(1);
     if (!worker) {
-      throw new BusinessException(400, this.i18n.t('messages.worker_not_found'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_not_found'),
+      );
     }
 
     const workerRegion = await this.regionName(worker.current_region_id);
@@ -180,8 +180,7 @@ export class ContractReplaceService {
       position_name: dto.post_name ?? '',
       command_type: commandTypeLabel,
       position_date: this.dateTex(dto.position_date),
-      salary:
-        dto.salary != null ? `${this.numberFormat(dto.salary)} so'm` : '',
+      salary: dto.salary != null ? `${this.numberFormat(dto.salary)} so'm` : '',
       contract_to_date: dto.contract_to_date
         ? this.dateTex(dto.contract_to_date)
         : '',
