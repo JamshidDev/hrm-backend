@@ -18,6 +18,8 @@ import type { DataSource } from '@/db/types';
 import {
   command_confirmations,
   commands as commandsTable,
+  confirmation_workers,
+  contract_confirmations,
   contracts,
   departments,
   organizations,
@@ -32,6 +34,8 @@ import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ContractMapper } from '@/modules/hr/contracts/contract.mapper';
+import { ContractReplaceService } from '@/modules/hr/contracts/contract-replace.service';
+import { ConvertService } from '@/shared/convert/convert.service';
 import {
   ContractListResponseDto,
   CreateContractDto,
@@ -52,6 +56,8 @@ export class ContractService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly scope: OrgScopeService,
+    private readonly replace: ContractReplaceService,
+    private readonly convert: ConvertService,
   ) {}
 
   async findAll(filters: QueryContractDto): Promise<ContractListResponseDto> {
@@ -184,11 +190,29 @@ export class ContractService {
       }
     }
 
-    return await this.db.transaction(async (tx) => {
+    const uuid = randomUUID();
+    const docxKey = `contracts/${uuid}.docx`;
+    const pdfKey = `documents/contracts/${uuid}.pdf`;
+
+    // DOCX'ni OLDIN tayyorlaymiz — generatsiya xato bo'lsa contract yozilmaydi
+    // (Laravel ContractService::store → contractReplace transaction ichida).
+    const docxBuffer = await this.replace.buildContractDocx(dto, uuid);
+
+    // Director (ContractConfirmation type='d' uchun worker_id + position).
+    const [director] = await this.db
+      .select({
+        worker_id: confirmation_workers.worker_id,
+        position: confirmation_workers.position,
+      })
+      .from(confirmation_workers)
+      .where(eq(confirmation_workers.id, dto.director_id))
+      .limit(1);
+
+    const contractId = await this.db.transaction(async (tx) => {
       const [contract] = await tx
         .insert(contracts)
         .values({
-          uuid: randomUUID(),
+          uuid,
           organization_id: dto.organization_id,
           worker_id: dto.worker_id,
           user_id: userId,
@@ -200,6 +224,8 @@ export class ContractService {
           table_number:
             dto.table_number != null ? Number(dto.table_number) : null,
           type: dto.type,
+          file: docxKey,
+          confirmation_file: pdfKey,
         })
         .returning({ id: contracts.id });
 
@@ -228,8 +254,55 @@ export class ContractService {
         });
       }
 
-      return { contract_id: contract.id };
+      // contract_confirmations — Laravel createConfirmation: hodim 'w' + direktor 'd'.
+      const confRows: Array<{
+        contract_id: number;
+        type: string;
+        worker_id: number;
+        position: string | null;
+      }> = [
+        {
+          contract_id: contract.id,
+          type: 'w',
+          worker_id: dto.worker_id,
+          position: null,
+        },
+      ];
+      if (director?.worker_id) {
+        confRows.push({
+          contract_id: contract.id,
+          type: 'd',
+          worker_id: director.worker_id,
+          position: director.position ?? null,
+        });
+      }
+      await tx.insert(contract_confirmations).values(confRows);
+
+      return contract.id;
     });
+
+    // DOCX'ni MinIO'ga yuklash (sinxron) + PDF (fon).
+    await this.minio.putObject(
+      docxKey,
+      docxBuffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    void this.generateContractPdf(docxBuffer, pdfKey);
+
+    return { contract_id: contractId };
+  }
+
+  // DOCX→PDF konvertatsiya + MinIO yuklash (fon — Laravel DocxToPdfJob).
+  private async generateContractPdf(
+    docxBuffer: Buffer,
+    pdfKey: string,
+  ): Promise<void> {
+    try {
+      const pdfBuffer = await this.convert.docxToPdf(docxBuffer);
+      await this.minio.putObject(pdfKey, pdfBuffer, 'application/pdf');
+    } catch {
+      // PDF konvertatsiya muvaffaqiyatsiz — DOCX baribir saqlangan.
+    }
   }
 
   // GET /api/v1/hr/contracts/{id}
