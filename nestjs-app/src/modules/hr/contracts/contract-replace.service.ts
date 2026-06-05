@@ -14,13 +14,18 @@ import type { DataSource } from '@/db/types';
 import {
   cities,
   confirmation_workers,
+  contract_additional_types,
   contract_types,
+  contracts,
+  department_positions,
   departments,
   organizations,
+  positions as positionsTable,
   regions,
   schedules,
   worker_passports,
   worker_phones,
+  worker_positions,
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
@@ -28,6 +33,7 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { MinioService } from '@/shared/minio/minio.service';
 import { I18nService } from 'nestjs-i18n';
 import type { CreateContractDto } from '@/modules/hr/contracts/dto/contract.dto';
+import type { CreateContractAdditionalDto } from '@/modules/hr/contract-additional/dto/contract-additional.dto';
 
 const UZ_MONTHS = [
   'yanvar',
@@ -64,118 +70,24 @@ export class ContractReplaceService {
 
   // Shartnoma DOCX'ini hosil qiladi (Laravel contractReplace).
   async buildContractDocx(dto: CreateContractDto): Promise<Buffer> {
-    // 1) Worker + passport + joriy region/shahar.
-    const [worker] = await this.db
-      .select({
-        last: workers.last_name,
-        first: workers.first_name,
-        middle: workers.middle_name,
-        pin: workers.pin,
-        address: workers.address,
-        current_region_id: workers.current_region_id,
-        current_city_id: workers.current_city_id,
-        passport: worker_passports.serial_number,
-      })
-      .from(workers)
-      .leftJoin(worker_passports, eq(worker_passports.worker_id, workers.id))
-      .where(and(eq(workers.id, dto.worker_id), notDeleted(workers)))
-      .limit(1);
-    if (!worker) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.worker_not_found'),
-      );
-    }
+    const common = await this.commonReplaceScalars(
+      dto.worker_id,
+      dto.director_id,
+      dto.organization_id,
+      dto.contract_date,
+      dto.number,
+    );
 
-    const workerRegion = await this.regionName(worker.current_region_id);
-    const workerCity = await this.cityName(worker.current_city_id);
-    const workerPhones = await this.phones(dto.worker_id);
-
-    // 2) Organization + shahar + region.
-    const [org] = await this.db
-      .select({
-        full_name: organizations.full_name,
-        address: organizations.address,
-        city_id: organizations.city_id,
-      })
-      .from(organizations)
-      .where(eq(organizations.id, dto.organization_id))
-      .limit(1);
-    const orgCity = await this.cityRow(org?.city_id ?? null);
-    const orgRegion = await this.regionName(orgCity?.region_id ?? null);
-
-    // 3) Director (ConfirmationWorker → worker + position + phones).
-    const [director] = await this.db
-      .select({
-        position: confirmation_workers.position,
-        worker_id: confirmation_workers.worker_id,
-        last: workers.last_name,
-        first: workers.first_name,
-        middle: workers.middle_name,
-      })
-      .from(confirmation_workers)
-      .leftJoin(workers, eq(workers.id, confirmation_workers.worker_id))
-      .where(eq(confirmation_workers.id, dto.director_id))
-      .limit(1);
-    const directorPhones = director?.worker_id
-      ? await this.phones(director.worker_id)
-      : [];
-
-    // 4) Department + Schedule.
-    const departmentName = dto.department_id
-      ? ((
-          await this.db
-            .select({ name: departments.name })
-            .from(departments)
-            .where(eq(departments.id, dto.department_id))
-            .limit(1)
-        )[0]?.name ?? '')
-      : '';
-    const workDay = dto.schedule_id
-      ? ((
-          await this.db
-            .select({ name: schedules.name })
-            .from(schedules)
-            .where(eq(schedules.id, dto.schedule_id))
-            .limit(1)
-        )[0]?.name ?? '')
-      : '';
-
-    // 5) Tur label'lari.
+    const departmentName = await this.departmentName(dto.department_id);
+    const workDay = await this.scheduleName(dto.schedule_id);
     const contractTypeLabel = CONTRACT_TYPE_UZ[dto.type] ?? '';
     const commandTypeLabel = dto.command_status
       ? this.commandTypeLabel(dto.command_type)
       : contractTypeLabel;
 
-    // 6) Qiymatlar (barchasi setValue — Laravel replace + contractReplace).
     const scalars: Record<string, string> = {
-      // replace()
-      address: this.regionAbbrev(orgRegion),
-      director_full_name: director
-        ? this.fullName(director.last, director.first, director.middle)
-        : '',
-      worker_full_name: this.fullName(worker.last, worker.first, worker.middle),
+      ...common,
       contract_type: contractTypeLabel,
-      passport: worker.passport ?? '',
-      worker_pin: worker.pin != null ? String(worker.pin) : '',
-      new_contract_date: this.dateTex(dto.contract_date),
-      stir: '',
-      worker_address: this.joinAddress([
-        workerRegion,
-        workerCity,
-        worker.address,
-      ]),
-      organization_full_name: org?.full_name ?? '',
-      worker_phone: this.phoneFormat(workerPhones),
-      director_position: `${director?.position ?? ''} `,
-      director_phone: this.phoneFormat(directorPhones),
-      organization_address: this.joinAddress([
-        orgRegion,
-        orgCity?.name ?? null,
-        org?.address ?? null,
-      ]),
-      number: dto.number != null ? String(dto.number) : '',
-      // contractReplace()
       department_name: departmentName,
       position_name: dto.post_name ?? '',
       command_type: commandTypeLabel,
@@ -194,33 +106,279 @@ export class ContractReplaceService {
       work_day: workDay,
     };
 
-    // 7) Template + to'ldirish.
-    const content = await this.resolveTemplate(dto.organization_id, dto.type);
+    const content = await this.resolveTemplate(
+      'contracts',
+      dto.organization_id,
+      dto.type,
+    );
     return this.fillTemplate(content, scalars);
+  }
+
+  // Qo'shimcha shartnoma (contract-additional) DOCX — Laravel
+  // contractAdditionalReplace. Turlar: 1, 8, 12, 13.
+  async buildContractAdditionalDocx(
+    dto: CreateContractAdditionalDto,
+  ): Promise<Buffer> {
+    // worker_position → worker + contract + department/position.
+    const [wp] = await this.db
+      .select({
+        worker_id: worker_positions.worker_id,
+        department_id: worker_positions.department_id,
+        position_id: worker_positions.position_id,
+        contract_id: worker_positions.contract_id,
+        contract_number: contracts.number,
+        contract_date: contracts.contract_date,
+      })
+      .from(worker_positions)
+      .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
+      .where(
+        and(
+          eq(worker_positions.id, dto.worker_position_id),
+          notDeleted(worker_positions),
+        ),
+      )
+      .limit(1);
+    if (!wp?.worker_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+
+    const common = await this.commonReplaceScalars(
+      wp.worker_id,
+      dto.director_id,
+      dto.organization_id,
+      dto.contract_date,
+      dto.number,
+    );
+
+    const workerPosition = `${await this.buildShortPosition(
+      wp.department_id,
+      wp.position_id,
+    )} `;
+    const contractNumber = wp.contract_number ?? '';
+    const contractDate = this.dateTex(wp.contract_date);
+
+    const scalars: Record<string, string> = {
+      ...common,
+      worker_position: workerPosition,
+      contract_number: contractNumber,
+      contract_date: contractDate,
+      number: dto.number != null ? String(dto.number) : '',
+    };
+
+    // Tur 8 — yangi lavozim (department_position yoki position).
+    if (dto.type === 8) {
+      let newPos = '';
+      if (dto.department_position_id) {
+        newPos = await this.departmentPositionShort(dto.department_position_id);
+      } else if (dto.position_id) {
+        newPos = await this.positionName(dto.position_id);
+      }
+      scalars.worker_new_position = newPos;
+    }
+    // Tur 12, 13 — contract_to_date (kontrakt mavjud bo'lishi shart).
+    if (dto.type === 12 || dto.type === 13) {
+      if (!wp.contract_id) {
+        throw new BusinessException(
+          400,
+          this.i18n.t('messages.replace.contract_not_found'),
+        );
+      }
+      scalars.contract_to_date = this.dateTex(dto.contract_to_date);
+    }
+
+    const content = await this.resolveTemplate(
+      'contract-additional',
+      dto.organization_id ?? null,
+      dto.type,
+    );
+    return this.fillTemplate(content, scalars);
+  }
+
+  // Laravel replace() — barcha contract/additional shablonlari uchun umumiy
+  // setValue maydonlari (worker/org/director ma'lumotlari).
+  private async commonReplaceScalars(
+    workerId: number,
+    directorId: number,
+    orgId: number | null | undefined,
+    contractDate: string | null | undefined,
+    number: string | number | null | undefined,
+  ): Promise<Record<string, string>> {
+    const [worker] = await this.db
+      .select({
+        last: workers.last_name,
+        first: workers.first_name,
+        middle: workers.middle_name,
+        pin: workers.pin,
+        address: workers.address,
+        current_region_id: workers.current_region_id,
+        current_city_id: workers.current_city_id,
+        passport: worker_passports.serial_number,
+      })
+      .from(workers)
+      .leftJoin(worker_passports, eq(worker_passports.worker_id, workers.id))
+      .where(and(eq(workers.id, workerId), notDeleted(workers)))
+      .limit(1);
+    if (!worker) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_not_found'),
+      );
+    }
+    const workerRegion = await this.regionName(worker.current_region_id);
+    const workerCity = await this.cityName(worker.current_city_id);
+    const workerPhones = await this.phones(workerId);
+
+    const [org] =
+      orgId != null
+        ? await this.db
+            .select({
+              full_name: organizations.full_name,
+              address: organizations.address,
+              city_id: organizations.city_id,
+            })
+            .from(organizations)
+            .where(eq(organizations.id, orgId))
+            .limit(1)
+        : [];
+    const orgCity = await this.cityRow(org?.city_id ?? null);
+    const orgRegion = await this.regionName(orgCity?.region_id ?? null);
+
+    const [director] = await this.db
+      .select({
+        position: confirmation_workers.position,
+        worker_id: confirmation_workers.worker_id,
+        last: workers.last_name,
+        first: workers.first_name,
+        middle: workers.middle_name,
+      })
+      .from(confirmation_workers)
+      .leftJoin(workers, eq(workers.id, confirmation_workers.worker_id))
+      .where(eq(confirmation_workers.id, directorId))
+      .limit(1);
+    const directorPhones = director?.worker_id
+      ? await this.phones(director.worker_id)
+      : [];
+
+    return {
+      address: this.regionAbbrev(orgRegion),
+      director_full_name: director
+        ? this.fullName(director.last, director.first, director.middle)
+        : '',
+      worker_full_name: this.fullName(worker.last, worker.first, worker.middle),
+      passport: worker.passport ?? '',
+      worker_pin: worker.pin != null ? String(worker.pin) : '',
+      new_contract_date: this.dateTex(contractDate),
+      stir: '',
+      worker_address: this.joinAddress([
+        workerRegion,
+        workerCity,
+        worker.address,
+      ]),
+      organization_full_name: org?.full_name ?? '',
+      worker_phone: this.phoneFormat(workerPhones),
+      director_position: `${director?.position ?? ''} `,
+      director_phone: this.phoneFormat(directorPhones),
+      organization_address: this.joinAddress([
+        orgRegion,
+        orgCity?.name ?? null,
+        org?.address ?? null,
+      ]),
+      number: number != null ? String(number) : '',
+    };
+  }
+
+  // ---- DB helperlar (contract-additional) ----
+
+  private async departmentName(id: number | undefined): Promise<string> {
+    if (!id) return '';
+    const [d] = await this.db
+      .select({ name: departments.name })
+      .from(departments)
+      .where(eq(departments.id, id))
+      .limit(1);
+    return d?.name ?? '';
+  }
+
+  private async scheduleName(id: number | undefined): Promise<string> {
+    if (!id) return '';
+    const [s] = await this.db
+      .select({ name: schedules.name })
+      .from(schedules)
+      .where(eq(schedules.id, id))
+      .limit(1);
+    return s?.name ?? '';
+  }
+
+  private async positionName(id: number): Promise<string> {
+    const [p] = await this.db
+      .select({ name: positionsTable.name })
+      .from(positionsTable)
+      .where(eq(positionsTable.id, id))
+      .limit(1);
+    return p?.name ?? '';
+  }
+
+  private async departmentPositionShort(id: number): Promise<string> {
+    const [dp] = await this.db
+      .select({
+        department_id: department_positions.department_id,
+        position_id: department_positions.position_id,
+      })
+      .from(department_positions)
+      .where(eq(department_positions.id, id))
+      .limit(1);
+    if (!dp) return '';
+    return this.buildShortPosition(dp.department_id, dp.position_id);
+  }
+
+  // PositionHelper::getShortPosition — lavozim nomi, CENTER bo'lmagan bo'lim oldida.
+  private async buildShortPosition(
+    departmentId: number | null,
+    positionId: number | null,
+  ): Promise<string> {
+    if (!positionId) return '';
+    let result = await this.positionName(positionId);
+    if (departmentId) {
+      const [dept] = await this.db
+        .select({ name: departments.name, level: departments.level })
+        .from(departments)
+        .where(eq(departments.id, departmentId))
+        .limit(1);
+      if (dept && dept.level !== 1 && dept.name) {
+        result = `${dept.name} ${result}`;
+      }
+    }
+    return result;
   }
 
   // ---- Template engine (sodda — scalar) ----
 
   private async resolveTemplate(
+    model: 'contracts' | 'contract-additional',
     orgId: number | null,
     type: number,
   ): Promise<Buffer> {
     if (orgId != null) {
+      const table =
+        model === 'contracts' ? contract_types : contract_additional_types;
       const [ct] = await this.db
-        .select({ file: contract_types.file })
-        .from(contract_types)
+        .select({ file: table.file })
+        .from(table)
         .where(
           and(
-            eq(contract_types.organization_id, orgId),
-            eq(contract_types.type, type),
-            notDeleted(contract_types),
+            eq(table.organization_id, orgId),
+            eq(table.type, type),
+            notDeleted(table),
           ),
         )
         .limit(1);
       if (ct?.file) return this.minio.getObject(ct.file);
     }
     return readFile(
-      join(process.cwd(), 'public', 'resumes', 'contracts', `${type}.docx`),
+      join(process.cwd(), 'public', 'resumes', model, `${type}.docx`),
     );
   }
 

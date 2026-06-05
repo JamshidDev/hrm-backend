@@ -1,7 +1,7 @@
 // ContractAdditional service. Laravel: ContractAdditionalController::index().
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -24,6 +24,8 @@ import {
   CreateContractAdditionalDto,
   QueryContractAdditionalDto,
 } from '@/modules/hr/contract-additional/dto/contract-additional.dto';
+import { ContractReplaceService } from '@/modules/hr/contracts/contract-replace.service';
+import { ConvertService } from '@/shared/convert/convert.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -34,6 +36,8 @@ export class ContractAdditionalService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly scope: OrgScopeService,
+    private readonly replace: ContractReplaceService,
+    private readonly convert: ConvertService,
   ) {}
 
   async findAll(
@@ -161,6 +165,14 @@ export class ContractAdditionalService {
         : Number(dto.command_status);
 
     const uuid = randomUUID();
+    const docxKey = `contract-additional/${uuid}.docx`;
+    const pdfKey = `documents/contract-additional/${uuid}.pdf`;
+
+    // DOCX'ni OLDIN tayyorlaymiz — generatsiya xato bo'lsa yozuv yaratilmaydi
+    // (Laravel ContractService → contractAdditionalReplace).
+    dto.organization_id = organizationId;
+    const docxBuffer = await this.replace.buildContractAdditionalDocx(dto);
+
     await this.db.insert(contract_additional).values({
       uuid,
       organization_id: organizationId,
@@ -175,11 +187,29 @@ export class ContractAdditionalService {
       type: dto.type,
       // Laravel ContractAdditional model boot('creating') — file yo'llari va
       // vaqt belgilarini avtomatik o'rnatadi (aks holda show 404 beradi).
-      file: `contract-additional/${uuid}.docx`,
-      confirmation_file: `documents/contract-additional/${uuid}.pdf`,
+      file: docxKey,
+      confirmation_file: pdfKey,
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
     });
+
+    // DOCX'ni MinIO'ga (sinxron) + PDF (fon).
+    await this.minio.putObject(
+      docxKey,
+      docxBuffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    void this.generatePdf(docxBuffer, pdfKey);
+  }
+
+  // DOCX→PDF konvertatsiya + MinIO yuklash (fon).
+  private async generatePdf(docxBuffer: Buffer, pdfKey: string): Promise<void> {
+    try {
+      const pdfBuffer = await this.convert.docxToPdf(docxBuffer);
+      await this.minio.putObject(pdfKey, pdfBuffer, 'application/pdf');
+    } catch {
+      // PDF konvertatsiya muvaffaqiyatsiz — DOCX baribir saqlangan.
+    }
   }
 
   // DELETE /api/v1/hr/contract-additional/{id}
