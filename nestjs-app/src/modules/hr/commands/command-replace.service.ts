@@ -290,6 +290,15 @@ export class CommandReplaceService {
     }
 
     xml = await this.embedBanner(zip, xml, orgId);
+
+    // U+2011 (non-breaking hyphen) — LibreOffice PDF eksporti (WinAnsi subset
+    // shrift) uni render qila olmaydi → kvadrat □ chiqadi. Oddiy defis bilan
+    // almashtiramiz (vizual bir xil). Bu ham kod, ham template U+2011'ini tuzatadi.
+    xml = xml.split('\u2011').join('-');
+    // Word `<w:noBreakHyphen/>` elementi ham non-breaking hyphen (mas. template
+    // "hisob-kitob") \u2014 uni oddiy defis matniga aylantiramiz.
+    xml = xml.replace(/<w:noBreakHyphen\s*\/>/g, '<w:t>-</w:t>');
+
     zip.file('word/document.xml', xml);
     return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
   }
