@@ -76,6 +76,30 @@ export class CreateCommandDto {
   // Tip 6 (vaqtinchalik o'rinbosar) uchun.
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
   temporary_worker_id?: number;
+
+  // --- Single-worker vacation (43–54) maydonlari ---
+  @ApiPropertyOptional() @IsOptional() @IsString() from?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() to?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() work_day?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() new_date?: string;
+  @ApiPropertyOptional() @IsOptional() rest_day?: number | string;
+  @ApiPropertyOptional() @IsOptional() all_day?: number | string;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  vacation_id?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  vacation_finish_status?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  vacation_status?: number;
+  @ApiPropertyOptional() @IsOptional() child_age?: number | string;
+  @ApiPropertyOptional() @IsOptional() half_one_day?: number | string;
+  @ApiPropertyOptional() @IsOptional() half_one_base?: unknown;
+  @ApiPropertyOptional() @IsOptional() half_two_day?: number | string;
+  @ApiPropertyOptional() @IsOptional() half_two_base?: unknown;
+  @ApiPropertyOptional() @IsOptional() @IsString() half_two_date?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vacation_reason_type?: string;
+  @ApiPropertyOptional() @IsOptional() vacation_reason_day?: number | string;
+  @ApiPropertyOptional() @IsOptional() @IsString() period_from?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() period_to?: string;
 }
 
 // GET /api/v1/hr/worker-additional/{id}?type=...

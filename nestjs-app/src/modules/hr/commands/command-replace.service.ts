@@ -14,7 +14,7 @@ import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import PizZip from 'pizzip';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -26,6 +26,7 @@ import {
   departments,
   organizations,
   positions as positionsTable,
+  vacations,
   worker_positions,
   workers,
 } from '@/db/schema';
@@ -62,6 +63,18 @@ const VACATION_ADDITIONAL_UZ: Record<number, string> = {
   6: 'Donorlarga beriladigan dam olish kuni',
 };
 
+// CommandReasonTypeEnum (uz) — Laravel CommandReasonTypeEnum::all().
+const COMMAND_REASON_UZ: Record<number, string> = {
+  1: 'pullik kompensatsiya bilan almashtirilsin',
+  2: 'mazkur ish yili davomida berilsin',
+  3: 'xodimning keyingi ish yiliga ko‘chirilsin',
+  4: "vaqtincha mehnatga layoqatsizlik ta'tilida",
+  5: "o'quv ta'tilida",
+  6: 'xomiladorlik va tug‘ish ta’tilida',
+  7: 'ellik olti',
+  8: 'tug‘ish qiyin kechgan yoxud ikki yoki undan ortiq bola tug‘ilgan taqdirda yetmish',
+};
+
 @Injectable()
 export class CommandReplaceService {
   constructor(
@@ -84,6 +97,10 @@ export class CommandReplaceService {
 
   // Many-worker (Laravel ManyWorkerCommandTypeHandler) — ko'p xodimli buyruqlar.
   static readonly MANY_WORKER_TYPES = [41, 55, 61, 62, 71, 72, 73];
+
+  // Single-worker vacation (Laravel SingleWorkerVacationCommandTypeHandler).
+  // 42 templatesiz — qo'llab-quvvatlanmaydi.
+  static readonly VACATION_TYPES = [43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54];
 
   // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
   private static readonly TERMINATION_TYPES = [
@@ -197,13 +214,11 @@ export class CommandReplaceService {
     Object.assign(scalars, additional.scalars);
 
     // 7) Render — template + scalar + cloneBlock + finance + banner.
-    return this.renderTemplate(
-      orgId,
-      dto.command_type,
-      scalars,
-      finance,
-      additional.blocks,
-    );
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance, [
+      { name: 'pension_count', count: additional.blocks.pension_count },
+      { name: 'compensation', count: additional.blocks.compensation },
+      { name: 'salary_withholding', count: additional.blocks.salary_withholding },
+    ]);
   }
 
   // Umumiy render: resolveTemplate → normalize → cloneBlock → scalar → finance → banner.
@@ -218,11 +233,7 @@ export class CommandReplaceService {
       first_name: string | null;
       middle_name: string | null;
     } | null,
-    blocks?: {
-      pension_count: number;
-      compensation: number;
-      salary_withholding: number;
-    },
+    blocks?: Array<{ name: string; count: number }>,
     rowSets?: Array<{ anchor: string; rows: Array<Record<string, string>> }>,
   ): Promise<Buffer> {
     const content = await this.resolveTemplate(orgId, type);
@@ -235,9 +246,9 @@ export class CommandReplaceService {
     xml = this.normalizePlaceholders(xml);
 
     if (blocks) {
-      xml = this.cloneBlock(xml, 'pension_count', blocks.pension_count);
-      xml = this.cloneBlock(xml, 'compensation', blocks.compensation);
-      xml = this.cloneBlock(xml, 'salary_withholding', blocks.salary_withholding);
+      for (const b of blocks) {
+        xml = this.cloneBlock(xml, b.name, b.count);
+      }
     }
 
     // Ko'p ishchili (many-worker) jadval qatorlari — cloneRowAndSetValues.
@@ -808,6 +819,224 @@ export class CommandReplaceService {
     }
     rows.push(...(await this.buildSignerConfirmations(dto)));
     return rows;
+  }
+
+  // Single-worker vacation (43–54) DOCX — SingleWorkerVacationCommandTypeHandler.
+  // Tasdiqlovchilar buildDeleteTypeConfirmations bilan bir xil (worker_position'dan).
+  async buildVacationDocx(dto: CreateCommandDto): Promise<Buffer> {
+    const type = dto.command_type;
+    if (!dto.worker_position_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+    const [wp] = await this.db
+      .select({
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        department_id: worker_positions.department_id,
+        position_id: worker_positions.position_id,
+        organization_id: worker_positions.organization_id,
+        contract_id: worker_positions.contract_id,
+      })
+      .from(worker_positions)
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .where(
+        and(
+          eq(worker_positions.id, dto.worker_position_id),
+          notDeleted(worker_positions),
+        ),
+      )
+      .limit(1);
+    if (!wp) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ??
+      dto.organization_id ??
+      wp.organization_id;
+    const address = await this.resolveAddress(orgId);
+
+    const postName = (
+      await this.buildShortPosition(wp.department_id, wp.position_id)
+    ).toLowerCase();
+    const workerFull = this.fullName(
+      wp.worker_last,
+      wp.worker_first,
+      wp.worker_middle,
+    );
+    const workerShort = this.shortName(
+      wp.worker_last,
+      wp.worker_first,
+      wp.worker_middle,
+    );
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+      post_name: postName,
+      worker_full_name: workerFull,
+      worker_short_name: workerShort,
+    };
+    const blocks: Array<{ name: string; count: number }> = [];
+
+    // applyStartDates umumiy: to (data.to ?? work_day), from, work_day.
+    const startTo = this.dateTex((dto.to ?? dto.work_day) as string);
+    const startFrom = this.dateTex(dto.from);
+    const startWorkDay = this.dateTex(dto.work_day);
+
+    if (type === 43 || type === 44) {
+      // last_vacation — kontraktning oxirgi ta'tili.
+      const lvRows = wp.contract_id
+        ? await this.db
+            .select({
+              period_from: vacations.period_from,
+              period_to: vacations.period_to,
+              all_day: vacations.all_day,
+              to: vacations.to,
+            })
+            .from(vacations)
+            .where(
+              and(
+                eq(vacations.contract_id, wp.contract_id),
+                notDeleted(vacations),
+              ),
+            )
+            .orderBy(desc(vacations.id))
+            .limit(1)
+        : [];
+      const lv = lvRows[0];
+      const newToDate = this.dateTex(dto.new_date);
+      scalars.period_from = this.dateTex(lv?.period_from ?? null);
+      scalars.period_to = this.dateTex(lv?.period_to ?? null);
+      scalars.all_day = String(lv?.all_day ?? (type === 44 ? 0 : ''));
+      scalars.to = this.dateTex(lv?.to ?? null);
+      scalars.new_date = newToDate;
+      scalars.work_day = newToDate;
+      scalars.reason = COMMAND_REASON_UZ[Number(dto.reason)] ?? '';
+      if (type === 44) scalars.rest_day = String(dto.rest_day ?? '');
+    } else if (type === 45 || type === 49) {
+      scalars.to = startTo;
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+    } else if (type === 48) {
+      scalars.all_day = String(dto.all_day ?? '');
+      scalars.to = startTo;
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.reason = COMMAND_REASON_UZ[Number(dto.reason)] ?? '';
+    } else if (type === 51 || type === 52 || type === 53 || type === 54) {
+      scalars.all_day = String(this.diffInDays(dto.to, dto.from));
+      scalars.to = startTo;
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.reason = String(dto.reason ?? '');
+    } else if (type === 47) {
+      scalars.from_date = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.reason = String(dto.vacation_reason_type ?? '').toLowerCase();
+      scalars.all_day = String(dto.vacation_reason_day ?? '');
+      scalars.base = dto.base
+        ? String(dto.base)
+        : `${workerShort}ning arizasi, bolalarning tug‘ilganlik haqida guvohnoma nusxalari`;
+    } else if (type === 46) {
+      scalars.period_from = this.dateTex(dto.period_from);
+      scalars.period_to = this.dateTex(dto.period_to);
+      scalars.all_day = String(dto.all_day ?? '');
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.half_one_day = String(dto.half_one_day ?? '');
+      if (dto.half_one_base !== undefined && dto.half_two_day) {
+        scalars.half_two_day = String(dto.half_two_day);
+      } else {
+        scalars.half_two_day = String(
+          Number(dto.all_day ?? 0) - Number(dto.half_one_day ?? 0),
+        );
+      }
+      if (dto.half_two_base) {
+        const nextDate = new Date(`${dto.half_two_date}T00:00:00Z`);
+        const month = this.getMonth(nextDate.getUTCMonth() + 1);
+        const activeYear = new Date(`${dto.from}T00:00:00Z`).getUTCFullYear();
+        const nextYear = nextDate.getUTCFullYear();
+        let text: string;
+        if (activeYear === nextYear) text = `joriy yilning ${month} oyiga`;
+        else if (activeYear + 1 === nextYear)
+          text = `keyingi yilning ${month} oyiga`;
+        else text = `${nextYear}-yilning ${month} oyiga`;
+        scalars.half_two_base = `xodimning xohishiga ko‘ra ${text} ko‘chirilsin`;
+      } else {
+        scalars.half_two_base =
+          'xodimning xohishiga ko‘ra pullik kompensatsiya bilan almashtirilsin';
+      }
+      const addArr = Array.isArray(dto.additional)
+        ? (dto.additional as Array<{ id?: unknown; value?: unknown }>)
+        : [];
+      let va = addArr
+        .map(
+          (a) =>
+            `${this.ucfirst(VACATION_ADDITIONAL_UZ[Number(a.id)] ?? '')}-${
+              a.value ?? ''
+            } kun`,
+        )
+        .join(', ');
+      if (va) va = `(${va})`;
+      scalars.additional = va;
+    } else if (type === 50) {
+      scalars.to = this.dateTex(dto.to);
+      const workDay = this.dateTex(dto.work_day);
+      if (Number(dto.vacation_finish_status) === 2) {
+        scalars.work_day = workDay;
+        scalars.child_age = String(dto.child_age ?? '');
+        scalars.codes = '9-, 405-moddalari';
+        blocks.push({ name: 'variant1', count: 0 });
+        blocks.push({ name: 'variant2', count: 1 });
+      } else {
+        scalars.vacation_new_date = workDay;
+        if (Number(dto.vacation_status) === 1) {
+          scalars.vacation_work_status = 'to‘liq';
+          scalars.vacation_salary_status = 'to‘lanadigan';
+        } else {
+          scalars.vacation_work_status = 'to‘liqsiz';
+          scalars.vacation_salary_status = 'saqlanmagan';
+        }
+        scalars.codes = '405-moddasi';
+        blocks.push({ name: 'variant2', count: 0 });
+        blocks.push({ name: 'variant1', count: 1 });
+      }
+    }
+
+    return this.renderTemplate(orgId, type, scalars, finance, blocks);
+  }
+
+  // Carbon diffInDays — ikki sana orasidagi kunlar (mutlaq).
+  private diffInDays(
+    a: string | null | undefined,
+    b: string | null | undefined,
+  ): number {
+    if (!a || !b) return 0;
+    const da = new Date(`${a}T00:00:00Z`).getTime();
+    const db = new Date(`${b}T00:00:00Z`).getTime();
+    if (isNaN(da) || isNaN(db)) return 0;
+    return Math.abs(Math.round((da - db) / 86400000));
   }
 
   // Create-group command (1–8) tasdiqlovchilari — Laravel appendWorkerConfirmation

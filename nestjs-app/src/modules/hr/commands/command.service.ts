@@ -191,6 +191,12 @@ export class CommandService {
     ) {
       docxBuffer = await this.replace.buildManyWorkerDocx(dto);
       confRows = await this.replace.buildManyWorkerConfirmations(dto);
+    } else if (
+      CommandReplaceService.VACATION_TYPES.includes(dto.command_type)
+    ) {
+      docxBuffer = await this.replace.buildVacationDocx(dto);
+      // Vacation tasdiqlovchilari delete bilan bir xil (worker_position'dan).
+      confRows = await this.replace.buildDeleteTypeConfirmations(dto);
     }
 
     // Command + command_confirmations'ni bitta transaction ichida yozamiz.
