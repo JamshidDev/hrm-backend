@@ -4,6 +4,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
+import type {
+  CommandAdditional,
+  ManyWorkerItem,
+  VacationAdditionalItem,
+} from '@/modules/hr/commands/dto/command.types';
 
 // POST /api/v1/hr/commands
 export class CreateCommandDto {
@@ -36,36 +41,54 @@ export class CreateCommandDto {
   @ApiPropertyOptional() @IsOptional() confirmations?: unknown[];
   @ApiPropertyOptional() @IsOptional() workers?: unknown[];
   // Ko'p ishchili (many-worker) buyruqlar uchun (41,55,61,62,71,72,73).
-  @ApiPropertyOptional() @IsOptional() worker_positions?: unknown[];
+  @ApiPropertyOptional() @IsOptional() worker_positions?: ManyWorkerItem[];
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   organization_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() base?: string;
-  @ApiPropertyOptional() @IsOptional() reason?: unknown;
-  @ApiPropertyOptional() @IsOptional() additional?: unknown;
+  @ApiPropertyOptional() @IsOptional() reason?: number | string;
+  @ApiPropertyOptional() @IsOptional() additional?: VacationAdditionalItem[];
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   finance_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() contract_to_date?: string;
-  @ApiPropertyOptional() @IsOptional() command_additional?: unknown;
+  @ApiPropertyOptional() @IsOptional() command_additional?: CommandAdditional;
 
   // --- Create-type (1–8) maydonlari (Laravel handleCreateType) ---
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   worker_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   department_position_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   position_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   probation?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() position_date?: string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   group?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   rank?: number;
   // salary/rate — son yoki satr kelishi mumkin (Laravel raw qiymat).
   @ApiPropertyOptional() @IsOptional() salary?: number | string;
@@ -74,7 +97,10 @@ export class CreateCommandDto {
   @ApiPropertyOptional() @IsOptional() @IsString() number?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contract_date?: string;
   // Tip 6 (vaqtinchalik o'rinbosar) uchun.
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   temporary_worker_id?: number;
 
   // --- Single-worker vacation (43–54) maydonlari ---
@@ -84,19 +110,37 @@ export class CreateCommandDto {
   @ApiPropertyOptional() @IsOptional() @IsString() new_date?: string;
   @ApiPropertyOptional() @IsOptional() rest_day?: number | string;
   @ApiPropertyOptional() @IsOptional() all_day?: number | string;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   vacation_id?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   vacation_finish_status?: number;
-  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   vacation_status?: number;
   @ApiPropertyOptional() @IsOptional() child_age?: number | string;
   @ApiPropertyOptional() @IsOptional() half_one_day?: number | string;
-  @ApiPropertyOptional() @IsOptional() half_one_base?: unknown;
+  @ApiPropertyOptional() @IsOptional() half_one_base?:
+    | boolean
+    | number
+    | string;
   @ApiPropertyOptional() @IsOptional() half_two_day?: number | string;
-  @ApiPropertyOptional() @IsOptional() half_two_base?: unknown;
+  @ApiPropertyOptional() @IsOptional() half_two_base?:
+    | boolean
+    | number
+    | string;
   @ApiPropertyOptional() @IsOptional() @IsString() half_two_date?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() vacation_reason_type?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vacation_reason_type?: string;
   @ApiPropertyOptional() @IsOptional() vacation_reason_day?: number | string;
   @ApiPropertyOptional() @IsOptional() @IsString() period_from?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() period_to?: string;

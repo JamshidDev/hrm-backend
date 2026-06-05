@@ -36,6 +36,11 @@ import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { I18nService } from 'nestjs-i18n';
 import type { CreateCommandDto } from '@/modules/hr/commands/dto/command.dto';
+import type {
+  CommandAdditional,
+  ManyWorkerItem,
+  VacationAdditionalItem,
+} from '@/modules/hr/commands/dto/command.types';
 
 const UZ_MONTHS = [
   'yanvar',
@@ -100,7 +105,9 @@ export class CommandReplaceService {
 
   // Single-worker vacation (Laravel SingleWorkerVacationCommandTypeHandler).
   // 42 templatesiz — qo'llab-quvvatlanmaydi.
-  static readonly VACATION_TYPES = [43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54];
+  static readonly VACATION_TYPES = [
+    43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+  ];
 
   // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
   private static readonly TERMINATION_TYPES = [
@@ -217,7 +224,10 @@ export class CommandReplaceService {
     return this.renderTemplate(orgId, dto.command_type, scalars, finance, [
       { name: 'pension_count', count: additional.blocks.pension_count },
       { name: 'compensation', count: additional.blocks.compensation },
-      { name: 'salary_withholding', count: additional.blocks.salary_withholding },
+      {
+        name: 'salary_withholding',
+        count: additional.blocks.salary_withholding,
+      },
     ]);
   }
 
@@ -298,7 +308,10 @@ export class CommandReplaceService {
   // applyWorkerPositionInfo. Tip 3: contract_to_date, tip 6: temporary_*.
   async buildCreateTypeDocx(dto: CreateCommandDto): Promise<Buffer> {
     if (!dto.worker_id) {
-      throw new BusinessException(400, this.i18n.t('messages.worker_not_found'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_not_found'),
+      );
     }
     const [worker] = await this.db
       .select({
@@ -310,15 +323,17 @@ export class CommandReplaceService {
       .where(and(eq(workers.id, dto.worker_id), notDeleted(workers)))
       .limit(1);
     if (!worker) {
-      throw new BusinessException(400, this.i18n.t('messages.worker_not_found'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_not_found'),
+      );
     }
 
     const director = await this.loadConfirmationWorker(dto.director_id);
     const finance = dto.finance_id
       ? await this.loadConfirmationWorker(dto.finance_id)
       : null;
-    const orgId =
-      this.ctx.user?.organization_id ?? dto.organization_id ?? null;
+    const orgId = this.ctx.user?.organization_id ?? dto.organization_id ?? null;
     const address = await this.resolveAddress(orgId);
 
     // post_name — department_position_id (qisqa lavozim) yoki position_id (nom).
@@ -541,8 +556,8 @@ export class CommandReplaceService {
   // Har xodim uchun jadval qatori (cloneRowAndSetValues); tur bo'yicha row maydonlari.
   async buildManyWorkerDocx(dto: CreateCommandDto): Promise<Buffer> {
     const type = dto.command_type;
-    const items = Array.isArray(dto.worker_positions)
-      ? (dto.worker_positions as Array<Record<string, unknown>>)
+    const items: ManyWorkerItem[] = Array.isArray(dto.worker_positions)
+      ? dto.worker_positions
       : [];
     const ids = items
       .map((i) => Number(i.id))
@@ -629,8 +644,8 @@ export class CommandReplaceService {
       );
 
       if (type === 41) {
-        const addArr = Array.isArray(item.additional)
-          ? (item.additional as Array<{ id?: unknown; value?: unknown }>)
+        const addArr: VacationAdditionalItem[] = Array.isArray(item.additional)
+          ? item.additional
           : [];
         let va = addArr
           .map(
@@ -643,14 +658,14 @@ export class CommandReplaceService {
         if (va) va = `(${va})`;
         rows.push({
           worker_full_name: fullName,
-          period_from: this.dateTex(item.period_from as string),
-          period_to: this.dateTex(item.period_to as string),
+          period_from: this.dateTex(item.period_from),
+          period_to: this.dateTex(item.period_to),
           post_name: postName,
           all_day: String(item.all_day ?? ''),
           additional: va,
-          from: this.dateTex(item.from as string),
-          to: this.dateTex(item.to as string),
-          work_day: this.dateTex((item.work_day ?? item.to) as string),
+          from: this.dateTex(item.from),
+          to: this.dateTex(item.to),
+          work_day: this.dateTex(item.work_day ?? item.to),
         });
       } else if (type === 55) {
         rows.push({
@@ -658,8 +673,8 @@ export class CommandReplaceService {
           post_name: postName,
           vacation_dates: this.buildVacationTimes(item),
           work_day: item.work_day
-            ? this.dateTex(item.work_day as string)
-            : this.dateTexPlusDay(item.to as string),
+            ? this.dateTex(item.work_day)
+            : this.dateTexPlusDay(item.to),
         });
       } else if (type === 61 || type === 62) {
         let toOrg: string;
@@ -679,8 +694,8 @@ export class CommandReplaceService {
           post_name: postName,
           contract_date: wp.contract_date ?? '',
           contract_number: wp.contract_number ?? '',
-          from: this.dateTex(item.from as string),
-          to: this.dateTex(item.to as string),
+          from: this.dateTex(item.from),
+          to: this.dateTex(item.to),
         });
       } else if (type === 71) {
         rows.push({
@@ -736,8 +751,7 @@ export class CommandReplaceService {
       scalars.base = dto.base ?? '';
     }
     if (type === 73) {
-      const add = (dto.command_additional ?? {}) as Record<string, unknown>;
-      scalars.base = typeof add.base === 'string' ? add.base : '';
+      scalars.base = dto.command_additional?.base ?? '';
     }
 
     return this.renderTemplate(orgId, type, scalars, finance, undefined, [
@@ -746,20 +760,21 @@ export class CommandReplaceService {
   }
 
   // Tip 55 — ta'til vaqtlari matni (Laravel handleFiftyFiveType match logikasi).
-  private buildVacationTimes(item: Record<string, unknown>): string {
-    const from = item.from as string;
-    const to = item.to as string;
+  private buildVacationTimes(item: ManyWorkerItem): string {
+    const from = item.from;
+    const to = item.to;
     const fromText = this.dateTex(from);
     const toText = this.dateTex(to);
-    const fromTime = (item.from_time as string) || null;
-    const toTime = (item.to_time as string) || null;
+    const fromTime = item.from_time || null;
+    const toTime = item.to_time || null;
     const diff = from !== to;
     if (diff && fromTime && toTime)
       return `${fromText} ${fromTime} dan ${toText} ${toTime} gacha`;
     if (diff && fromTime) return `${fromText} ${fromTime} dan ${toText} gacha`;
     if (diff && toTime) return `${fromText} dan ${toText} ${toTime} gacha`;
     if (diff) return `${fromText} dan ${toText} gacha`;
-    if (fromTime && toTime) return `${fromText} ${fromTime} dan ${toTime} gacha`;
+    if (fromTime && toTime)
+      return `${fromText} ${fromTime} dan ${toTime} gacha`;
     if (fromTime) return `${fromText} ${fromTime} dan`;
     if (toTime) return `${fromText} ${toTime} gacha`;
     return `${fromText} kuni`;
@@ -790,8 +805,8 @@ export class CommandReplaceService {
       type: string;
       order: number;
     }> = [];
-    const items = Array.isArray(dto.worker_positions)
-      ? (dto.worker_positions as Array<Record<string, unknown>>)
+    const items: ManyWorkerItem[] = Array.isArray(dto.worker_positions)
+      ? dto.worker_positions
       : [];
     const ids = items
       .map((i) => Number(i.id))
@@ -900,7 +915,7 @@ export class CommandReplaceService {
     const blocks: Array<{ name: string; count: number }> = [];
 
     // applyStartDates umumiy: to (data.to ?? work_day), from, work_day.
-    const startTo = this.dateTex((dto.to ?? dto.work_day) as string);
+    const startTo = this.dateTex(dto.to ?? dto.work_day);
     const startFrom = this.dateTex(dto.from);
     const startWorkDay = this.dateTex(dto.work_day);
 
@@ -987,8 +1002,8 @@ export class CommandReplaceService {
         scalars.half_two_base =
           'xodimning xohishiga ko‘ra pullik kompensatsiya bilan almashtirilsin';
       }
-      const addArr = Array.isArray(dto.additional)
-        ? (dto.additional as Array<{ id?: unknown; value?: unknown }>)
+      const addArr: VacationAdditionalItem[] = Array.isArray(dto.additional)
+        ? dto.additional
         : [];
       let va = addArr
         .map(
@@ -1056,7 +1071,12 @@ export class CommandReplaceService {
       order: number;
     }> = [];
     if (dto.worker_id) {
-      rows.push({ worker_id: dto.worker_id, position: null, type: 'w', order: 1 });
+      rows.push({
+        worker_id: dto.worker_id,
+        position: null,
+        type: 'w',
+        order: 1,
+      });
     }
     rows.push(...(await this.buildSignerConfirmations(dto)));
     return rows;
@@ -1500,7 +1520,7 @@ export class CommandReplaceService {
     };
   } {
     const type = dto.command_type;
-    const add = (dto.command_additional ?? {}) as Record<string, any>;
+    const add: CommandAdditional = dto.command_additional ?? {};
     const scalars: Record<string, string> = {};
     const blocks = { pension_count: 0, compensation: 0, salary_withholding: 0 };
 
@@ -1511,11 +1531,11 @@ export class CommandReplaceService {
       // Pension bloki.
       if (add.pension_count) {
         scalars.year = String(add.pension_count.year ?? '');
-        scalars.count = `lavozim maoshining ${add.pension_count.count} barobari miqdorida`;
+        scalars.count = `lavozim maoshining ${add.pension_count.count ?? ''} barobari miqdorida`;
         blocks.pension_count = 1;
       } else if (add.pension_coefficient) {
         scalars.year = String(add.pension_coefficient.year ?? '');
-        scalars.count = `lavozim maoshining ${add.pension_coefficient.count} foizi miqdorida`;
+        scalars.count = `lavozim maoshining ${add.pension_coefficient.count ?? ''} foizi miqdorida`;
         scalars.codes = '172,269‑moddalariga';
         blocks.pension_count = 1;
       }
