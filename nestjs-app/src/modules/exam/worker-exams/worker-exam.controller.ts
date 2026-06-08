@@ -68,8 +68,18 @@ export class WorkerExamController {
 
   @Get(':examId/finished')
   @ApiOperation({ summary: 'Finish a worker exam and finalize results' })
-  async finishExam(@Param('examId', ParseIntPipe) examId: number) {
-    return buildSuccess(true, await this.service.finish(examId));
+  async finishExam(
+    @Param('examId', ParseIntPipe) examId: number,
+    @Headers('active-token') activeTokenDash?: string,
+    @Headers('active_token') activeTokenUnderscore?: string,
+  ) {
+    return buildSuccess(
+      true,
+      await this.service.finish(
+        examId,
+        activeTokenDash ?? activeTokenUnderscore,
+      ),
+    );
   }
 
   @Get(':examId/result')

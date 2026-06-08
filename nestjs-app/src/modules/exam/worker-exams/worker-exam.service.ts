@@ -724,8 +724,74 @@ export class WorkerExamService {
       })),
     };
   }
-  async finish(_examId: number) {
-    return { finished: true };
+  // GET /worker-exams/:workerExamId/finished — Laravel WorkerExamService::finishExam.
+  //   result = questions.where('is_correct', 1).count() → update(ended=now, result).
+  async finish(workerExamId: number, activeToken?: string) {
+    const [we] = await this.db
+      .select({
+        id: worker_exams.id,
+        created: worker_exams.created,
+        ip_address: worker_exams.ip_address,
+        user_agent: worker_exams.user_agent,
+        active_token: worker_exams.active_token,
+        user_id: worker_exams.user_id,
+      })
+      .from(worker_exams)
+      .where(eq(worker_exams.id, workerExamId))
+      .limit(1);
+    if (!we) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+
+    // assertActiveToken — boshqa qurilmadan kirish taqiqlangan.
+    if (we.active_token !== (activeToken ?? null)) {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.exam.access_from_another_device_is_prohibited'),
+      );
+    }
+
+    // result = to'g'ri javoblar soni (is_correct = true).
+    const [{ c }] = await this.db
+      .select({ c: count() })
+      .from(worker_exam_questions)
+      .where(
+        and(
+          eq(worker_exam_questions.worker_exam_id, workerExamId),
+          eq(worker_exam_questions.is_correct, true),
+        ),
+      );
+    const result = Number(c);
+
+    await this.db
+      .update(worker_exams)
+      .set({ ended: sql`NOW()`, result, updated_at: sql`NOW()` })
+      .where(eq(worker_exams.id, workerExamId));
+
+    // WorkerExamResultResource: {id, created, ended, result, ip_address,
+    // user_agent, user}.
+    const [u] = await this.db
+      .select({
+        id: users.id,
+        uuid: users.uuid,
+        last_name: workers.last_name,
+        first_name: workers.first_name,
+        middle_name: workers.middle_name,
+      })
+      .from(users)
+      .leftJoin(workers, eq(workers.id, users.worker_id))
+      .where(eq(users.id, we.user_id))
+      .limit(1);
+
+    return {
+      id: we.id,
+      created: we.created,
+      ended: new Date().toISOString(),
+      result,
+      ip_address: we.ip_address,
+      user_agent: we.user_agent,
+      user: u ?? null,
+    };
   }
   // GET /api/v1/exam/worker-exams/:workerExamId/result
   //
