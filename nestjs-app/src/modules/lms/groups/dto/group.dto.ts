@@ -32,6 +32,13 @@ export class GroupListQueryDto {
   @IsInt()
   edu_plan_id?: number;
 
+  // GET /lms/worker-exams — Laravel request('worker_id').
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  worker_id?: number;
+
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @Type(() => Number)
