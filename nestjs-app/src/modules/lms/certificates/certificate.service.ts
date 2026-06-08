@@ -542,16 +542,17 @@ export class LmsCertificateService {
         });
     }
 
-    // 9) DOCX/PDF generatsiya (Laravel DocumentReplace::generate) — har sertifikat
-    //    uchun cert.docx to'ldirib MinIO'ga + confirmation + PDF. Best-effort:
-    //    bitta sertifikat xato bo'lsa qolganlari davom etadi (Laravel try/catch).
-    try {
-      await this.generateCertificateDocx(grp.id, eduPlanId, Number(directorId));
-    } catch (e) {
-      this.logger.error(
-        `Certificate DOCX generatsiya xato: ${(e as Error).message}`,
-      );
-    }
+    // 9) DOCX/PDF generatsiya — Laravel: GenerateCertificateJob::dispatch + DocxToPdfJob
+    //    (QUEUE/fon). NestJS'da ham FON rejimida (void) — javob darhol qaytadi,
+    //    har sertifikat fonда yasaladi (generate: 2→3). Aks holda har cert uchun
+    //    DOCX+remote-S3+libreoffice-PDF (~3-5s) sinxron bo'lib so'rov sekinlashadi.
+    void this.generateCertificateDocx(
+      grp.id,
+      eduPlanId,
+      Number(directorId),
+    ).catch((e: Error) =>
+      this.logger.error(`Certificate DOCX generatsiya xato: ${e.message}`),
+    );
 
     return {
       success: true,
