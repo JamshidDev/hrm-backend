@@ -74,14 +74,11 @@ export class AttachEduPlanExamDto {
   @IsInt()
   exam_id!: number;
 
-  @ApiPropertyOptional({
-    example: 3,
-    description: '1=Default, 2=Middle, 3=Final',
-  })
-  @IsOptional()
+  // Laravel request maydoni `type` (DB ustuni `exam_type`). 1=Default,2=Middle,3=Final.
+  @ApiProperty({ example: 3, description: '1=Default, 2=Middle, 3=Final' })
   @Type(() => Number)
   @IsInt()
-  exam_type?: number;
+  type!: number;
 
   @ApiPropertyOptional({ example: 10 })
   @IsOptional()

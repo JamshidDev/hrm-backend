@@ -36,7 +36,9 @@ export class LmsEduPlanExamController {
   @Post('attach')
   @ApiOperation({ summary: 'Attach exam to edu plan' })
   async attach(@Body() dto: AttachEduPlanExamDto) {
-    return buildSuccess(true, await this.service.attach(dto));
+    // Service Laravel Helper::response shaklini ({message,error,data}) qaytaradi —
+    // soft-error (already_attached / edu_plan_or_lesson) message=false bilan.
+    return this.service.attach(dto);
   }
 
   @Get('result')

@@ -147,27 +147,25 @@ export class LmsEduPlanExamService {
   //   Dedup: edu_plan_exams (edu_plan_id, type, exam_id, [lesson_id]) — agar mavjud
   //          bo'lsa 400 lms.exam_already_attached.
   //   Create EduPlanExam row.
-  async attach(dto: AttachEduPlanExamDto) {
-    const type = Number(dto.exam_type);
+  async attach(
+    dto: AttachEduPlanExamDto,
+  ): Promise<{ message: boolean | string; error: boolean; data: unknown }> {
+    // type + exam_id majburiy — DTO (@IsInt) validatsiya qiladi (Laravel validate).
+    const type = Number(dto.type);
     const examId = Number(dto.exam_id);
-    if (
-      !Number.isInteger(type) ||
-      type <= 0 ||
-      !Number.isInteger(examId) ||
-      examId <= 0
-    ) {
-      throw new BusinessException(422, 'type and exam_id are required');
-    }
 
     let eduPlanId = Number(dto.edu_plan_id ?? 0);
     const lessonId = dto.lesson_id ? Number(dto.lesson_id) : null;
 
+    // Laravel: Helper::response(false, ...) — soft-error (HTTP 200, message=false).
     if (!lessonId && !eduPlanId) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.lms.edu_plan_or_lesson_is_required'),
-      );
+      return {
+        message: false,
+        error: false,
+        data: this.i18n.t('messages.lms.edu_plan_or_lesson_is_required'),
+      };
     }
+    // Laravel: Lesson::findOrFail($lesson_id)->edu_plan_id (topilmasa 404).
     if (lessonId) {
       const [l] = await this.db
         .select({ id: lessons.id, edu_plan_id: lessons.edu_plan_id })
@@ -179,7 +177,7 @@ export class LmsEduPlanExamService {
       eduPlanId = Number(l.edu_plan_id);
     }
 
-    // Dedup check.
+    // Dedup: (edu_plan_id, type, exam_id, [lesson_id]) — Laravel where(...)->count().
     const conds = [
       eq(edu_plan_exams.edu_plan_id, eduPlanId),
       eq(edu_plan_exams.exam_type, type),
@@ -192,12 +190,14 @@ export class LmsEduPlanExamService {
       .from(edu_plan_exams)
       .where(and(...conds));
     if (Number(c) > 0) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.lms.exam_already_attached'),
-      );
+      return {
+        message: false,
+        error: false,
+        data: this.i18n.t('messages.lms.exam_already_attached'),
+      };
     }
 
+    // EduPlanExam::create($data).
     const id = await this.nextId();
     await this.db.insert(edu_plan_exams).values({
       id,
@@ -208,7 +208,12 @@ export class LmsEduPlanExamService {
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
     });
-    return { id };
+    // Laravel: Helper::response(true, trans('messages.successfully_attached')).
+    return {
+      message: true,
+      error: false,
+      data: this.i18n.t('messages.successfully_attached'),
+    };
   }
 
   // GET /lms/exams/detach/:examId — hard delete (Laravel: findOrFail + delete).
