@@ -2,6 +2,8 @@
 // Savol kategoriyalari ustida CRUD + clear + excel-header/import (stub).
 
 import { Injectable } from '@nestjs/common';
+import ExcelJS from 'exceljs';
+import { Readable } from 'node:stream';
 import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -156,18 +158,75 @@ export class CategoryService {
       .where(eq(exam_category_questions.exam_category_id, categoryId));
   }
 
-  // Laravel: excel-header — import uchun kutilgan ustun nomlari.
-  excelHeader() {
-    return {
-      columns: [
-        'question',
-        'option_1',
-        'option_2',
-        'option_3',
-        'option_4',
-        'correct',
-      ],
-    };
+  // Laravel TopicExamQuestionService::preview — yuklangan Excel'ni o'qib,
+  // ustun harflari (A,B,C...) + birinchi 10 qatorni qaytaradi (import preview).
+  async previewExcel(
+    file: Express.Multer.File,
+  ): Promise<{ headers: string[]; preview: unknown[][] }> {
+    if (!file?.buffer) {
+      throw new BusinessException(422, 'Fayl yuborilmadi');
+    }
+    const ext = (file.originalname.split('.').pop() ?? '').toLowerCase();
+    const wb = new ExcelJS.Workbook();
+    if (ext === 'xlsx') {
+      await wb.xlsx.load(file.buffer as unknown as ArrayBuffer);
+    } else if (ext === 'csv') {
+      await wb.csv.read(Readable.from(file.buffer));
+    } else {
+      // Laravel: csv/xls/xlsx. ExcelJS .xls o'qiy olmaydi → xato (parity: throw).
+      throw new BusinessException(400, `Noto'g'ri fayl turi: ${ext}`);
+    }
+
+    // Barcha qatorlarni 0-indeksli massivga (ExcelJS row.values 1-indeksli).
+    const ws = wb.worksheets[0];
+    const rows: unknown[][] = [];
+    if (ws) {
+      ws.eachRow({ includeEmpty: true }, (row) => {
+        const vals = (row.values as unknown[]).slice(1).map((v) => {
+          if (v && typeof v === 'object') {
+            const o = v as {
+              text?: string;
+              result?: unknown;
+              richText?: { text: string }[];
+            };
+            return (
+              o.text ??
+              o.result ??
+              o.richText?.map((r) => r.text).join('') ??
+              ''
+            );
+          }
+          return v;
+        });
+        rows.push(vals);
+      });
+    }
+
+    const previewRows = rows.slice(0, 10);
+    let maxCols = 0;
+    for (const row of previewRows) {
+      const filled = row.filter(
+        (c) => c !== null && c !== undefined && String(c).trim() !== '',
+      );
+      maxCols = Math.max(maxCols, filled.length);
+    }
+    const usedCols = Math.min(10, maxCols);
+    const headers: string[] = [];
+    for (let i = 0; i < usedCols; i++) headers.push(this.numToExcelColumn(i));
+    const preview = previewRows.map((row) =>
+      row.slice(0, usedCols).map((c) => (c === undefined ? null : c)),
+    );
+    return { headers, preview };
+  }
+
+  // Laravel numToExcelColumn — 0→A, 25→Z, 26→AA.
+  private numToExcelColumn(index: number): string {
+    let letters = '';
+    while (index >= 0) {
+      letters = String.fromCharCode((index % 26) + 65) + letters;
+      index = Math.floor(index / 26) - 1;
+    }
+    return letters;
   }
 
   // Laravel: import — Excel'dan savollarni yuklash. External job, stub qoldiramiz.

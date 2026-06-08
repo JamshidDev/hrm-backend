@@ -10,11 +10,15 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { CategoryService } from '@/modules/exam/categories/category.service';
 import {
@@ -77,11 +81,18 @@ export class CategoryController {
     return buildSuccess(true, { success: true });
   }
 
-  // Excel import uchun ustun nomlari.
+  // Yuklangan Excel'ni preview qilish (Laravel TopicExamQuestionController::preview).
+  // categoryId 'null' bo'lishi mumkin (yangi kategoriya) → ParseIntPipe YO'Q.
+  // Javob Laravel'da to'g'ridan-to'g'ri ({headers, preview}) — @RawResponse.
   @Post(':categoryId/excel-header')
-  @ApiOperation({ summary: 'Get expected Excel header columns for import' })
-  async excelHeader(@Param('categoryId', ParseIntPipe) _categoryId: number) {
-    return buildSuccess(true, this.service.excelHeader());
+  @RawResponse()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Preview uploaded Excel (headers + first rows)' })
+  async excelHeader(
+    @Param('categoryId') _categoryId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.service.previewExcel(file);
   }
 
   // Excel orqali savollar yuklash (stub: job dispatch).
