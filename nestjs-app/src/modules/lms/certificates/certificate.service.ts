@@ -5,7 +5,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -15,18 +15,30 @@ import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
   departments,
+  directions,
   edu_plans,
   exams,
   groups,
   learning_centers,
+  lms_certificate_confirmations,
   lms_certificates,
   lms_protocols,
   organizations,
   positions,
+  specializations,
   worker_exams,
   worker_positions,
   workers,
 } from '@/db/schema';
+import PizZip from 'pizzip';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { ConvertService } from '@/shared/convert/convert.service';
+import {
+  escapeXml,
+  normalizePlaceholders,
+} from '@/shared/docx/docx-template.util';
+import { getShortPosition } from '@/modules/hr/_shared/position-helper';
 import {
   lmsPaginate,
   readPaging,
@@ -58,6 +70,7 @@ export class LmsCertificateService {
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
     private readonly minio: MinioService,
+    private readonly convert: ConvertService,
   ) {}
 
   // GET /lms/certificates — Laravel: LmsCertificateController::certificates.
@@ -529,15 +542,336 @@ export class LmsCertificateService {
         });
     }
 
-    // 9) DOCX generation (Laravel: DocumentReplace::generate) — TODO.
-    //    Implementing DOCX template replacement is out of scope for now;
-    //    certificate rows include `file` and `confirmation_file` paths anyway.
+    // 9) DOCX/PDF generatsiya (Laravel DocumentReplace::generate) — har sertifikat
+    //    uchun cert.docx to'ldirib MinIO'ga + confirmation + PDF. Best-effort:
+    //    bitta sertifikat xato bo'lsa qolganlari davom etadi (Laravel try/catch).
+    try {
+      await this.generateCertificateDocx(grp.id, eduPlanId, Number(directorId));
+    } catch (e) {
+      this.logger.error(
+        `Certificate DOCX generatsiya xato: ${(e as Error).message}`,
+      );
+    }
 
     return {
       success: true,
       protocol_id: protocolId,
       certificates: certInserts.length,
     };
+  }
+
+  // Laravel DocumentReplace::generate + generateCertificate — har sertifikat uchun
+  // cert.docx shablonini to'ldirib MinIO'ga (DOCX), confirmation (director 'd'),
+  // PDF (generate=3). SUCCESS bo'lgan sertifikatlar o'tkazib yuboriladi.
+  private async generateCertificateDocx(
+    groupId: number,
+    eduPlanId: number,
+    directorId: number,
+  ): Promise<void> {
+    // Umumiy ma'lumotlar: edu_plan + specialization + direction.
+    const [edp] = await this.db
+      .select({
+        start_date: edu_plans.start_date,
+        end_date: edu_plans.end_date,
+        hours: edu_plans.hours,
+        spec_name: specializations.name,
+        direction_name: directions.name,
+      })
+      .from(edu_plans)
+      .leftJoin(
+        specializations,
+        eq(specializations.id, edu_plans.specialization_id),
+      )
+      .leftJoin(directions, eq(directions.id, specializations.direction_id))
+      .where(eq(edu_plans.id, eduPlanId))
+      .limit(1);
+
+    // Direktor worker_position → worker (short_name) + getShortPosition.
+    const [dir] = await this.db
+      .select({
+        wp_id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+        position_name: positions.name,
+        department_name: departments.name,
+        department_level: departments.level,
+        organization_full_name: organizations.full_name,
+        last_name: workers.last_name,
+        first_name: workers.first_name,
+        middle_name: workers.middle_name,
+      })
+      .from(worker_positions)
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .leftJoin(positions, eq(positions.id, worker_positions.position_id))
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(
+        organizations,
+        eq(organizations.id, worker_positions.organization_id),
+      )
+      .where(eq(worker_positions.id, directorId))
+      .limit(1);
+
+    const directorName = dir
+      ? this.shortName(dir.first_name, dir.middle_name, dir.last_name)
+      : '';
+    const directorPosition = dir
+      ? getShortPosition({
+          position_name: dir.position_name,
+          department_name: dir.department_name,
+          department_level: dir.department_level,
+          organization_full_name: dir.organization_full_name,
+        })
+      : '';
+
+    // Yaratiladigan sertifikatlar (SUCCESS bo'lmaganlar — Laravel whereNot SUCCESS).
+    const certs = await this.db
+      .select({
+        id: lms_certificates.id,
+        uuid: lms_certificates.uuid,
+        serial: lms_certificates.serial,
+        file: lms_certificates.file,
+        confirmation_file: lms_certificates.confirmation_file,
+        worker_position_id: lms_certificates.worker_position_id,
+        cert_from: lms_certificates.cert_from,
+        cert_to: lms_certificates.cert_to,
+        start_exam_result: lms_certificates.start_exam_result,
+        end_exam_result: lms_certificates.end_exam_result,
+      })
+      .from(lms_certificates)
+      .where(
+        and(
+          eq(lms_certificates.group_id, groupId),
+          ne(lms_certificates.confirmation, CONFIRMATION_SUCCESS),
+        ),
+      );
+    if (certs.length === 0) return;
+
+    // cert.docx shabloni (bir marta o'qiladi).
+    const template = await readFile(
+      join(process.cwd(), 'public', 'resumes', 'lms', 'cert.docx'),
+    );
+
+    for (const cert of certs) {
+      // Xodim ma'lumotlari.
+      const [wp] = await this.db
+        .select({
+          last_name: workers.last_name,
+          first_name: workers.first_name,
+          middle_name: workers.middle_name,
+          birthday: workers.birthday,
+          organization_full_name: organizations.full_name,
+          department_name: departments.name,
+          position_name: positions.name,
+        })
+        .from(worker_positions)
+        .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+        .leftJoin(
+          organizations,
+          eq(organizations.id, worker_positions.organization_id),
+        )
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
+        .leftJoin(positions, eq(positions.id, worker_positions.position_id))
+        .where(eq(worker_positions.id, Number(cert.worker_position_id)))
+        .limit(1);
+      if (!wp) continue;
+
+      // Raqam — Laravel getSerialNumber: shu yilgi max(number) + 1.
+      const [{ n }] = await this.db
+        .select({
+          n: sql<number>`COALESCE(MAX(${lms_certificates.number}), 0)::int`,
+        })
+        .from(lms_certificates)
+        .where(
+          sql`EXTRACT(YEAR FROM ${lms_certificates.created_at}) = EXTRACT(YEAR FROM NOW())`,
+        );
+      const number = Number(n ?? 0) + 1;
+      await this.db
+        .update(lms_certificates)
+        .set({ number, updated_at: sql`NOW()` })
+        .where(eq(lms_certificates.id, cert.id));
+
+      // Shablon to'ldirish.
+      const scalars: Record<string, string> = {
+        serial: this.serialLabel(cert.serial),
+        number: String(number).padStart(6, '0'),
+        last_name: wp.last_name ?? '',
+        first_name: wp.first_name ?? '',
+        middle_name: wp.middle_name ?? '',
+        birthday: this.dmy(wp.birthday),
+        organization: wp.organization_full_name ?? '',
+        department: this.ucfirst(wp.department_name),
+        position: this.ucfirst(wp.position_name),
+        direction: edp?.direction_name ?? '',
+        specialization: edp?.spec_name ?? '',
+        start_date: this.dmy(edp?.start_date),
+        end_date: this.dmy(edp?.end_date ?? null),
+        hours: edp?.hours != null ? String(edp.hours) : '',
+        start_result: cert.start_exam_result ?? '',
+        end_result: cert.end_exam_result ?? '',
+        position_type: '',
+        from: this.dmy(cert.cert_from),
+        to: this.dmy(cert.cert_to),
+        director_name: directorName,
+      };
+      const docx = this.fillTemplate(template, scalars);
+
+      // DOCX → MinIO.
+      await this.minio.putObject(
+        cert.file ?? `lms-certificate/${cert.uuid}.docx`,
+        docx,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+
+      // Confirmation — direktor (type 'd'), updateOrCreate (lms_certificate_id, worker_id).
+      if (dir?.worker_id) {
+        const [exists] = await this.db
+          .select({ id: lms_certificate_confirmations.id })
+          .from(lms_certificate_confirmations)
+          .where(
+            and(
+              eq(lms_certificate_confirmations.lms_certificate_id, cert.id),
+              eq(lms_certificate_confirmations.worker_id, dir.worker_id),
+            ),
+          )
+          .limit(1);
+        if (exists) {
+          await this.db
+            .update(lms_certificate_confirmations)
+            .set({
+              position: directorPosition,
+              type: 'd',
+              updated_at: sql`NOW()`,
+            })
+            .where(eq(lms_certificate_confirmations.id, exists.id));
+        } else {
+          const [{ cid }] = await this.db
+            .select({
+              cid: sql<number>`COALESCE(MAX(id), 0)::int + 1`,
+            })
+            .from(lms_certificate_confirmations);
+          await this.db.insert(lms_certificate_confirmations).values({
+            id: cid,
+            lms_certificate_id: cert.id,
+            worker_id: dir.worker_id,
+            position: directorPosition,
+            type: 'd',
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
+          });
+        }
+      }
+
+      // PDF — best-effort (Laravel DocxToPdfJob: generate=3 muvaffaqiyatda).
+      try {
+        const pdf = await this.convert.docxToPdf(docx);
+        await this.minio.putObject(
+          cert.confirmation_file ??
+            `documents/lms-certificate/${cert.uuid}.pdf`,
+          pdf,
+          'application/pdf',
+        );
+        await this.db
+          .update(lms_certificates)
+          .set({ generate: 3, updated_at: sql`NOW()` })
+          .where(eq(lms_certificates.id, cert.id));
+      } catch (e) {
+        await this.db
+          .update(lms_certificates)
+          .set({ generate: 4, updated_at: sql`NOW()` })
+          .where(eq(lms_certificates.id, cert.id));
+        this.logger.error(
+          `Certificate ${cert.id} PDF xato: ${(e as Error).message}`,
+        );
+      }
+    }
+  }
+
+  // Laravel Worker::short_name — shorten(first).shorten(middle).last.
+  private shortName(
+    first: string | null,
+    middle: string | null,
+    last: string | null,
+  ): string {
+    const digraphs = new Set([
+      'Yu',
+      'YU',
+      'yu',
+      'SH',
+      'Sh',
+      'sh',
+      'CH',
+      'Ch',
+      'ch',
+      "O'",
+      "o'",
+      "G'",
+      "g'",
+      'Oʻ',
+      'oʻ',
+      'Gʻ',
+      'gʻ',
+      'O’',
+      'o’',
+      'G’',
+      'g’',
+    ]);
+    const shorten = (name: string | null): string => {
+      const s = name ?? '';
+      const two = s.slice(0, 2);
+      return digraphs.has(two) ? two : s.slice(0, 1);
+    };
+    return `${shorten(first)}.${shorten(middle)}.${last ?? ''}`;
+  }
+
+  // Laravel SerialTypeEnum::get — 1→MO-RW, 2→MO-LM, 3→MO-SM.
+  private serialLabel(serial: string | null): string {
+    switch (Number(serial)) {
+      case 1:
+        return 'MO-RW';
+      case 2:
+        return 'MO-LM';
+      case 3:
+        return 'MO-SM';
+      default:
+        return '';
+    }
+  }
+
+  private ucfirst(s: string | null): string {
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // d.m.Y format (Laravel Carbon::parse(...)->format('d.m.Y')).
+  private dmy(date: string | null | undefined): string {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const pad = (x: number) => String(x).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+
+  // PizZip shablon to'ldirish (ContractReplaceService.fillTemplate parity).
+  private fillTemplate(
+    content: Buffer,
+    scalars: Record<string, string>,
+  ): Buffer {
+    const zip = new PizZip(content);
+    const xmlFile = zip.file('word/document.xml');
+    if (!xmlFile) {
+      throw new BusinessException(500, 'document.xml topilmadi');
+    }
+    let xml = xmlFile.asText();
+    xml = normalizePlaceholders(xml);
+    for (const [k, v] of Object.entries(scalars)) {
+      xml = xml.split(`\${${k}}`).join(escapeXml(v));
+    }
+    xml = xml.split('‑').join('-');
+    xml = xml.replace(/<w:noBreakHyphen\s*\/>/g, '<w:t>-</w:t>');
+    zip.file('word/document.xml', xml);
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
   }
 
   // Fallback nextId for protocols when execute() shape is unclear.
