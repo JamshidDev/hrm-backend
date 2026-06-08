@@ -2,6 +2,7 @@
 // Asosan stub — real implementatsiya keyin.
 
 import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -255,10 +256,36 @@ export class UserExtrasService {
     return { success: true };
   }
 
-  /** PUT /user/update — phone/password update (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async update(_dto: UpdateUserDto) {
-    return { success: true, stub: true };
+  /**
+   * PUT /user/update — Laravel UserService::updateProfile.
+   * Parol berilsa: joriy parolni qayta ishlatishni taqiqlaydi, yangisini
+   * bcrypt (rounds=12) bilan saqlaydi va `password_changed_at`ni now() qiladi.
+   * Bu maydonsiz login har safar parol yangilashni so'rardi (30 kun sharti).
+   */
+  async update(dto: UpdateUserDto): Promise<void> {
+    if (!dto.password) return;
+
+    const userId = this.ctx.user_or_fail.id;
+    const [u] = await this.db
+      .select({ password: users.password })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    // Laravel: Hash::check(new, current) → bir xil bo'lsa rad etadi.
+    if (u?.password && (await bcrypt.compare(dto.password, u.password))) {
+      throw new BusinessException(400, 'You cannot reuse current password');
+    }
+
+    const hashed = await bcrypt.hash(dto.password, 12);
+    await this.db
+      .update(users)
+      .set({
+        password: hashed,
+        password_changed_at: sql`NOW()`,
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(users.id, userId));
   }
 
   /** GET /user/organization-info — joriy organization tafsiloti (stub). */
