@@ -97,11 +97,21 @@ export class CategoryController {
 
   // Excel orqali savollar yuklash (stub: job dispatch).
   @Post(':categoryId/import')
-  @ApiOperation({ summary: 'Import category questions from Excel (stub)' })
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Import category questions from Excel' })
   async excelImport(
     @Param('categoryId', ParseIntPipe) categoryId: number,
-    @Body() body: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('mapping') mapping: string,
+    @Body('startRow') startRow: string,
   ) {
-    return buildSuccess(true, await this.service.excelImport(categoryId, body));
+    await this.service.importExcel(
+      categoryId,
+      file,
+      mapping,
+      Number(startRow) || 1,
+    );
+    // Laravel: Helper::response(trans('messages.successfully_exported')).
+    return buildSuccess(this.i18n.t('messages.successfully_exported'), []);
   }
 }

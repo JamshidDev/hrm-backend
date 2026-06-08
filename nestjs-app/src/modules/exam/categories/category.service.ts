@@ -11,7 +11,11 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
-import { exam_categories, exam_category_questions } from '@/db/schema';
+import {
+  exam_categories,
+  exam_category_options,
+  exam_category_questions,
+} from '@/db/schema';
 import { nextId, pageOf } from '@/modules/exam/_shared/helpers';
 import type {
   CreateCategoryDto,
@@ -73,7 +77,9 @@ export class CategoryService {
               isNull(exam_category_questions.deleted_at),
             ),
           )
-          .groupBy(exam_category_questions.exam_category_id)) as unknown as Array<{
+          .groupBy(
+            exam_category_questions.exam_category_id,
+          )) as unknown as Array<{
           cat_id: number | null;
           cnt: number;
         }>)
@@ -229,8 +235,138 @@ export class CategoryService {
     return letters;
   }
 
-  // Laravel: import — Excel'dan savollarni yuklash. External job, stub qoldiramiz.
-  async excelImport(_categoryId: number, _body: unknown) {
-    return { imported: true };
+  // Laravel TopicExamQuestionService::import — Excel'dan savol+variantlarni yuklash.
+  // mapping: {column: field} (field='ques' yoki 'option_*'; '_correct' bilan tugasa
+  // to'g'ri javob). startRow — boshidan skip qilinadigan qatorlar soni.
+  async importExcel(
+    categoryId: number,
+    file: Express.Multer.File,
+    mappingRaw: string,
+    startRow: number,
+  ): Promise<void> {
+    // Kategoriya mavjudligini tekshirish (Laravel findOrFail).
+    const [cat] = await this.db
+      .select({ id: exam_categories.id })
+      .from(exam_categories)
+      .where(eq(exam_categories.id, categoryId))
+      .limit(1);
+    if (!cat) {
+      throw new BusinessException(404, 'Kategoriya topilmadi');
+    }
+    if (!file?.buffer) {
+      throw new BusinessException(422, 'Fayl yuborilmadi');
+    }
+
+    let mapping: Record<string, string>;
+    try {
+      mapping = JSON.parse(mappingRaw) as Record<string, string>;
+    } catch {
+      throw new BusinessException(422, 'mapping JSON noto‘g‘ri');
+    }
+
+    const rows = await this.readExcelRows(file);
+    const dataRows = rows.slice(startRow); // Laravel array_slice(rows, startRow).
+
+    await this.db.transaction(async (tx) => {
+      for (const row of dataRows) {
+        let questionText = '';
+        const options: { text: string; is_correct: boolean }[] = [];
+
+        for (const [column, field] of Object.entries(mapping)) {
+          const idx = this.excelColumnToIndex(column);
+          const value = row[idx];
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ''
+          )
+            continue;
+
+          if (field === 'ques') {
+            questionText = String(value);
+            continue;
+          }
+          if (field.startsWith('option_')) {
+            options.push({
+              text: String(value),
+              is_correct: field.endsWith('_correct'),
+            });
+          }
+        }
+
+        if (!questionText) continue;
+
+        const qId = await nextId(tx, exam_category_questions);
+        await tx.insert(exam_category_questions).values({
+          id: qId,
+          exam_category_id: categoryId,
+          ques: questionText,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        });
+
+        if (options.length) {
+          const baseId = await nextId(tx, exam_category_options);
+          await tx.insert(exam_category_options).values(
+            options.map((o, i) => ({
+              id: baseId + i,
+              category_question_id: qId,
+              text: o.text,
+              is_correct: o.is_correct,
+              created_at: sql`NOW()`,
+              updated_at: sql`NOW()`,
+            })),
+          );
+        }
+      }
+    });
+  }
+
+  // Laravel excelColumnToIndex — 'A'→0, 'B'→1, 'AA'→26.
+  private excelColumnToIndex(column: string): number {
+    let index = 0;
+    const c = column.toUpperCase();
+    for (let i = 0; i < c.length; i++) {
+      index = index * 26 + (c.charCodeAt(i) - 65 + 1);
+    }
+    return index - 1;
+  }
+
+  // Yuklangan Excel/CSV'ni 0-indeksli qator massivlariga o'qish (cell matni).
+  private async readExcelRows(file: Express.Multer.File): Promise<unknown[][]> {
+    const ext = (file.originalname.split('.').pop() ?? '').toLowerCase();
+    const wb = new ExcelJS.Workbook();
+    if (ext === 'xlsx') {
+      await wb.xlsx.load(file.buffer as unknown as ArrayBuffer);
+    } else if (ext === 'csv') {
+      await wb.csv.read(Readable.from(file.buffer));
+    } else {
+      throw new BusinessException(400, `Noto'g'ri fayl turi: ${ext}`);
+    }
+    const ws = wb.worksheets[0];
+    const rows: unknown[][] = [];
+    if (ws) {
+      ws.eachRow({ includeEmpty: true }, (row) => {
+        rows.push(
+          (row.values as unknown[]).slice(1).map((v) => {
+            if (v && typeof v === 'object') {
+              const o = v as {
+                text?: string;
+                result?: unknown;
+                richText?: { text: string }[];
+              };
+              return (
+                o.text ??
+                o.result ??
+                o.richText?.map((r) => r.text).join('') ??
+                ''
+              );
+            }
+            return v;
+          }),
+        );
+      });
+    }
+    return rows;
   }
 }
