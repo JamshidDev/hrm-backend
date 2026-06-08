@@ -45,6 +45,32 @@ export class EduPlanListQueryDto {
   @Type(() => Number)
   @IsInt()
   specialization_id?: number;
+
+  // Nom bo'yicha qidiruv (Laravel index `search`; frontend `name` ham yuboradi).
+  @ApiPropertyOptional({ example: 'alo' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  // Laravel: whereYear('start_date', year).
+  @ApiPropertyOptional({ example: 2024 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  // Laravel: whereMonth('start_date', month).
+  @ApiPropertyOptional({ example: 6 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  month?: number;
+
+  // Laravel scopeFilter `organizations`ni ISHLATMAYDI — qabul qilinadi, e'tiborga olinmaydi.
+  @ApiPropertyOptional({ example: '19,136' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
 }
 
 export class UpsertEduPlanDto {

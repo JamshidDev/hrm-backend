@@ -2,7 +2,7 @@
 // List: learning_center + specialization + subjects + workers_count + exams_count.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, max, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -13,6 +13,7 @@ import {
   edu_plan_subjects,
   edu_plan_workers,
   edu_plans,
+  learning_center_users,
   learning_centers,
   organizations,
   positions,
@@ -55,11 +56,42 @@ export class LmsEduPlanService {
   async list(q: EduPlanListQueryDto) {
     const { page, perPage } = readPaging(q);
     const conditions = [notDeleted(edu_plans)];
+
+    // Laravel EduPlan::scopeFilter — foydalanuvchi biriktirilgan learning
+    // center'lar (learning_center_users) bilan cheklash (role-scope).
+    const userId = this.ctx.user_or_fail.id;
+    conditions.push(
+      inArray(
+        edu_plans.learning_center_id,
+        this.db
+          .select({ id: learning_center_users.learning_center_id })
+          .from(learning_center_users)
+          .where(eq(learning_center_users.user_id, userId)),
+      ),
+    );
+
     if (q.learning_center_id) {
       conditions.push(eq(edu_plans.learning_center_id, q.learning_center_id));
     }
     if (q.specialization_id) {
       conditions.push(eq(edu_plans.specialization_id, q.specialization_id));
+    }
+    // Nom bo'yicha qidiruv — Laravel whereLike('name', %search%). `search` yoki
+    // `name` (frontend ba'zan `name` yuboradi).
+    const nameSearch = q.search ?? q.name;
+    if (nameSearch) {
+      conditions.push(ilike(edu_plans.name, `%${nameSearch}%`));
+    }
+    // Laravel: whereYear/whereMonth('start_date', ...).
+    if (q.year) {
+      conditions.push(
+        sql`EXTRACT(YEAR FROM ${edu_plans.start_date}) = ${q.year}`,
+      );
+    }
+    if (q.month) {
+      conditions.push(
+        sql`EXTRACT(MONTH FROM ${edu_plans.start_date}) = ${q.month}`,
+      );
     }
     const where = and(...conditions);
 
@@ -347,7 +379,9 @@ export class LmsEduPlanService {
       mapList: async (rows) => {
         // Telefon raqamlari — HasMany, batch (N+1 oldini olish).
         const workerIds = [
-          ...new Set(rows.map((r) => r.worker_id).filter((v): v is number => !!v)),
+          ...new Set(
+            rows.map((r) => r.worker_id).filter((v): v is number => !!v),
+          ),
         ];
         const phoneRows = workerIds.length
           ? await this.db
