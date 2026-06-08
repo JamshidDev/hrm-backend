@@ -26,6 +26,7 @@ import {
 } from '@/modules/hr/contract-additional/dto/contract-additional.dto';
 import { ContractReplaceService } from '@/modules/hr/contracts/contract-replace.service';
 import { ConvertService } from '@/shared/convert/convert.service';
+import { RedisService } from '@/shared/redis/redis.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -38,6 +39,7 @@ export class ContractAdditionalService {
     private readonly scope: OrgScopeService,
     private readonly replace: ContractReplaceService,
     private readonly convert: ConvertService,
+    private readonly redis: RedisService,
   ) {}
 
   async findAll(
@@ -173,25 +175,28 @@ export class ContractAdditionalService {
     dto.organization_id = organizationId;
     const docxBuffer = await this.replace.buildContractAdditionalDocx(dto);
 
-    await this.db.insert(contract_additional).values({
-      uuid,
-      organization_id: organizationId,
-      worker_position_id: dto.worker_position_id,
-      user_id: userId,
-      director_id: dto.director_id,
-      worker_id: dto.worker_id ?? null,
-      command_status: cmdStatus,
-      number: dto.number != null ? Number(dto.number) : null,
-      contract_date: dto.contract_date,
-      contract_to_date: dto.contract_to_date ?? null,
-      type: dto.type,
-      // Laravel ContractAdditional model boot('creating') — file yo'llari va
-      // vaqt belgilarini avtomatik o'rnatadi (aks holda show 404 beradi).
-      file: docxKey,
-      confirmation_file: pdfKey,
-      created_at: sql`NOW()`,
-      updated_at: sql`NOW()`,
-    });
+    const [row] = await this.db
+      .insert(contract_additional)
+      .values({
+        uuid,
+        organization_id: organizationId,
+        worker_position_id: dto.worker_position_id,
+        user_id: userId,
+        director_id: dto.director_id,
+        worker_id: dto.worker_id ?? null,
+        command_status: cmdStatus,
+        number: dto.number != null ? Number(dto.number) : null,
+        contract_date: dto.contract_date,
+        contract_to_date: dto.contract_to_date ?? null,
+        type: dto.type,
+        // Laravel ContractAdditional model boot('creating') — file yo'llari va
+        // vaqt belgilarini avtomatik o'rnatadi (aks holda show 404 beradi).
+        file: docxKey,
+        confirmation_file: pdfKey,
+        created_at: sql`NOW()`,
+        updated_at: sql`NOW()`,
+      })
+      .returning({ id: contract_additional.id });
 
     // DOCX'ni MinIO'ga (sinxron) + PDF (fon).
     await this.minio.putObject(
@@ -199,16 +204,41 @@ export class ContractAdditionalService {
       docxBuffer,
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
-    void this.generatePdf(docxBuffer, pdfKey);
+    void this.generatePdf(row.id, userId, docxBuffer, pdfKey);
   }
 
-  // DOCX→PDF konvertatsiya + MinIO yuklash (fon).
-  private async generatePdf(docxBuffer: Buffer, pdfKey: string): Promise<void> {
+  // DOCX→PDF konvertatsiya + MinIO yuklash (fon). Laravel DocxToPdfJob:
+  // muvaffaqiyatda generate=3 + socket 'contract.additional.generated' xabari,
+  // xatoda generate=4.
+  private async generatePdf(
+    id: number,
+    userId: number,
+    docxBuffer: Buffer,
+    pdfKey: string,
+  ): Promise<void> {
     try {
       const pdfBuffer = await this.convert.docxToPdf(docxBuffer);
       await this.minio.putObject(pdfKey, pdfBuffer, 'application/pdf');
+      await this.db
+        .update(contract_additional)
+        .set({ generate: 3 })
+        .where(eq(contract_additional.id, id));
+      // Real-time "hujjat tayyor" xabari (Laravel Redis::publish parity).
+      await this.redis.publishNotification(userId, {
+        type: 'contract.additional.generated',
+        alert: 'info',
+        duration: 3000,
+        documentId: id,
+        title: this.i18n.t('messages.document.created'),
+        message: this.i18n.t('messages.document.created'),
+        action: null,
+      });
     } catch {
-      // PDF konvertatsiya muvaffaqiyatsiz — DOCX baribir saqlangan.
+      // PDF konvertatsiya muvaffaqiyatsiz — generate=4 (xato).
+      await this.db
+        .update(contract_additional)
+        .set({ generate: 4 })
+        .where(eq(contract_additional.id, id));
     }
   }
 

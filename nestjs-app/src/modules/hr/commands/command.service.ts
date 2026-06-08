@@ -20,6 +20,7 @@ import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ConvertService } from '@/shared/convert/convert.service';
+import { RedisService } from '@/shared/redis/redis.service';
 import { CommandMapper } from '@/modules/hr/commands/command.mapper';
 import { CommandReplaceService } from '@/modules/hr/commands/command-replace.service';
 import {
@@ -40,6 +41,7 @@ export class CommandService {
     private readonly replace: CommandReplaceService,
     private readonly convert: ConvertService,
     private readonly scope: OrgScopeService,
+    private readonly redis: RedisService,
   ) {}
 
   async findAll(filters: QueryCommandDto): Promise<CommandListResponseDto> {
@@ -249,7 +251,7 @@ export class CommandService {
       );
       // PDF konvertatsiya — fon rejimida (Laravel DocxToPdfJob async).
       // generate: 2=jarayonda, 3=tayyor, 4=xato.
-      void this.generateCommandPdf(cmd.id, docxBuffer, pdfKey);
+      void this.generateCommandPdf(cmd.id, userId, docxBuffer, pdfKey);
     }
 
     return { command_id: cmd.id };
@@ -310,6 +312,7 @@ export class CommandService {
   // Laravel DocxToPdfJob ekvivalenti — fon jarayoni sifatida ishlaydi.
   private async generateCommandPdf(
     commandId: number,
+    userId: number,
     docxBuffer: Buffer,
     pdfKey: string,
   ): Promise<void> {
@@ -320,6 +323,16 @@ export class CommandService {
         .update(commands)
         .set({ generate: 3 })
         .where(eq(commands.id, commandId));
+      // Real-time "hujjat tayyor" xabari (Laravel Redis::publish parity).
+      await this.redis.publishNotification(userId, {
+        type: 'commands.generated',
+        alert: 'info',
+        duration: 3000,
+        documentId: commandId,
+        title: this.i18n.t('messages.document.created'),
+        message: this.i18n.t('messages.document.created'),
+        action: null,
+      });
     } catch {
       // Konvertatsiya muvaffaqiyatsiz — generate=4 (xato).
       await this.db

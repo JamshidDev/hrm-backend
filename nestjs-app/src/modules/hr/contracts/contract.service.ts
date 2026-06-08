@@ -26,6 +26,7 @@ import { MinioService } from '@/shared/minio/minio.service';
 import { ContractMapper } from '@/modules/hr/contracts/contract.mapper';
 import { ContractReplaceService } from '@/modules/hr/contracts/contract-replace.service';
 import { ConvertService } from '@/shared/convert/convert.service';
+import { RedisService } from '@/shared/redis/redis.service';
 import {
   ContractListResponseDto,
   CreateContractDto,
@@ -48,6 +49,7 @@ export class ContractService {
     private readonly scope: OrgScopeService,
     private readonly replace: ContractReplaceService,
     private readonly convert: ConvertService,
+    private readonly redis: RedisService,
   ) {}
 
   async findAll(filters: QueryContractDto): Promise<ContractListResponseDto> {
@@ -277,21 +279,41 @@ export class ContractService {
       docxBuffer,
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
-    void this.generateContractPdf(docxBuffer, pdfKey);
+    void this.generateContractPdf(contractId, userId, docxBuffer, pdfKey);
 
     return { contract_id: contractId };
   }
 
   // DOCX→PDF konvertatsiya + MinIO yuklash (fon — Laravel DocxToPdfJob).
+  // Laravel DocxToPdfJob: muvaffaqiyatda generate=3 + socket 'contracts.generated'
+  // xabari, xatoda generate=4.
   private async generateContractPdf(
+    id: number,
+    userId: number,
     docxBuffer: Buffer,
     pdfKey: string,
   ): Promise<void> {
     try {
       const pdfBuffer = await this.convert.docxToPdf(docxBuffer);
       await this.minio.putObject(pdfKey, pdfBuffer, 'application/pdf');
+      await this.db
+        .update(contracts)
+        .set({ generate: 3 })
+        .where(eq(contracts.id, id));
+      await this.redis.publishNotification(userId, {
+        type: 'contracts.generated',
+        alert: 'info',
+        duration: 3000,
+        documentId: id,
+        title: this.i18n.t('messages.document.created'),
+        message: this.i18n.t('messages.document.created'),
+        action: null,
+      });
     } catch {
-      // PDF konvertatsiya muvaffaqiyatsiz — DOCX baribir saqlangan.
+      await this.db
+        .update(contracts)
+        .set({ generate: 4 })
+        .where(eq(contracts.id, id));
     }
   }
 
