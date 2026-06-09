@@ -209,7 +209,9 @@ export class ContractService {
           worker_id: dto.worker_id,
           user_id: userId,
           director_id: dto.director_id,
-          command_status: dto.command_status ? 1 : 2,
+          // ContractCommandStatusEnum: FORMED=2 (buyruq bilan), NOT_MANDATORY=3
+          // (to'g'ridan-to'g'ri shartnoma). Laravel ContractService::store parity.
+          command_status: dto.command_status ? 2 : 3,
           number: String(dto.number),
           contract_date: dto.contract_date ?? null,
           contract_to_date: dto.contract_to_date ?? null,
@@ -221,30 +223,11 @@ export class ContractService {
         })
         .returning({ id: contracts.id });
 
-      // Create related worker_position if department_position provided.
-      if (dto.department_position_id) {
-        await tx.insert(worker_positions).values({
-          uuid: randomUUID(),
-          organization_id: dto.organization_id,
-          department_id: dto.department_id ?? null,
-          department_position_id: dto.department_position_id,
-          position_id: dto.position_id ?? null,
-          contract_id: contract.id,
-          worker_id: dto.worker_id,
-          type: dto.type,
-          position_date: dto.position_date ?? this.today(),
-          contract_position: true,
-          probation: dto.probation ? Number(dto.probation) : 0,
-          vacation_main_day: dto.vacation_main_day ?? 0,
-          additional_vacation_day: dto.additional_vacation_day ?? 0,
-          group: dto.group ? Number(dto.group) : 0,
-          rank: dto.rank ? String(dto.rank) : null,
-          rate: dto.rate != null ? Math.trunc(Number(dto.rate)) : 100,
-          salary: dto.salary != null ? Number(dto.salary) : null,
-          post_name: dto.post_name ?? null,
-          status: dto.position_status ?? POSITION_STATUS_ACTIVE,
-        });
-      }
+      // ESLATMA: worker_position bu yerda YARATILMAYDI. Laravel
+      // ContractService::store ham yaratmaydi — xodim lavozimi FAQAT hujjat
+      // tasdiqlanganda (ContractConfirmationService::confirmation → createWorker)
+      // yaratiladi. `json/contracts/{id}.json` snapshot side-effect uchun pastda
+      // saqlanadi.
 
       // contract_confirmations — Laravel createConfirmation: hodim 'w' + direktor 'd'.
       const confRows: Array<{
@@ -273,6 +256,12 @@ export class ContractService {
       return contract.id;
     });
 
+    // Tasdiqlash side-effect'i uchun `data` snapshot (Laravel
+    // ContractService::storeJson → json/contracts/{id}.json). Tasdiq tugaganda
+    // CommandConfirmationService.applyContractConfirmation shu data'ni o'qib
+    // createWorker chaqiradi (worker_position + Worker rol + user org).
+    await this.storeContractData(contractId, dto);
+
     // DOCX'ni MinIO'ga yuklash (sinxron) + PDF (fon).
     await this.minio.putObject(
       docxKey,
@@ -282,6 +271,41 @@ export class ContractService {
     void this.generateContractPdf(contractId, userId, docxBuffer, pdfKey);
 
     return { contract_id: contractId };
+  }
+
+  // json/contracts/{id}.json — confirm side-effect (createWorker) uchun.
+  // Laravel ContractService::storeJson({request, data}). `data` createWorker
+  // talab qiladigan barcha maydonlarni o'z ichiga oladi.
+  private async storeContractData(
+    contractId: number,
+    dto: CreateContractDto,
+  ): Promise<void> {
+    const data: Record<string, unknown> = {
+      contract_id: contractId,
+      worker_id: dto.worker_id,
+      organization_id: dto.organization_id,
+      department_position_id: dto.department_position_id ?? null,
+      department_id: dto.department_id ?? null,
+      position_id: dto.position_id ?? null,
+      type: dto.type,
+      probation: dto.probation ?? null,
+      vacation_main_day: dto.vacation_main_day ?? null,
+      additional_vacation_day: dto.additional_vacation_day ?? null,
+      group: dto.group ?? null,
+      rank: dto.rank ?? null,
+      rate: dto.rate ?? null,
+      salary: dto.salary ?? null,
+      post_name: dto.post_name ?? null,
+      // createWorker: position_date ?? command_date ?? today.
+      position_date: dto.position_date ?? null,
+      command_date: dto.contract_date ?? null,
+      contract_to_date: dto.contract_to_date ?? null,
+    };
+    await this.minio.putObject(
+      `json/contracts/${contractId}.json`,
+      Buffer.from(JSON.stringify({ data }), 'utf-8'),
+      'application/json',
+    );
   }
 
   // DOCX→PDF konvertatsiya + MinIO yuklash (fon — Laravel DocxToPdfJob).

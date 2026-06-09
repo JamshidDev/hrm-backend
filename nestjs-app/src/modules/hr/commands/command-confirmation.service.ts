@@ -273,8 +273,8 @@ export class CommandConfirmationService {
         const amountType = this.num(item.type) ?? 1;
         const amountText =
           amountType === 1
-            ? `mehnatga haq to'lash eng kam miqdorining ${item.amount} barobari ko'rinishida `
-            : `uzluksiz ish stajiga bog'liq ravishda lavozim maoshinining ${item.amount}% miqdorida `;
+            ? `mehnatga haq to'lash eng kam miqdorining ${amount} barobari ko'rinishida `
+            : `uzluksiz ish stajiga bog'liq ravishda lavozim maoshinining ${amount}% miqdorida `;
         rows.push({
           ...base,
           reason: this.str(item.reason),
@@ -305,12 +305,34 @@ export class CommandConfirmationService {
     await this.db.insert(table).values(rows as never);
   }
 
-  // CONTRACTS tasdiqlangach — contract status=ACTIVE.
-  // ESLATMA: NestJS contract create worker_position'ni DARHOL yaratadi (Laravel
-  // esa confirm'da ContractConfirmationService::confirmation → createWorker).
-  // Shu sabab bu yerda createWorker QILMAYMIZ (dublikat oldini olish) — faqat
-  // contract status ACTIVE belgilanadi.
-  async markContractActive(contractId: number): Promise<void> {
+  // CONTRACTS tasdiqlangach — Laravel ContractConfirmationService::confirmation.
+  // FAQAT command_status=NOT_MANDATORY (to'g'ridan-to'g'ri shartnoma): JSON'dan
+  // data o'qib createWorker chaqiradi (worker_position + Worker rol + user org)
+  // va contract status=ACTIVE qiladi. FORMED (buyruq bilan) bo'lsa — xodim
+  // lavozimi buyruq tasdig'ida yaratiladi, bu yerda hech narsa qilinmaydi.
+  async applyContractConfirmation(contractId: number): Promise<void> {
+    const [c] = await this.db
+      .select({ command_status: contracts.command_status })
+      .from(contracts)
+      .where(eq(contracts.id, contractId))
+      .limit(1);
+    if (!c || c.command_status !== COMMAND_STATUS_NOT_MANDATORY) return;
+
+    const data = await this.readJsonData(`json/contracts/${contractId}.json`);
+    if (!data) {
+      this.logger.warn(`json/contracts/${contractId}.json topilmadi`);
+      return;
+    }
+
+    // Laravel ContractConfirmationService::confirmation default'lari
+    // (createWorker'ning '4'/100 default'idan farqli — rank/rate=1, group=0).
+    if (data.rank == null) data.rank = 1;
+    if (data.rate == null) data.rate = 1;
+    if (data.group == null) data.group = 0;
+    if (data.contract_id == null) data.contract_id = contractId;
+
+    await this.createWorker(data);
+
     await this.db
       .update(contracts)
       .set({ status: STATUS_ACTIVE, updated_at: sql`NOW()` })

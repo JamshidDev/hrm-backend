@@ -6,7 +6,9 @@ import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
+  confirmation_workers,
   contract_additional,
+  contract_additional_confirmations,
   organizations,
   worker_positions,
   workers,
@@ -161,12 +163,15 @@ export class ContractAdditionalService {
       );
     }
 
-    const cmdStatus =
-      typeof dto.command_status === 'boolean'
-        ? dto.command_status
-          ? 1
-          : 2
-        : Number(dto.command_status);
+    // ContractCommandStatusEnum: FORMED=2 (buyruq bilan), NOT_MANDATORY=3
+    // (to'g'ridan-to'g'ri). Laravel ContractAdditionalService::store parity —
+    // command_status ? FORMED : NOT_MANDATORY. NOT_MANDATORY bo'lsa side-effect
+    // (applyContractAdditionalConfirmation) tasdiqda to'g'ridan-to'g'ri ishlaydi.
+    const hasCommand =
+      dto.command_status === true ||
+      dto.command_status === 1 ||
+      dto.command_status === '1';
+    const cmdStatus = hasCommand ? 2 : 3;
 
     const uuid = randomUUID();
     const docxKey = `contract-additional/${uuid}.docx`;
@@ -199,6 +204,56 @@ export class ContractAdditionalService {
         updated_at: sql`NOW()`,
       })
       .returning({ id: contract_additional.id });
+
+    // contract_additional_confirmations — Laravel createConfirmation: hodim 'w'
+    // + direktor 'd'. Tasdiqlash document/signature oqimi orqali bo'ladi va
+    // hammasi SUCCESS bo'lganda applyContractAdditionalConfirmation ishlaydi.
+    // worker_id Laravel'da workerPosition->worker_id'dan keladi.
+    const [wp] = await this.db
+      .select({ worker_id: worker_positions.worker_id })
+      .from(worker_positions)
+      .where(eq(worker_positions.id, dto.worker_position_id))
+      .limit(1);
+    const workerId = dto.worker_id ?? wp?.worker_id ?? null;
+    const [director] = await this.db
+      .select({
+        worker_id: confirmation_workers.worker_id,
+        position: confirmation_workers.position,
+      })
+      .from(confirmation_workers)
+      .where(eq(confirmation_workers.id, dto.director_id))
+      .limit(1);
+    const confRows: Array<{
+      contract_additional_id: number;
+      type: string;
+      worker_id: number | null;
+      position: string | null;
+    }> = [];
+    if (workerId) {
+      confRows.push({
+        contract_additional_id: row.id,
+        type: 'w',
+        worker_id: workerId,
+        position: null,
+      });
+    }
+    if (director?.worker_id) {
+      confRows.push({
+        contract_additional_id: row.id,
+        type: 'd',
+        worker_id: director.worker_id,
+        position: director.position ?? null,
+      });
+    }
+    if (confRows.length) {
+      await this.db.insert(contract_additional_confirmations).values(
+        confRows.map((r) => ({
+          ...r,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        })),
+      );
+    }
 
     // DOCX'ni MinIO'ga (sinxron) + PDF (fon).
     await this.minio.putObject(
@@ -304,25 +359,6 @@ export class ContractAdditionalService {
     await this.db
       .update(contract_additional)
       .set({ deleted_at: sql`NOW()` })
-      .where(eq(contract_additional.id, id));
-  }
-
-  // POST /api/v1/hr/contract-additional/{id}/confirmation
-  async confirmation(id: number, _file?: unknown): Promise<void> {
-    const [row] = await this.db
-      .select({ id: contract_additional.id })
-      .from(contract_additional)
-      .where(
-        and(eq(contract_additional.id, id), notDeleted(contract_additional)),
-      )
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    // Set confirmation = SUCCESS.
-    await this.db
-      .update(contract_additional)
-      .set({ confirmation: 3, updated_at: sql`NOW()` })
       .where(eq(contract_additional.id, id));
   }
 }

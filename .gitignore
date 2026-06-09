@@ -75,3 +75,7 @@ hrm_backup.dump
 .cache/
 *.tgz
 *.zip
+
+# Lokal dev app'lar — GitHub'ga chiqmaydi (binar/maxfiy + lokalda ko'tariladi)
+/e-imzo-app/
+/onlyoffice-app/

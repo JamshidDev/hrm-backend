@@ -47,8 +47,8 @@ export class DocumentConfirmationController {
 
   @Post('document/signature')
   async signature(@Body() dto: DocumentSignatureDto) {
-    await this.service.signature(dto);
-    return buildSuccess(this.i18n.t('messages.signature.success'), []);
+    const result = await this.service.signature(dto);
+    return buildSuccess(result.message, []);
   }
 
   @Post('forward')

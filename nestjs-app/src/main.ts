@@ -14,6 +14,12 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  // E-IMZO imzo `code` (PKCS7) ~300KB+ keladi; OnlyOffice callback va base64
+  // upload'lar ham katta. NestJS default 100KB limitini Laravel kabi oshiramiz
+  // (Laravel `post_max_size` odatda 50M). 50MB — barcha holatlar uchun yetarli.
+  app.useBodyParser('json', { limit: '50mb' });
+  app.useBodyParser('urlencoded', { limit: '50mb', extended: true });
+
   // Laravel `public/` statik fayllari — `asset('resumes/...')` ekvivalenti.
   // example .xlsx fayllar `/resumes/economist/*.xlsx` URL'da yuklab olinadi.
   app.useStaticAssets(join(__dirname, '..', '..', 'public'));
