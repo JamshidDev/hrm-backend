@@ -60,7 +60,37 @@ export class WorkDurationService {
   // return base rows (frontend can hydrate via separate calls).
   async list(q: WorkDurationQuery) {
     const { page, perPage, offset } = pageOf(q);
-    const conds = [notDeleted(terminal_logs)];
+
+    // Laravel: whereHas('worker', whereHas('positions', filter($user))) —
+    // xodimning org-scope ichidagi pozitsiyasi bo'lishi shart. Scope bo'sh →
+    // hech narsa (Laravel filter bo'sh natija).
+    const ids = await this.scope.ids();
+    if (!ids.length) {
+      return { current_page: page, per_page: perPage, total: 0, data: [] };
+    }
+    const orgList = sql.join(
+      ids.map((n) => sql`${n}`),
+      sql`, `,
+    );
+
+    const conds = [
+      notDeleted(terminal_logs),
+      sql`EXISTS (
+        SELECT 1 FROM worker_positions wp
+        WHERE wp.worker_id = ${terminal_logs.worker_id}
+          AND wp.deleted_at IS NULL
+          AND wp.organization_id IN (${orgList})
+      )`,
+    ];
+    // search — worker fullname (Laravel when(search, worker.searchByFullName)).
+    if (q.search) {
+      const cond = buildWorkerSearchCond(q.search);
+      if (cond) {
+        conds.push(
+          sql`EXISTS (SELECT 1 FROM workers w WHERE w.id = ${terminal_logs.worker_id} AND w.deleted_at IS NULL AND (${cond}))`,
+        );
+      }
+    }
     if (q.start) conds.push(sql`${terminal_logs.event_time} >= ${q.start}`);
     if (q.end) conds.push(sql`${terminal_logs.event_time} <= ${q.end}`);
     const where = and(...conds);

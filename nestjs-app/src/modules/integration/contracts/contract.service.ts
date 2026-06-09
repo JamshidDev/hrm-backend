@@ -2,10 +2,11 @@
 // PositionController.index (classifications/positions).
 
 import { Injectable } from '@nestjs/common';
-import { count, desc } from 'drizzle-orm';
+import { and, count, desc } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { contracts, positions } from '@/db/schema';
 import {
   pageOf,
@@ -14,12 +15,20 @@ import {
 
 @Injectable()
 export class IntegrationContractService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly scope: OrgScopeService,
+  ) {}
 
   /** GET /integration/contracts — paginatsiya. */
   async listContracts(q: IntegrationPageQueryDto) {
     const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(contracts);
+    // Laravel Contract::query()->filter($user, $filters) — rol/org-scope.
+    const inScope = await this.scope.whereOrg(contracts.organization_id, {
+      organizations: (q as { organizations?: string }).organizations,
+      organization_id: (q as { organization_id?: number }).organization_id,
+    });
+    const where = and(notDeleted(contracts), inScope);
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select()

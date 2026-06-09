@@ -380,10 +380,18 @@ export class ReportService {
           .filter((n) => !Number.isNaN(n))
       : [];
 
+    // Laravel: WorkerPosition::filter($user) (rol/org-scope childIds) +
+    // ->where('organization_id', request('organization_id')). whereOrg ikkalasini
+    // ham qo'llaydi (childIds AND organization_id).
+    const inScope = await this.scope.whereOrg(worker_positions.organization_id, {
+      organizations: (filters as { organizations?: string }).organizations,
+      organization_id: filters.organization_id,
+    });
+
     const where = and(
       notDeleted(worker_positions),
       eq(worker_positions.status, POSITION_STATUS_ACTIVE),
-      eq(worker_positions.organization_id, filters.organization_id),
+      inScope,
       filters.department_id
         ? eq(worker_positions.department_id, filters.department_id)
         : undefined,
