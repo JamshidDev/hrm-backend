@@ -305,27 +305,12 @@ export class CommandConfirmationService {
     await this.db.insert(table).values(rows as never);
   }
 
-  // CONTRACTS tasdiqlangach — Laravel ContractConfirmationService::confirmation.
-  // FAQAT command_status=NOT_MANDATORY bo'lsa (aks holda buyruq orqali bo'ladi).
-  //   json/contracts/{id}.json → data → createWorker + status=ACTIVE.
-  async applyContractConfirmation(contractId: number): Promise<void> {
-    const [c] = await this.db
-      .select({ id: contracts.id, command_status: contracts.command_status })
-      .from(contracts)
-      .where(eq(contracts.id, contractId))
-      .limit(1);
-    if (!c || c.command_status !== COMMAND_STATUS_NOT_MANDATORY) return;
-
-    const data = await this.readJsonData(`json/contracts/${contractId}.json`);
-    if (!data) {
-      this.logger.warn(`json/contracts/${contractId}.json topilmadi`);
-      return;
-    }
-    data.rank = data.rank ?? 1;
-    data.rate = data.rate ?? 1;
-    data.group = data.group ?? 0;
-
-    await this.createWorker(data);
+  // CONTRACTS tasdiqlangach — contract status=ACTIVE.
+  // ESLATMA: NestJS contract create worker_position'ni DARHOL yaratadi (Laravel
+  // esa confirm'da ContractConfirmationService::confirmation → createWorker).
+  // Shu sabab bu yerda createWorker QILMAYMIZ (dublikat oldini olish) — faqat
+  // contract status ACTIVE belgilanadi.
+  async markContractActive(contractId: number): Promise<void> {
     await this.db
       .update(contracts)
       .set({ status: STATUS_ACTIVE, updated_at: sql`NOW()` })

@@ -176,9 +176,10 @@ export class DocumentService {
       if (model === 'commands') {
         await this.commandConfirmation.applyConfirmation(docId);
       } else if (model === 'contracts') {
-        // Laravel: CONTRACTS (command_status NOT_MANDATORY) →
-        // ContractConfirmationService::confirmation (createWorker + ACTIVE).
-        await this.commandConfirmation.applyContractConfirmation(docId);
+        // ESLATMA: NestJS contract create worker_position'ni DARHOL yaratadi
+        // (Laravel esa confirm'da). Shu sabab confirm'da createWorker QILMAYMIZ
+        // (dublikat oldini olish) — faqat contract status=ACTIVE belgilanadi.
+        await this.commandConfirmation.markContractActive(docId);
       } else if (model === 'contract-additional') {
         // Laravel: CONTRACT_ADDITIONAL (NOT_MANDATORY) → updateContract
         // (xodim lavozimini o'zgartirish/yakunlash).

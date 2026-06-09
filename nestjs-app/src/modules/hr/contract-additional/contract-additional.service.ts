@@ -1,6 +1,6 @@
 // ContractAdditional service. Laravel: ContractAdditionalController::index().
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
@@ -31,6 +31,8 @@ import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ContractAdditionalService {
+  private readonly logger = new Logger(ContractAdditionalService.name);
+
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
@@ -204,6 +206,40 @@ export class ContractAdditionalService {
       docxBuffer,
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
+
+    // Layer 1: confirmation side-effect uchun systemData snapshot (Laravel
+    // ContractAdditionalService::storeJson). Tasdiqlangach
+    // applyContractAdditionalConfirmation shu `data`ni o'qib xodim lavozimini
+    // o'zgartiradi (1→updateWorker, 8→updateWorkerPosition, 12/13→finished).
+    const snapshot = {
+      request: dto,
+      data: {
+        worker_id: dto.worker_id ?? null,
+        worker_position_id: dto.worker_position_id,
+        organization_id: organizationId,
+        type: dto.type,
+        group: dto.group ?? null,
+        rank: dto.rank ?? null,
+        rate: dto.rate ?? null,
+        salary: dto.salary ?? null,
+        department_position_id: dto.department_position_id ?? null,
+        // ad-contract sanasi = lavozim o'zgarish sanasi (position_date yo'q).
+        position_date: dto.contract_date,
+        contract_to_date: dto.contract_to_date ?? null,
+      },
+    };
+    try {
+      await this.minio.putObject(
+        `json/contract-additional/${row.id}.json`,
+        Buffer.from(JSON.stringify(snapshot), 'utf-8'),
+        'application/json',
+      );
+    } catch (e) {
+      this.logger.warn(
+        `ad-contract ${row.id} snapshot JSON xato: ${(e as Error).message}`,
+      );
+    }
+
     void this.generatePdf(row.id, userId, docxBuffer, pdfKey);
   }
 
