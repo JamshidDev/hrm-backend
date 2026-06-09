@@ -1,7 +1,7 @@
 // Command DTO'lari. Laravel: HR/CommandController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 import type {
@@ -38,10 +38,23 @@ export class CreateCommandDto {
   command_date!: string;
 
   @ApiPropertyOptional() @IsOptional() @IsString() command_number?: string;
-  @ApiPropertyOptional() @IsOptional() confirmations?: unknown[];
-  @ApiPropertyOptional() @IsOptional() workers?: unknown[];
+  // `enableImplicitConversion` nested obyektlar massivini mangled qilib (`[[]]`)
+  // ma'lumotni yo'qotadi (interface, @Type yo'q). `obj` (XOM plain obyekt)'dan
+  // o'qib bypass qilamiz — `value` allaqachon konvertatsiya bo'lgan. Many-worker
+  // side-effect (61/62/71/72/73 va 41/55) uchun KRITIK.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ obj }) => obj.confirmations)
+  confirmations?: unknown[];
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ obj }) => obj.workers)
+  workers?: unknown[];
   // Ko'p ishchili (many-worker) buyruqlar uchun (41,55,61,62,71,72,73).
-  @ApiPropertyOptional() @IsOptional() worker_positions?: ManyWorkerItem[];
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ obj }) => obj.worker_positions)
+  worker_positions?: ManyWorkerItem[];
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)

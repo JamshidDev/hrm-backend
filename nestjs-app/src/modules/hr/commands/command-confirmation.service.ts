@@ -173,8 +173,9 @@ export class CommandConfirmationService {
         work_day: this.str(item.work_day ?? data.work_day),
         period_from: this.str(item.period_from ?? data.period_from),
         period_to: this.str(item.period_to ?? data.period_to),
-        all_day: this.num(item.all_day ?? data.all_day),
-        rest_day: this.num(item.rest_day ?? data.rest_day),
+        // all_day/rest_day vacations'da NOT NULL — explicit null buzadi, 0 default.
+        all_day: this.num(item.all_day ?? data.all_day) ?? 0,
+        rest_day: this.num(item.rest_day ?? data.rest_day) ?? 0,
       };
 
       // updateOrCreate / upsert kaliti: (worker_id, type, to).
@@ -237,6 +238,7 @@ export class CommandConfirmationService {
         id: worker_positions.id,
         worker_id: worker_positions.worker_id,
         organization_id: worker_positions.organization_id,
+        contract_id: worker_positions.contract_id,
       })
       .from(worker_positions)
       .where(inArray(worker_positions.id, wpIds));
@@ -283,8 +285,10 @@ export class CommandConfirmationService {
           amount,
         });
       } else if (type === 61 || type === 62) {
+        // worker_business_trips.contract_id NOT NULL — worker_position'dan.
         rows.push({
           ...base,
+          contract_id: wp.contract_id,
           to_organization: this.str(item.to_organization),
           type,
           from: this.str(item.from),
