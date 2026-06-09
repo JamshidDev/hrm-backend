@@ -12,7 +12,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationStationService } from '@/modules/integration/stations/station.service';
-import { IntegrationPageQueryDto } from '@/modules/integration/_shared/page-query.dto';
+import { StationWorkersQueryDto } from '@/modules/integration/stations/dto/station-workers.dto';
 
 @ApiTags('Integration / Stations')
 @ApiBearerAuth('access-token')
@@ -22,10 +22,10 @@ export class IntegrationStationController {
   constructor(private readonly service: IntegrationStationService) {}
 
   @Get(':code/workers')
-  @ApiOperation({ summary: 'Station workers by code (stub)' })
+  @ApiOperation({ summary: 'Station workers by code (+ director, deputy)' })
   async listWorkers(
     @Param('code') code: string,
-    @Query() q: IntegrationPageQueryDto,
+    @Query() q: StationWorkersQueryDto,
   ) {
     return buildSuccess(true, await this.service.listWorkers(code, q));
   }
