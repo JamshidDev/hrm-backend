@@ -28,11 +28,15 @@ export interface ManyWorkerItem {
   reason?: string;
   // 71 (mukofot)
   gift?: number | string;
+  gift_type?: number | string;
   // 72 (jarima)
   fine?: number | string;
+  fine_type?: number | string;
   // 73 (moddiy yordam)
   amount?: number | string;
   type?: number | string;
+  // 71/72/73 — kim tomonidan (ixtiyoriy).
+  by_whom?: string;
 }
 
 // Termination (33–39) qo'shimcha ma'lumotlari — CommandAdditionalTemplateHelper.

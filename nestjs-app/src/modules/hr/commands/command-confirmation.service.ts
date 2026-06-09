@@ -6,7 +6,7 @@
 // Manba: json/commands/{id}.json (`data`) — buyruq yaratilganda saqlangan.
 
 import { Injectable, Logger } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -15,7 +15,11 @@ import {
   contract_additional,
   department_positions,
   model_has_roles,
+  organization_disciplinaries,
+  organization_financial_assistances,
+  organization_incentives,
   users,
+  worker_business_trips,
   worker_positions,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
@@ -87,17 +91,116 @@ export class CommandConfirmationService {
           })
           .where(eq(contracts.id, contractId));
       }
+    } else if ([61, 62, 71, 72, 73].includes(type)) {
+      // Many-worker insert: safar(61/62)/mukofot(71)/jarima(72)/moddiy yordam(73).
+      await this.applyManyWorkerInsert(commandId, type, data);
     } else if (
-      [41, 55, 43, 44, 50, 45, 46, 47, 48, 49, 51, 52, 53, 54].includes(type) ||
-      [61, 62, 71, 72, 73].includes(type)
+      [41, 55, 43, 44, 50, 45, 46, 47, 48, 49, 51, 52, 53, 54].includes(type)
     ) {
-      // Ta'til / safar / mukofot side-effectlari boyroq `data` talab qiladi
-      // (vacation type, contract_id, gift_type — buyruq qurishda hisoblanadi).
-      // Phase 2: shu hisoblangan data saqlanib, bu yerda qo'llaniladi.
-      this.logger.log(
-        `wp ${this.num(data.worker_position_id) ?? '-'} tur ${type}: side-effect Phase 2 (vacation/trip/incentive)`,
-      );
+      // Ta'til (vacation) side-effectlari — Batch B (keyingi bosqich).
+      this.logger.log(`tur ${type}: vacation side-effect Phase 2 (Batch B)`);
     }
+  }
+
+  // Many-worker buyruqlar (61/62 safar, 71 mukofot, 72 jarima, 73 moddiy yordam)
+  // tasdiqlangach — Laravel ManyWorkerCommandTypeHandler. data.worker_positions
+  // (har xodim uchun) bo'yicha har bir target jadvalga yozuv (bulk insert).
+  private async applyManyWorkerInsert(
+    commandId: number,
+    type: number,
+    data: CmdData,
+  ): Promise<void> {
+    const [cmd] = await this.db
+      .select({
+        command_date: commands.command_date,
+        organization_id: commands.organization_id,
+      })
+      .from(commands)
+      .where(eq(commands.id, commandId))
+      .limit(1);
+    const date = this.str(cmd?.command_date) ?? this.str(data.command_date);
+
+    const items = Array.isArray(data.worker_positions)
+      ? (data.worker_positions as Array<Record<string, unknown>>)
+      : [];
+    if (!items.length) return;
+
+    // Har worker_position uchun worker_id + organization_id (DB'dan).
+    const wpIds = items
+      .map((i) => this.num(i.id))
+      .filter((x): x is number => !!x);
+    if (!wpIds.length) return;
+    const wpRows = await this.db
+      .select({
+        id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+        organization_id: worker_positions.organization_id,
+      })
+      .from(worker_positions)
+      .where(inArray(worker_positions.id, wpIds));
+    const wpMap = new Map(wpRows.map((w) => [w.id, w]));
+
+    type Rec = Record<string, unknown>;
+    const rows: Rec[] = [];
+    for (const item of items) {
+      const wpId = this.num(item.id);
+      const wp = wpId ? wpMap.get(wpId) : undefined;
+      if (!wp || !wp.worker_id) continue;
+      const base = {
+        worker_id: wp.worker_id,
+        worker_position_id: wp.id,
+        organization_id: wp.organization_id,
+        date,
+        created_at: sql`NOW()`,
+        updated_at: sql`NOW()`,
+      };
+      if (type === 71) {
+        rows.push({
+          ...base,
+          reason: this.str(item.reason),
+          gift_type: this.num(item.gift_type ?? item.gift) ?? 0,
+        });
+      } else if (type === 72) {
+        rows.push({
+          ...base,
+          reason: this.str(item.reason),
+          fine_type: this.num(item.fine_type ?? item.fine) ?? 0,
+        });
+      } else if (type === 73) {
+        const amount = Number(item.amount) || 0;
+        const amountType = this.num(item.type) ?? 1;
+        const amountText =
+          amountType === 1
+            ? `mehnatga haq to'lash eng kam miqdorining ${item.amount} barobari ko'rinishida `
+            : `uzluksiz ish stajiga bog'liq ravishda lavozim maoshinining ${item.amount}% miqdorida `;
+        rows.push({
+          ...base,
+          reason: this.str(item.reason),
+          amount_text: amountText,
+          type: amountType,
+          amount,
+        });
+      } else if (type === 61 || type === 62) {
+        rows.push({
+          ...base,
+          to_organization: this.str(item.to_organization),
+          type,
+          from: this.str(item.from),
+          to: this.str(item.to),
+        });
+      }
+    }
+    if (!rows.length) return;
+
+    const table =
+      type === 71
+        ? organization_incentives
+        : type === 72
+          ? organization_disciplinaries
+          : type === 73
+            ? organization_financial_assistances
+            : worker_business_trips;
+    await this.db.insert(table).values(rows as never);
   }
 
   // CONTRACTS tasdiqlangach — Laravel ContractConfirmationService::confirmation.
