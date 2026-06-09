@@ -29,6 +29,7 @@ import { MinioService } from '@/shared/minio/minio.service';
 import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import {
   statements,
+  positions,
   statement_aggregates,
   organizations,
   workers,
@@ -95,6 +96,12 @@ const SORT_COLUMNS: Record<string, PgColumn> = {
 };
 
 // Service-darajadagi list query shape (StatementListQueryDto bilan mos).
+interface ByPositionsQueryLike extends PageQueryLike {
+  positions?: string;
+  organizations?: string;
+  organization_id?: number;
+}
+
 interface StatementListQuery extends PageQueryLike {
   organizations?: string;
   search?: string;
@@ -703,13 +710,18 @@ export class StatementService {
   // GET /api/v1/economist/statements-by-positions — Laravel
   // downloadWorkersByPositions → StatementsByPositionJob. UserExportTask + fonda
   // Excel (javob faqat success xabari).
-  async byPositions(q: PageQueryLike): Promise<void> {
+  async byPositions(q: ByPositionsQueryLike): Promise<void> {
     const year =
       q?.year !== undefined ? Number(q.year) : new Date().getFullYear();
     await this.exportRunner.run({
       type: 27, // ExportTaskEnum.STATEMENTS_BY_POSITIONS
       folder: 'economist',
-      build: () => this.exportByPosition(year),
+      build: () =>
+        this.exportByPosition(year, {
+          organizations: q?.organizations,
+          organization_id: q?.organization_id,
+          positions: q?.positions,
+        }),
     });
   }
 
@@ -728,11 +740,38 @@ export class StatementService {
    */
   async exportByPosition(
     year: number,
-    organizationId?: number,
+    filters: {
+      organizations?: string;
+      organization_id?: number;
+      positions?: string;
+    } = {},
   ): Promise<Buffer> {
-    const conds = [notDeleted(statements), eq(statements.year, year)];
-    if (organizationId)
-      conds.push(eq(statements.organization_id, organizationId));
+    const conds: SQL[] = [notDeleted(statements), eq(statements.year, year)];
+
+    // Rol/org-scope — Laravel StatementsByPositionExport ->filter($user).
+    // Scope bo'sh bo'lsa whereOrg `FALSE` qaytaradi → ruxsatsiz ko'rinmaydi.
+    const inScope = await this.scope.whereOrg(statements.organization_id, {
+      organizations: filters.organizations,
+      organization_id: filters.organization_id,
+    });
+    if (inScope) conds.push(inScope);
+
+    // positions filtri — Laravel ->when(positions, whereIn('position_id', csv)).
+    // statements'da position_id yo'q (matn) → position_id'larni nomга map qilamiz.
+    const posIds = (filters.positions ?? '')
+      .split(',')
+      .map((x) => Number(x.trim()))
+      .filter((x) => x > 0);
+    if (posIds.length) {
+      const pr = await this.db
+        .select({ name: positions.name })
+        .from(positions)
+        .where(inArray(positions.id, posIds));
+      const names = pr.map((p) => p.name).filter((n): n is string => !!n);
+      conds.push(
+        names.length ? inArray(statements.position, names) : sql`FALSE`,
+      );
+    }
 
     const rows = await this.db
       .select({
