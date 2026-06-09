@@ -45,6 +45,8 @@ import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ConvertService } from '@/shared/convert/convert.service';
+import * as QRCode from 'qrcode';
+import { injectDocxImage } from '@/modules/confirmation/documents/docx-image.util';
 import {
   DocumentBase64QueryDto,
   DocumentConfirmDto,
@@ -239,6 +241,7 @@ export class DocumentService {
         id: confTable.id,
         status: confTable.status,
         worker_id: confTable.worker_id,
+        type: confTable.type, // 'w' (hodim) | 'd' (direktor) | 's' (imzolovchi)
         doc_id: confTable[map.fk],
       })
       .from(confTable)
@@ -251,7 +254,11 @@ export class DocumentService {
       );
     }
     const [doc] = await this.db
-      .select({ id: dTable.id })
+      .select({
+        id: dTable.id,
+        file: dTable.file,
+        confirmation_file: dTable.confirmation_file,
+      })
       .from(dTable)
       .where(eq(dTable.id, conf.doc_id))
       .limit(1);
@@ -306,7 +313,15 @@ export class DocumentService {
           ne(confTable.status, 3),
         ),
       );
-    if (Number(pendingRow?.pending ?? 0) === 0) {
+    const pending = Number(pendingRow?.pending ?? 0);
+
+    // Imzo rasmini DOCX'ga bosamiz — HAR imzolovchi o'z `${signature_*}` o'rnini
+    // to'ldiradi (Laravel oxirgi imzolovchinigina bosadi; bu yerda barcha
+    // imzolar ko'rinishi uchun har confirmation'da DOCX yangilanadi). PDF esa
+    // faqat oxirgi imzoda (pending=0) qayta generatsiya qilinadi — tejamkorlik.
+    await this.replaceDocumentSignature(dto, conf, doc, pending === 0);
+
+    if (pending === 0) {
       await this.db
         .update(dTable)
         .set({ confirmation: 3, updated_at: sql`NOW()` })
@@ -315,6 +330,75 @@ export class DocumentService {
     }
 
     return { message: this.i18n.t('messages.document.signed_successfully') };
+  }
+
+  // Laravel DocumentFinalizeService::replaceDocumentSignature — imzo rasmini
+  // (digital=QR kod hujjat URL'iga, biometrik=yuklangan rasm) DOCX'dagi
+  // `${signature_worker}`/`${signature_director}` o'rniga bosib, PDF'ni qayta
+  // generatsiya qiladi. Xato bo'lsa tasdiqни bekor qilmaydi (log).
+  private async replaceDocumentSignature(
+    dto: DocumentSignatureDto,
+    conf: { id: number; type: string | null },
+    doc: { file: string | null; confirmation_file: string | null },
+    regeneratePdf: boolean,
+  ): Promise<void> {
+    try {
+      if (!doc.file) return;
+      const fileName = doc.file.split('/').pop() ?? doc.file;
+
+      // Imzo rasmi.
+      let png: Buffer | null = null;
+      if ((dto.confirmation_type ?? 1) === 2) {
+        // Biometrik — yuklangan base64 rasm (data:image/...;base64,...).
+        if (dto.signature) {
+          const b64 = dto.signature.replace(/^data:image\/\w+;base64,/i, '');
+          png = Buffer.from(b64, 'base64');
+        }
+      } else {
+        // Digital — hujjat URL'iga QR kod (Laravel signatureToImageDigital).
+        const frontUrl = this.config.get<string>(
+          'APP_FRONT_URL',
+          'http://localhost',
+        );
+        const url = `${frontUrl}/public/${dto.model}/${fileName}`;
+        png = await QRCode.toBuffer(url, { width: 200, margin: 0 });
+      }
+      if (!png) return;
+
+      // Imzo kaliti: hodim ('w') + contracts/ad-contract/worker-application →
+      // signature_worker, aks holda signature_director (Laravel parity).
+      const key =
+        conf.type === 'w' &&
+        ['contracts', 'contract-additional', 'worker-application'].includes(
+          dto.model,
+        )
+          ? 'signature_worker'
+          : 'signature_director';
+
+      // DOCX'ni olib, rasmni joylab, qaytarib saqlaymiz.
+      const docxBuf = await this.minio.getObject(doc.file);
+      const stamped = injectDocxImage(docxBuf, key, png);
+      await this.minio.putObject(
+        doc.file,
+        stamped,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+
+      // PDF'ni qayta generatsiya qilamiz (faqat oxirgi imzoda — barcha imzolar
+      // DOCX'da bo'lganda).
+      if (regeneratePdf && doc.confirmation_file) {
+        const pdf = await this.convert.docxToPdf(stamped);
+        await this.minio.putObject(
+          doc.confirmation_file,
+          pdf,
+          'application/pdf',
+        );
+      }
+    } catch (e) {
+      this.logger.error(
+        `replaceDocumentSignature(conf=${conf.id}) xato: ${String(e)}`,
+      );
+    }
   }
 
   // Test PIN'lar — worker mavjudligini tekshirishni chetlab o'tadi (Laravel).
