@@ -12,6 +12,7 @@ import type { DataSource } from '@/db/types';
 import {
   commands,
   contracts,
+  contract_additional,
   department_positions,
   model_has_roles,
   users,
@@ -28,6 +29,13 @@ import { sql } from 'drizzle-orm';
 const STATUS_ACTIVE = 2;
 const STATUS_FINISHED = 3;
 const CONTRACT_TYPE_ONE = 1;
+// ContractCommandStatusEnum::NOT_MANDATORY — side-effect to'g'ridan-to'g'ri
+// contract/ad-contract tasdig'ida qo'llanadi (buyruq orqali EMAS).
+const COMMAND_STATUS_NOT_MANDATORY = 3;
+// ContractAdditionalTypeEnum
+const AD_TYPE_UPDATE_WORKER = 1; // ONE → updateWorker
+const AD_TYPE_UPDATE_POSITION = 8; // EIGHT → updateWorkerPosition
+const AD_TYPE_FINISH = [12, 13]; // TWELVE/THIRTEEN → finishedWorkerPosition
 const WORKER_ROLE_ID = 2;
 const USER_MODEL_TYPE = 'App\\Models\\User';
 
@@ -89,6 +97,89 @@ export class CommandConfirmationService {
       this.logger.log(
         `wp ${this.num(data.worker_position_id) ?? '-'} tur ${type}: side-effect Phase 2 (vacation/trip/incentive)`,
       );
+    }
+  }
+
+  // CONTRACTS tasdiqlangach — Laravel ContractConfirmationService::confirmation.
+  // FAQAT command_status=NOT_MANDATORY bo'lsa (aks holda buyruq orqali bo'ladi).
+  //   json/contracts/{id}.json → data → createWorker + status=ACTIVE.
+  async applyContractConfirmation(contractId: number): Promise<void> {
+    const [c] = await this.db
+      .select({ id: contracts.id, command_status: contracts.command_status })
+      .from(contracts)
+      .where(eq(contracts.id, contractId))
+      .limit(1);
+    if (!c || c.command_status !== COMMAND_STATUS_NOT_MANDATORY) return;
+
+    const data = await this.readJsonData(`json/contracts/${contractId}.json`);
+    if (!data) {
+      this.logger.warn(`json/contracts/${contractId}.json topilmadi`);
+      return;
+    }
+    data.rank = data.rank ?? 1;
+    data.rate = data.rate ?? 1;
+    data.group = data.group ?? 0;
+
+    await this.createWorker(data);
+    await this.db
+      .update(contracts)
+      .set({ status: STATUS_ACTIVE, updated_at: sql`NOW()` })
+      .where(eq(contracts.id, contractId));
+  }
+
+  // CONTRACT_ADDITIONAL tasdiqlangach — Laravel ContractConfirmationService::
+  // updateContract. FAQAT command_status=NOT_MANDATORY. Tur bo'yicha:
+  //   1 → updateWorker, 8 → updateWorkerPosition, 12/13 → finishedWorkerPosition
+  //   (+ parent contract status=FINISHED, contract_to_date).
+  async applyContractAdditionalConfirmation(adId: number): Promise<void> {
+    const [ad] = await this.db
+      .select({
+        id: contract_additional.id,
+        type: contract_additional.type,
+        command_status: contract_additional.command_status,
+        contract_id: contract_additional.contract_id,
+      })
+      .from(contract_additional)
+      .where(eq(contract_additional.id, adId))
+      .limit(1);
+    if (!ad || ad.command_status !== COMMAND_STATUS_NOT_MANDATORY) return;
+
+    const data = await this.readJsonData(
+      `json/contract-additional/${adId}.json`,
+    );
+    if (!data) {
+      this.logger.warn(`json/contract-additional/${adId}.json topilmadi`);
+      return;
+    }
+
+    const type = ad.type;
+    if (type === AD_TYPE_UPDATE_POSITION) {
+      await this.updateWorkerPosition(data);
+    } else if (type === AD_TYPE_UPDATE_WORKER) {
+      await this.updateWorker(data);
+    } else if (AD_TYPE_FINISH.includes(type)) {
+      await this.finishedWorkerPosition(data);
+      const contractId = this.num(ad.contract_id);
+      if (contractId) {
+        await this.db
+          .update(contracts)
+          .set({
+            status: STATUS_FINISHED,
+            contract_to_date: this.str(data.contract_to_date),
+            updated_at: sql`NOW()`,
+          })
+          .where(eq(contracts.id, contractId));
+      }
+    }
+  }
+
+  private async readJsonData(key: string): Promise<CmdData | null> {
+    try {
+      const buf = await this.minio.getObject(key);
+      const parsed = JSON.parse(buf.toString('utf-8')) as { data?: CmdData };
+      return parsed.data ?? null;
+    } catch {
+      return null;
     }
   }
 

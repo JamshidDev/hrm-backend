@@ -175,8 +175,17 @@ export class DocumentService {
     try {
       if (model === 'commands') {
         await this.commandConfirmation.applyConfirmation(docId);
+      } else if (model === 'contracts') {
+        // Laravel: CONTRACTS (command_status NOT_MANDATORY) →
+        // ContractConfirmationService::confirmation (createWorker + ACTIVE).
+        await this.commandConfirmation.applyContractConfirmation(docId);
+      } else if (model === 'contract-additional') {
+        // Laravel: CONTRACT_ADDITIONAL (NOT_MANDATORY) → updateContract
+        // (xodim lavozimini o'zgartirish/yakunlash).
+        await this.commandConfirmation.applyContractAdditionalConfirmation(
+          docId,
+        );
       }
-      // Phase 2: contracts, contract-additional side-effectlari.
     } catch (e) {
       // Side-effect xatosi tasdiqni bekor qilmaydi (Laravel report()).
       this.logger.error(
