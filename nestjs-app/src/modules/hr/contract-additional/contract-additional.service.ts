@@ -182,6 +182,19 @@ export class ContractAdditionalService {
     dto.organization_id = organizationId;
     const docxBuffer = await this.replace.buildContractAdditionalDocx(dto);
 
+    // worker_id + contract_id worker_position'dan (Laravel systemData parity).
+    // type 12/13 finish parent contract'ni FINISHED qilish uchun contract_id
+    // contract_additional yozuvida bo'lishi SHART.
+    const [wp] = await this.db
+      .select({
+        worker_id: worker_positions.worker_id,
+        contract_id: worker_positions.contract_id,
+      })
+      .from(worker_positions)
+      .where(eq(worker_positions.id, dto.worker_position_id))
+      .limit(1);
+    const workerId = dto.worker_id ?? wp?.worker_id ?? null;
+
     const [row] = await this.db
       .insert(contract_additional)
       .values({
@@ -190,7 +203,8 @@ export class ContractAdditionalService {
         worker_position_id: dto.worker_position_id,
         user_id: userId,
         director_id: dto.director_id,
-        worker_id: dto.worker_id ?? null,
+        worker_id: workerId,
+        contract_id: wp?.contract_id ?? null,
         command_status: cmdStatus,
         number: dto.number != null ? Number(dto.number) : null,
         contract_date: dto.contract_date,
@@ -208,13 +222,6 @@ export class ContractAdditionalService {
     // contract_additional_confirmations — Laravel createConfirmation: hodim 'w'
     // + direktor 'd'. Tasdiqlash document/signature oqimi orqali bo'ladi va
     // hammasi SUCCESS bo'lganda applyContractAdditionalConfirmation ishlaydi.
-    // worker_id Laravel'da workerPosition->worker_id'dan keladi.
-    const [wp] = await this.db
-      .select({ worker_id: worker_positions.worker_id })
-      .from(worker_positions)
-      .where(eq(worker_positions.id, dto.worker_position_id))
-      .limit(1);
-    const workerId = dto.worker_id ?? wp?.worker_id ?? null;
     const [director] = await this.db
       .select({
         worker_id: confirmation_workers.worker_id,
@@ -269,7 +276,10 @@ export class ContractAdditionalService {
     const snapshot = {
       request: dto,
       data: {
-        worker_id: dto.worker_id ?? null,
+        // Laravel: worker_id + contract_id worker_position'dan keladi (type 8
+        // updateWorkerPosition → createWorker uchun worker_id MAJBURIY).
+        worker_id: workerId,
+        contract_id: wp?.contract_id ?? null,
         worker_position_id: dto.worker_position_id,
         organization_id: organizationId,
         type: dto.type,
