@@ -292,12 +292,22 @@ export class LmsGroupService {
   // GroupWorkersResource: { id, worker, position (short), worker_position_id, certificate }
   async groupWorkers(q: GroupListQueryDto) {
     const { page, perPage } = readPaging(q);
-    const where = q.group_id
-      ? and(
-          eq(edu_plan_workers.group_id, q.group_id),
-          notDeleted(edu_plan_workers),
-        )
-      : notDeleted(edu_plan_workers);
+    const conds = [notDeleted(edu_plan_workers)];
+    if (q.group_id) {
+      conds.push(eq(edu_plan_workers.group_id, q.group_id));
+    }
+    // Laravel: when(protocol_id, whereDoesntHave('certificate')) — protocol_id
+    // berilgan bo'lsa, FAQAT sertifikati YO'Q xodimlar (hasOne edu_plan_worker_id).
+    if (q.protocol_id) {
+      conds.push(
+        sql`NOT EXISTS (
+          SELECT 1 FROM lms_certificates c
+          WHERE c.edu_plan_worker_id = ${edu_plan_workers.id}
+            AND c.deleted_at IS NULL
+        )`,
+      );
+    }
+    const where = and(...conds);
 
     const [rows, [{ total }]] = await Promise.all([
       this.db
@@ -397,6 +407,11 @@ export class LmsGroupService {
           cert_to: lms_certificates.cert_to,
           serial: lms_certificates.serial,
           number: lms_certificates.number,
+          start_exam_result: lms_certificates.start_exam_result,
+          end_exam_result: lms_certificates.end_exam_result,
+          confirmation_file: lms_certificates.confirmation_file,
+          generate: lms_certificates.generate,
+          confirmation: lms_certificates.confirmation,
         })
         .from(lms_certificates)
         .where(
@@ -441,6 +456,31 @@ export class LmsGroupService {
         (c) => [Number(c.edu_plan_worker_id), c] as const,
       ),
     );
+    // confirmation_file presigned URL'lar (batch) — Laravel Helper::fileUrl.
+    const certFileUrls = await Promise.all(
+      (certRows as any[]).map((c) =>
+        c.confirmation_file
+          ? this.minio.fileUrl(c.confirmation_file as string)
+          : Promise.resolve(null),
+      ),
+    );
+    const certFileMap = new Map(
+      (certRows as any[]).map(
+        (c, i) => [Number(c.edu_plan_worker_id), certFileUrls[i]] as const,
+      ),
+    );
+    // ConfirmationStatusEnum → i18n label (1=process..5=deleted).
+    const confWord: Record<number, string> = {
+      1: 'process',
+      2: 'read',
+      3: 'success',
+      4: 'rejected',
+      5: 'deleted',
+    };
+    const confName = (v: number | null): string => {
+      const w = v != null ? confWord[v] : undefined;
+      return w ? this.i18n.t(`messages.confirmation.status.${w}`) : '';
+    };
 
     return {
       current_page: page,
@@ -475,6 +515,14 @@ export class LmsGroupService {
                 cert_to: cert.cert_to,
                 serial: cert.serial,
                 number: cert.number,
+                start_exam_result: cert.start_exam_result,
+                end_exam_result: cert.end_exam_result,
+                confirmation_file: certFileMap.get(Number(r.id)) ?? null,
+                generate: cert.generate,
+                confirmation: {
+                  id: cert.confirmation,
+                  name: confName(cert.confirmation),
+                },
               }
             : null,
         };
