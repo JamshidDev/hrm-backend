@@ -35,6 +35,7 @@ import { TelegramBotModule } from '@/modules/telegram-bot/telegram-bot.module';
 import { OnlyOfficeModule } from '@/modules/only-office/only-office.module';
 import { RedisModule } from '@/shared/redis/redis.module';
 import { SocketModule } from '@/modules/socket/socket.module';
+import { ZoomModule } from '@/shared/zoom/zoom.module';
 import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 import { BusinessExceptionFilter } from '@/common/filters/business-exception.filter';
 import { ExistsConstraint } from '@/common/validators/exists.validator';
@@ -65,6 +66,7 @@ class RequestContextModule {}
     DrizzleModule,
     RedisModule,
     SocketModule,
+    ZoomModule,
     HikCentralModule,
     MinioModule,
     ExcelModule,

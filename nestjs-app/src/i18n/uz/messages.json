@@ -56,12 +56,13 @@
       "three": "OʻzLiDeP partiyasi",
       "four": "Adolat partiyasi",
       "five": "Milliy tiklanish partiyasi"
-    }
+    },
+    "not_found": "Xodim topilmadi"
   },
   "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
   "invalid_credentials_password": "Foydalanuvchi nomi yoki parol to'g'riligini tekshiring",
   "user_block": "Sizning profilingiz tizim ma'muriyati tomonidan vaqtincha cheklab qo'yildi.",
-  "token_is_expired": "Token muddati tugagan.",
+  "token_is_expired": "Token muddati tugagan",
   "not_found": "Ma'lumot topilmadi",
   "server_error": "Tizimda xatolik yuzaga keldi. Birozdan so'ng qayta urinib ko'ring.",
   "successfully_stored": "Muvaffaqqiyatli qo'shildi",
@@ -73,7 +74,6 @@
   "meet_not_found": "Uchrashuv topilmadi",
   "meet_not_available": "Uchrashuv hali mavjud emas",
   "meet_ended": "Uchrashuv yakunlangan",
-  "token_is_expired": "Token muddati tugagan",
   "worker_position_not_found": "Xodimning lavozimi topilmadi yoki mavjud emas",
   "worker_not_found": "Xodim topilmadi yoki mavjud emas",
   "worker_pin_exists": "Bunday JSHSHIR lik xodim allaqachon mavjud",
@@ -695,5 +695,8 @@
     "hospital": "Poliklinika xodimi",
     "turnstile_viewer": "Turniket ko'ruvchi",
     "turnstile_leader": "Turniket Leader"
+  },
+  "zoom": {
+    "not_found": "Zoom uchrashuvi topilmadi"
   }
 }

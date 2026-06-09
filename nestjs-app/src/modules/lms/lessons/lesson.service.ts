@@ -23,7 +23,9 @@ import {
   subjects,
   teachers,
   workers,
+  zoom_meetings,
 } from '@/db/schema';
+import { ZoomService } from '@/shared/zoom/zoom.service';
 import {
   CalendarDay,
   CalendarLessonItem,
@@ -42,6 +44,7 @@ export class LmsLessonService {
     @InjectDb() private readonly db: DataSource,
     private readonly minio: MinioService,
     private readonly i18n: I18nService,
+    private readonly zoom: ZoomService,
   ) {}
 
   private async nextId(): Promise<number> {
@@ -382,14 +385,86 @@ export class LmsLessonService {
     }));
   }
 
+  // GET /lms/lessons/:lesson/create-meet — Laravel LessonMeetController::
+  // createZoomMeeting. Mavjud bo'lsa cache qaytaradi; aks holda Zoom meeting
+  // yaratib lesson zoom ustunlarini + zoom_meetings (webhook lookup) saqlaydi.
   async createZoomMeeting(lessonId: number) {
     const [row] = await this.db
-      .select({ id: lessons.id })
+      .select({
+        id: lessons.id,
+        name: lessons.name,
+        lesson_date: lessons.lesson_date,
+        start_time: lessons.start_time,
+        end_time: lessons.end_time,
+        zoom_meeting_id: lessons.zoom_meeting_id,
+        zoom_join_url: lessons.zoom_join_url,
+        zoom_start_url: lessons.zoom_start_url,
+        zoom_password: lessons.zoom_password,
+      })
       .from(lessons)
       .where(eq(lessons.id, lessonId))
       .limit(1);
-    if (!row) throw new BusinessException(404, 'not_found');
-    return { success: true, stub: true, url: '', meeting_id: '' };
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+
+    // Oldin yaratilgan bo'lsa — cache qaytaramiz (Laravel parity).
+    if (row.zoom_meeting_id) {
+      return {
+        meeting_id: row.zoom_meeting_id,
+        join_url: row.zoom_join_url,
+        zoom_start_url: row.zoom_start_url,
+        zoom_password: row.zoom_password,
+      };
+    }
+
+    // start_time/end_time — 'HH:MM:SS'. duration daqiqada (Zoom uchun).
+    const toMin = (t: string): number => {
+      const [h = 0, m = 0] = (t ?? '').split(':').map((x) => Number(x) || 0);
+      return h * 60 + m;
+    };
+    const duration = Math.max(
+      1,
+      Math.round(toMin(row.end_time) - toMin(row.start_time)),
+    );
+    const startTime = `${row.lesson_date}T${row.start_time}`;
+
+    const meeting = await this.zoom.createMeeting(
+      row.name ?? `Lesson #${lessonId}`,
+      startTime,
+      duration,
+    );
+
+    // Lesson zoom ustunlarini yangilash.
+    await this.db
+      .update(lessons)
+      .set({
+        zoom_meeting_uuid: meeting.uuid,
+        zoom_meeting_id: meeting.id,
+        zoom_start_url: meeting.start_url,
+        zoom_join_url: meeting.join_url,
+        zoom_password: meeting.password ?? null,
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(lessons.id, lessonId));
+
+    // zoom_meetings (webhook zoom_id bo'yicha lookup qiladi).
+    const [{ zid }] = await this.db
+      .select({ zid: sql<number>`COALESCE(MAX(id), 0)::int + 1` })
+      .from(zoom_meetings);
+    await this.db.insert(zoom_meetings).values({
+      id: zid,
+      model_id: lessonId,
+      model_type: 'Modules\\LMS\\Models\\Lesson',
+      zoom_uuid: meeting.uuid,
+      zoom_id: meeting.id,
+      meet_date_and_time: startTime,
+      duration,
+      details: meeting,
+      created_at: sql`NOW()`,
+      updated_at: sql`NOW()`,
+    });
+
+    return meeting;
   }
 
   // Carbon::parse(start)->diffInMinutes(parse(end)) / 60 ekvivalenti (soatda).

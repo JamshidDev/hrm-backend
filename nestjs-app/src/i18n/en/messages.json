@@ -56,12 +56,13 @@
       "three": "UzLiDeP Party",
       "four": "Adolat Party",
       "five": "Milliy Tiklanish Party"
-    }
+    },
+    "not_found": "Employee not found"
   },
   "invalid_credentials": "Such user was not found in the system. Please verify the entered information...",
   "invalid_credentials_password": "Check if the username or password is correct.",
   "user_block": "Your profile has been temporarily restricted by the system administration.",
-  "token_is_expired": "The token has expired.",
+  "token_is_expired": "Token has expired",
   "not_found": "Data not found",
   "server_error": "A system error has occurred. Please try again later.",
   "successfully_stored": "Successfully added",
@@ -73,7 +74,6 @@
   "meet_not_found": "Meeting not found",
   "meet_not_available": "Meeting is not available yet",
   "meet_ended": "Meeting has ended",
-  "token_is_expired": "Token has expired",
   "worker_position_not_found": "Worker position not found or does not exist",
   "worker_not_found": "Worker not found or does not exist",
   "worker_pin_exists": "Worker PIN already exists",
@@ -695,5 +695,8 @@
     "hospital": "Polyclinic employee",
     "turnstile_viewer": "Turnstile viewer",
     "turnstile_leader": "Turnstile Leader"
+  },
+  "zoom": {
+    "not_found": "Zoom meeting not found"
   }
 }
