@@ -19,6 +19,7 @@ import {
   organization_financial_assistances,
   organization_incentives,
   users,
+  vacations,
   worker_business_trips,
   worker_positions,
 } from '@/db/schema';
@@ -97,8 +98,109 @@ export class CommandConfirmationService {
     } else if (
       [41, 55, 43, 44, 50, 45, 46, 47, 48, 49, 51, 52, 53, 54].includes(type)
     ) {
-      // Ta'til (vacation) side-effectlari — Batch B (keyingi bosqich).
-      this.logger.log(`tur ${type}: vacation side-effect Phase 2 (Batch B)`);
+      // Ta'til (vacation) side-effectlari — Batch B.
+      await this.applyVacationSideEffect(commandId, type, data);
+    }
+  }
+
+  // Ta'til buyruqlari (Batch B) tasdiqlangach — Laravel CommandConfirmationService
+  // vacation case'lari. type bo'yicha:
+  //   41/55 → many-worker upsert; 45-54 → single updateOrCreate;
+  //   43/50 → update {to, work_day}; 44 → update {to, rest_day, work_day}.
+  // Vacation.type = command_type (Laravel parity), from/to/work_day request'dan.
+  private async applyVacationSideEffect(
+    commandId: number,
+    type: number,
+    data: CmdData,
+  ): Promise<void> {
+    // 43/50/44 — mavjud ta'tilni yangilash (xodimning oxirgi ta'tili).
+    if ([43, 50, 44].includes(type)) {
+      const wpId = this.num(data.worker_position_id);
+      const workerId = this.num(data.worker_id);
+      if (!workerId && !wpId) return;
+      const [last] = await this.db
+        .select({ id: vacations.id })
+        .from(vacations)
+        .where(
+          workerId
+            ? eq(vacations.worker_id, workerId)
+            : eq(vacations.worker_position_id, wpId as number),
+        )
+        .orderBy(sql`${vacations.id} DESC`)
+        .limit(1);
+      if (!last) return;
+      const set: Record<string, unknown> = {
+        to: this.str(data.new_date ?? data.to),
+        work_day: this.str(data.work_day),
+        updated_at: sql`NOW()`,
+      };
+      if (type === 44) set.rest_day = this.num(data.rest_day);
+      await this.db.update(vacations).set(set).where(eq(vacations.id, last.id));
+      return;
+    }
+
+    // 41/55 — many-worker upsert; 45-54 — single updateOrCreate.
+    const items: Array<Record<string, unknown>> =
+      [41, 55].includes(type) && Array.isArray(data.worker_positions)
+        ? (data.worker_positions as Array<Record<string, unknown>>)
+        : [{ id: data.worker_position_id, ...data }];
+
+    for (const item of items) {
+      const wpId = this.num(item.id ?? data.worker_position_id);
+      if (!wpId) continue;
+      const [wp] = await this.db
+        .select({
+          id: worker_positions.id,
+          worker_id: worker_positions.worker_id,
+          organization_id: worker_positions.organization_id,
+          contract_id: worker_positions.contract_id,
+        })
+        .from(worker_positions)
+        .where(eq(worker_positions.id, wpId))
+        .limit(1);
+      if (!wp || !wp.worker_id) continue;
+
+      const toDate = this.str(item.to ?? data.to);
+      const record: Record<string, unknown> = {
+        worker_id: wp.worker_id,
+        worker_position_id: wp.id,
+        organization_id: wp.organization_id,
+        contract_id: wp.contract_id,
+        command_id: commandId,
+        type, // Laravel: vacation.type = command_type
+        from: this.str(item.from ?? data.from),
+        to: toDate,
+        work_day: this.str(item.work_day ?? data.work_day),
+        period_from: this.str(item.period_from ?? data.period_from),
+        period_to: this.str(item.period_to ?? data.period_to),
+        all_day: this.num(item.all_day ?? data.all_day),
+        rest_day: this.num(item.rest_day ?? data.rest_day),
+      };
+
+      // updateOrCreate / upsert kaliti: (worker_id, type, to).
+      const [existing] = await this.db
+        .select({ id: vacations.id })
+        .from(vacations)
+        .where(
+          and(
+            eq(vacations.worker_id, wp.worker_id),
+            eq(vacations.type, type),
+            toDate ? eq(vacations.to, toDate) : sql`${vacations.to} IS NULL`,
+          ),
+        )
+        .limit(1);
+      if (existing) {
+        await this.db
+          .update(vacations)
+          .set({ ...record, updated_at: sql`NOW()` })
+          .where(eq(vacations.id, existing.id));
+      } else {
+        await this.db.insert(vacations).values({
+          ...record,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        } as never);
+      }
     }
   }
 
