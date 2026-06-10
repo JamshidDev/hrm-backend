@@ -11,6 +11,7 @@ import { cities } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { nowDb } from '@/common/utils/datetime.util';
 import { CityMapper } from '@/modules/structure/cities/city.mapper';
 import {
   QueryCityDto,
@@ -96,9 +97,10 @@ export class CityService {
   async remove(id: number): Promise<void> {
     await this.findById(id);
 
+    // Laravel softDelete app vaqti (now()) bilan yozadi — DB NOW() emas.
     await this.db
       .update(cities)
-      .set({ deleted_at: sql`NOW()` })
+      .set({ deleted_at: nowDb() })
       .where(eq(cities.id, id));
   }
 

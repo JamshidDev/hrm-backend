@@ -10,6 +10,7 @@ import { regions } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { nowDb } from '@/common/utils/datetime.util';
 import { RegionMapper } from '@/modules/structure/regions/region.mapper';
 import {
   QueryRegionDto,
@@ -96,9 +97,10 @@ export class RegionService {
   async remove(id: number): Promise<void> {
     await this.findById(id);
 
+    // Laravel softDelete app vaqti (now()) bilan yozadi — DB NOW() emas.
     await this.db
       .update(regions)
-      .set({ deleted_at: sql`NOW()` })
+      .set({ deleted_at: nowDb() })
       .where(eq(regions.id, id));
   }
 
