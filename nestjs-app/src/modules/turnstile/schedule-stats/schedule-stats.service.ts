@@ -1203,9 +1203,12 @@ export class ScheduleStatsService {
   // tenglashtirib, proper grouping ishlatamiz.
   // ────────────────────────────────────────────────────────────────────────
   async privilegeTurnstilePreview(q: PreviewQuery) {
+    // Laravel: ->where('start_minute','!=',0)->orWhere('end_minute','!=',0)
+    // guruhlanmagan → `(barcha AND start!=0) OR (end!=0)`. end!=0 rowlari
+    // scope/status/deleted shartlaridan "qochadi" (Laravel xulqi — parity).
     return this.workerPositionPreview(q, {
-      extraCond: sql`AND (wp.turnstile_privilege_start_minute != 0
-                          OR wp.turnstile_privilege_end_minute != 0)`,
+      extraCond: sql`AND wp.turnstile_privilege_start_minute != 0`,
+      trailingOr: sql` OR wp.turnstile_privilege_end_minute != 0`,
       extraFields: [
         'turnstile_privilege_start_minute',
         'turnstile_privilege_end_minute',
@@ -1248,6 +1251,9 @@ export class ScheduleStatsService {
       extraCond: ReturnType<typeof sql>;
       extraFields?: string[];
       extraMap?: (r: any) => Record<string, unknown>;
+      // Laravel guruhlanmagan orWhere parity — searchCond'dan keyin qo'shiladi,
+      // butun AND-guruhni OR bilan bog'laydi: `(... ) OR (trailingOr)`.
+      trailingOr?: ReturnType<typeof sql>;
     },
   ) {
     const { page, perPage, offset } = pageOf(q);
@@ -1273,7 +1279,7 @@ export class ScheduleStatsService {
       WHERE wp.status = 2 AND wp.deleted_at IS NULL
         AND wp.organization_id IN (${sqlIdList(allowedIds)})
         ${deptCsv.length > 0 ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})` : sql``}
-        ${opts.extraCond}${searchCond}
+        ${opts.extraCond}${searchCond}${opts.trailingOr ?? sql``}
     `;
 
     const [rowsRes, cntRes] = await Promise.all([
