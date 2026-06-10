@@ -28,20 +28,22 @@ export class RegionService {
   async findAll(filters: QueryRegionDto): Promise<RegionListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-    // BITTA object-where — list ham, count ham ($count(relationalQuery)) shundan.
-    const where = this.buildWhere(filters);
+    const { search, country_id } = filters;
+
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+      ...(country_id ? { country_id } : {}),
+    };
 
     return paginate({
       db: this.db,
-      // count: relational query'ni sql subquery qilib $count qiladi (cast'siz —
-      // sql template SQL source beradi). RQB'da count metodi yo'q (Prisma'dan
-      // farqli), shuning uchun $count + sql — drizzle-v2'dagi count yo'li.
       count: () =>
         this.db.$count(sql`(${this.db.query.regions.findMany({ where })})`),
       query: ({ limit, offset }) =>
         this.db.query.regions.findMany({
           where,
-          with: { country: true }, // country eager load
+          with: { country: true },
           orderBy: { id: 'asc' },
           limit,
           offset,
@@ -52,18 +54,7 @@ export class RegionService {
     });
   }
 
-  // Relational object-where — Laravel scopeSearch (name LIKE) + country_id.
-  private buildWhere(filters: QueryRegionDto) {
-    const { search, country_id } = filters;
-    return {
-      deleted_at: { isNull: true as const },
-      ...(search ? { name: { ilike: `%${search}%` } } : {}),
-      ...(country_id ? { country_id } : {}),
-    };
-  }
-
   async create(dto: CreateRegionDto): Promise<void> {
-    // id'siz — insertRecord atomik MAX+1 beradi (transaction + advisory lock).
     await insertRecord(this.db, regions, {
       country_id: dto.country_id,
       name: dto.name,

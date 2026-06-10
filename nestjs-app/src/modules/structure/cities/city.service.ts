@@ -1,7 +1,3 @@
-// City service. Laravel: Modules/Structure/Http/Controllers/CityController.
-// scopeSearch: name LIKE + region_id filter. with('region.country') eager (lekin
-// CityResource faqat region.id va region.name dan foydalanadi).
-
 import { Injectable } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
@@ -32,14 +28,15 @@ export class CityService {
   async findAll(filters: QueryCityDto): Promise<CityListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-    // BITTA object-where — list ham, count ham ($count(relationalQuery)) shundan.
-    const where = this.buildWhere(filters);
+    const { search, region_id } = filters;
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+      ...(region_id ? { region_id } : {}),
+    };
 
     return paginate({
       db: this.db,
-      // count: relational query'ni sql subquery qilib $count qiladi (cast'siz —
-      // sql template SQL source beradi). RQB'da count metodi yo'q (Prisma'dan
-      // farqli), shuning uchun $count + sql — drizzle-v2'dagi count yo'li.
       count: () =>
         this.db.$count(sql`(${this.db.query.cities.findMany({ where })})`),
       query: ({ limit, offset }) =>
@@ -48,8 +45,6 @@ export class CityService {
           with: {
             region: { columns: { id: true, name: true } },
           },
-          // Laravel ORDER BY ishlatmaydi — natural PG order. Bir xil DB'da bir
-          // xil query plan → bir xil tartib. ORDER BY qo'shsak Laravel'dan farq qiladi.
           limit,
           offset,
         }),
@@ -59,18 +54,7 @@ export class CityService {
     });
   }
 
-  // Relational object-where — Laravel scopeSearch (name LIKE) + region_id.
-  private buildWhere(filters: QueryCityDto) {
-    const { search, region_id } = filters;
-    return {
-      deleted_at: { isNull: true as const },
-      ...(search ? { name: { ilike: `%${search}%` } } : {}),
-      ...(region_id ? { region_id } : {}),
-    };
-  }
-
   async create(dto: CreateCityDto): Promise<void> {
-    // id'siz — insertRecord atomik MAX+1 beradi (transaction + advisory lock).
     await insertRecord(this.db, cities, {
       region_id: dto.region_id,
       name: dto.name,
