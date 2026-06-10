@@ -10,7 +10,6 @@ import {
   DepartmentListMinimalDto,
   DepartmentOrgMinDto,
   DepartmentParentMinDto,
-  DepartmentTreeNodeDto,
   DepartmentWithJoinDto,
 } from '@/modules/hr/departments/dto/department.dto';
 
@@ -92,6 +91,14 @@ export interface DepartmentIndexRow extends DepartmentRow {
   worker_rate: number; // SUM(wp.rate) — divided by 100 in mapper
   children_exists: boolean;
   parent: { id: number; name: string; level: number } | null;
+  // Laravel with('city')/with('region') — CityOnlyResource / RegionMinimalResource.
+  city: {
+    id: number;
+    name: string | null;
+    name_ru: string | null;
+    name_en: string | null;
+  } | null;
+  region: { id: number; name: string | null } | null;
 }
 
 export const DepartmentMapper = {
@@ -131,6 +138,10 @@ export const DepartmentMapper = {
       comment: d.comment,
       organization: orgMinToDto(d.organization, lang),
       children: d.children_exists,
+      // Laravel: CityOnlyResource(whenLoaded('city')) / RegionMinimalResource —
+      // relation null bo'lsa key chiqadi, qiymati null.
+      city: d.city,
+      region: d.region,
     };
   },
 

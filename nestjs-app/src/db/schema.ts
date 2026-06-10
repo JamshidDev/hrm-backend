@@ -12152,6 +12152,8 @@ export const departments = pgTable("departments", {
 	name_en: varchar({ length: 255 }),
 	comment: text(),
 	is_correct: smallint().default(sql`'1'`).notNull(),
+	region_id: bigint({ mode: "number" }),
+	city_id: bigint({ mode: "number" }),
 }, (table) => [
 	index().using("btree", table._lft.asc().nullsLast().op("int4_ops"), table._rgt.asc().nullsLast().op("int4_ops"), table.parent_id.asc().nullsLast().op("int4_ops")),
 	index().using("btree", table.level.asc().nullsLast().op("int2_ops")),
