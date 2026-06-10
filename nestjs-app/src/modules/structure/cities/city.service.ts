@@ -33,26 +33,16 @@ export class CityService {
   async findAll(filters: QueryCityDto): Promise<CityListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-
-    const where = and(
-      notDeleted(cities),
-      filters.search ? ilike(cities.name, `%${filters.search}%`) : undefined,
-      filters.region_id ? eq(cities.region_id, filters.region_id) : undefined,
-    );
+    // Bitta manba — count va list bir xil filterdan (divergensiya oldini oladi).
+    const { countWhere, listWhere } = this.buildFilters(filters);
 
     return paginate({
       db: this.db,
       countTable: cities,
-      countWhere: where,
+      countWhere,
       query: ({ limit, offset }) =>
         this.db.query.cities.findMany({
-          where: {
-            deleted_at: { isNull: true },
-            ...(filters.search
-              ? { name: { ilike: `%${filters.search}%` } }
-              : {}),
-            ...(filters.region_id ? { region_id: filters.region_id } : {}),
-          },
+          where: listWhere,
           with: {
             region: { columns: { id: true, name: true } },
           },
@@ -65,6 +55,24 @@ export class CityService {
       perPage,
       mapper: CityMapper.toItem,
     });
+  }
+
+  // Count (Builder SQL) + list (relational object) filtri — BITTA manbadan.
+  // Laravel scopeSearch (name LIKE) + region_id filter.
+  private buildFilters(filters: QueryCityDto) {
+    const { search, region_id } = filters;
+    return {
+      countWhere: and(
+        notDeleted(cities),
+        search ? ilike(cities.name, `%${search}%`) : undefined,
+        region_id ? eq(cities.region_id, region_id) : undefined,
+      ),
+      listWhere: {
+        deleted_at: { isNull: true as const },
+        ...(search ? { name: { ilike: `%${search}%` } } : {}),
+        ...(region_id ? { region_id } : {}),
+      },
+    };
   }
 
   async create(dto: CreateCityDto): Promise<void> {

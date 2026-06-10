@@ -32,30 +32,18 @@ export class RegionService {
   async findAll(filters: QueryRegionDto): Promise<RegionListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-
-    // Count uchun Builder API WHERE.
-    const where = and(
-      notDeleted(regions),
-      filters.search ? ilike(regions.name, `%${filters.search}%`) : undefined,
-      filters.country_id
-        ? eq(regions.country_id, filters.country_id)
-        : undefined,
-    );
+    // Bitta manba — count (Builder SQL) va list (relational object) bir xil
+    // filterdan kelib chiqadi (divergensiya/total mismatch oldini oladi).
+    const { countWhere, listWhere } = this.buildFilters(filters);
 
     return paginate({
       db: this.db,
       countTable: regions,
-      countWhere: where,
+      countWhere,
       // Relational API — country eager load.
       query: ({ limit, offset }) =>
         this.db.query.regions.findMany({
-          where: {
-            deleted_at: { isNull: true },
-            ...(filters.search
-              ? { name: { ilike: `%${filters.search}%` } }
-              : {}),
-            ...(filters.country_id ? { country_id: filters.country_id } : {}),
-          },
+          where: listWhere,
           with: { country: true },
           orderBy: { id: 'asc' },
           limit,
@@ -65,6 +53,26 @@ export class RegionService {
       perPage,
       mapper: RegionMapper.toItem,
     });
+  }
+
+  // Count (Builder SQL) + list (relational object) filtri — BITTA manbadan.
+  // Laravel scopeSearch (name LIKE) + country_id filter.
+  private buildFilters(filters: QueryRegionDto) {
+    const { search, country_id } = filters;
+    return {
+      countWhere: and(
+        notDeleted(regions),
+        search ? ilike(regions.name, `%${search}%`) : undefined,
+        country_id ? eq(regions.country_id, country_id) : undefined,
+      ),
+      listWhere: {
+        // `as const` — method'dan qaytganda `true` literal saqlanadi (drizzle
+        // RelationsFieldFilter `isNull: true` kutadi, `boolean` emas).
+        deleted_at: { isNull: true as const },
+        ...(search ? { name: { ilike: `%${search}%` } } : {}),
+        ...(country_id ? { country_id } : {}),
+      },
+    };
   }
 
   async create(dto: CreateRegionDto): Promise<void> {
