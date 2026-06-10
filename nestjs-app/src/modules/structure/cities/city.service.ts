@@ -3,7 +3,7 @@
 // CityResource faqat region.id va region.name dan foydalanadi).
 
 import { Injectable } from '@nestjs/common';
-import { eq, type SQLWrapper } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -37,13 +37,11 @@ export class CityService {
 
     return paginate({
       db: this.db,
-      // count: shu where'ning relational query'sini subquery qilib count qiladi.
-      // `as SQLWrapper` — PgRelationalQuery runtime'da SQLWrapper, tip imzosi
-      // $count param'iga to'g'ri kelmaydi (getSQL nomuvofiqligi).
+      // count: relational query'ni sql subquery qilib $count qiladi (cast'siz —
+      // sql template SQL source beradi). RQB'da count metodi yo'q (Prisma'dan
+      // farqli), shuning uchun $count + sql — drizzle-v2'dagi count yo'li.
       count: () =>
-        this.db.$count(
-          this.db.query.cities.findMany({ where }) as unknown as SQLWrapper,
-        ),
+        this.db.$count(sql`(${this.db.query.cities.findMany({ where })})`),
       query: ({ limit, offset }) =>
         this.db.query.cities.findMany({
           where,
