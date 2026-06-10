@@ -600,22 +600,32 @@ export class ScheduleStatsService {
 
     const nextDay = (d: string) => addDays(d, 1);
 
+    // Laravel SQL'ga date'larni LITERAL qo'yadi — partitsiyalangan terminal_events
+    // plan-time partition pruning qilishi uchun (parametr generic-plan'da pruning'ni
+    // yo'qotishi mumkin). YYYY-MM-DD validatsiyasi — injection xavfsiz.
+    const lit = (d: string) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        throw new Error(`invalid date literal: ${d}`);
+      }
+      return sql.raw(`'${d}'`);
+    };
+
     // late: kunning BIRINCHI event'i (ASC LIMIT 1), direction=TRUE (kirish),
     // event vaqti > start_time. start_time <> '00:00'.
     const latePart = (d1: string) => sql`
-      SELECT ${d1}::text AS date, COUNT(DISTINCT t.worker_id) AS cnt
+      SELECT ${lit(d1)}::text AS date, COUNT(DISTINCT t.worker_id) AS cnt
       FROM turnstile_worker_schedules t
       LEFT JOIN LATERAL (
         SELECT te.event_date_and_time, te.direction
         FROM terminal_events te
         WHERE te.worker_id = t.worker_id
-          AND te.event_date_and_time >= ${d1}
-          AND te.event_date_and_time <  ${nextDay(d1)}
+          AND te.event_date_and_time >= ${lit(d1)}
+          AND te.event_date_and_time <  ${lit(nextDay(d1))}
           AND te.deleted_at IS NULL
         ORDER BY te.event_date_and_time
         LIMIT 1
       ) AS first_te ON TRUE AND first_te.direction = TRUE
-      WHERE t.date = ${d1}
+      WHERE t.date = ${lit(d1)}
         AND t.work_status = 1
         AND t.start_time <> '00:00'
         AND t.deleted_at IS NULL
@@ -626,19 +636,19 @@ export class ScheduleStatsService {
     // early: kunning OXIRGI event'i (DESC LIMIT 1), direction=FALSE (chiqish),
     // event vaqti < end_time. end_time IS NOT NULL.
     const earlyPart = (d1: string) => sql`
-      SELECT ${d1}::text AS date, COUNT(DISTINCT t.worker_id) AS cnt
+      SELECT ${lit(d1)}::text AS date, COUNT(DISTINCT t.worker_id) AS cnt
       FROM turnstile_worker_schedules t
       LEFT JOIN LATERAL (
         SELECT te.event_date_and_time, te.direction
         FROM terminal_events te
         WHERE te.worker_id = t.worker_id
-          AND te.event_date_and_time >= ${d1}
-          AND te.event_date_and_time <  ${nextDay(d1)}
+          AND te.event_date_and_time >= ${lit(d1)}
+          AND te.event_date_and_time <  ${lit(nextDay(d1))}
           AND te.deleted_at IS NULL
         ORDER BY te.event_date_and_time DESC
         LIMIT 1
       ) AS last_te ON TRUE AND last_te.direction = FALSE
-      WHERE t.date = ${d1}
+      WHERE t.date = ${lit(d1)}
         AND t.work_status = 1
         AND t.deleted_at IS NULL
         AND t.end_time IS NOT NULL
