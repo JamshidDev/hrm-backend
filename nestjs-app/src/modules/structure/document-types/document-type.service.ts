@@ -1,10 +1,5 @@
-// DocumentType service — contract-types / contract-additional-types / command-types
-// uchun umumiy mantiq. Har modul service'i shu generic'dan inherit (yoki direct ishlatadi).
-//
-// File upload (store/update) — alohida bosqich (TODO), hozircha faqat list + delete.
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import type { PgTable, AnyPgColumn } from 'drizzle-orm/pg-core';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
@@ -13,6 +8,7 @@ import { organizations } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService, type UploadedFile } from '@/shared/minio/minio.service';
 import { DocumentTypeMapper } from '@/modules/structure/document-types/document-type.mapper';
@@ -21,16 +17,13 @@ import {
   DocumentTypeListResponseDto,
 } from '@/modules/structure/document-types/dto/document-type.dto';
 
-// Generic config — har modul shu interface'ni implement qiladi.
 export interface DocumentTypeTableConfig {
-  // Drizzle table (contract_types / contract_additional_types / command_types).
   table: PgTable & {
     id: AnyPgColumn;
     organization_id: AnyPgColumn;
     type: AnyPgColumn;
     deleted_at: AnyPgColumn;
   };
-  // Enum map: numeric type → i18n translation key.
   enumMap: Record<number, string>;
 }
 
@@ -51,14 +44,6 @@ export class DocumentTypeService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
-    // Laravel filterByOrganizations:
-    //   - user.organization_id descendants (NestedSet — admin permission'siz)
-    //   - ?organizations=1,2  → whereIn
-    //   - ?organization_id=1  → where
-    //
-    // Bizning test admin user — organization-admin permission'i bor → NO filter.
-    // Hozircha implementatsiya: explicit organizations query param bor bo'lsa filter,
-    // aks holda admin behaviour (no filter).
     const orgIds = filters.organizations
       ? filters.organizations
           .split(',')
@@ -92,10 +77,6 @@ export class DocumentTypeService {
     });
   }
 
-  // Laravel store: file upload + bulk insert (har organization uchun bitta row).
-  //   - validate type, organizations (CSV), file (doc/docx)
-  //   - upload file to MinIO
-  //   - insert bulk rows: each org gets one row with same file path
   async create(
     cfg: DocumentTypeTableConfig,
     folder: string,
@@ -128,7 +109,6 @@ export class DocumentTypeService {
     });
   }
 
-  // Laravel update: faqat bitta row (organization_id + type majburiy, file ixtiyoriy).
   async update(
     cfg: DocumentTypeTableConfig,
     folder: string,
@@ -137,14 +117,7 @@ export class DocumentTypeService {
     type: number,
     file: UploadedFile | undefined,
   ): Promise<void> {
-    const [row] = await this.db
-      .select({ id: cfg.table.id })
-      .from(cfg.table)
-      .where(and(eq(cfg.table.id as never, id), notDeleted(cfg.table)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
+    await findByIdOrFail(this.db, cfg.table, id, this.i18n);
 
     const updates: Record<string, unknown> = {
       organization_id,
@@ -163,21 +136,10 @@ export class DocumentTypeService {
   }
 
   async remove(cfg: DocumentTypeTableConfig, id: number): Promise<void> {
-    const [row] = await this.db
-      .select({ id: cfg.table.id })
-      .from(cfg.table)
-      .where(and(eq(cfg.table.id as never, id), notDeleted(cfg.table)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    await this.db
-      .update(cfg.table)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(cfg.table.id as never, id));
+    await findByIdOrFail(this.db, cfg.table, id, this.i18n);
+    await softDeleteById(this.db, cfg.table, id);
   }
 
-  // Drizzle relational API generic table bilan ishlamaydi — JOIN bilan select.
   private async fetchWithOrganization(
     cfg: DocumentTypeTableConfig,
     where: SQL | undefined,
