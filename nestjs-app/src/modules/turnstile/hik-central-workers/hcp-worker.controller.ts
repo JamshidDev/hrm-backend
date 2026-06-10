@@ -12,7 +12,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
@@ -21,6 +21,7 @@ import {
   AddHcpWorkerDto,
   QueryHcpWorkerDto,
   SyncWorkersToHcpDto,
+  UpdateFaceDto,
 } from '@/modules/turnstile/hik-central-workers/dto/hcp-worker.dto';
 
 @ApiTags('Turnstile / HikCentral Workers')
@@ -63,8 +64,8 @@ export class HcpWorkerController {
     );
   }
 
-  @Post('workers/update-face') async updateFace(@Body() _body: any) {
-    await this.service.updateFace();
+  @Post('workers/update-face') async updateFace(@Body() dto: UpdateFaceDto) {
+    await this.service.updateFace(dto);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

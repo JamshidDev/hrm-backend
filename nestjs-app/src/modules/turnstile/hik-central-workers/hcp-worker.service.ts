@@ -3,7 +3,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { and, asc, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -36,6 +36,7 @@ import type {
   AddHcpWorkerDto,
   QueryHcpWorkerDto,
   SyncWorkersToHcpDto,
+  UpdateFaceDto,
 } from '@/modules/turnstile/hik-central-workers/dto/hcp-worker.dto';
 
 @Injectable()
@@ -909,8 +910,344 @@ export class HcpWorkerService {
   }
 
   // Laravel: external face/access-level updates. Stubs.
-  async updateFace() {
-    return { face_updated: true };
+  // Laravel: HikCentralWorkerService::updateWorkerFace — HCP face/expiry/access
+  // level update. Branch: (1) mavjud hikWorker (id) — face (photo_id o'zgarsa) +
+  // expiry (to o'zgarsa); (2) yangi worker (worker_id) — HCP'ga qo'shish.
+  // So'ng access_level diff (attach/detach HCP + worker_access_levels).
+  async updateFace(dto: UpdateFaceDto): Promise<{ ok: true }> {
+    const accessLevelIds = Array.isArray(dto.access_level_ids)
+      ? dto.access_level_ids.map((n) => Number(n)).filter(Number.isFinite)
+      : [];
+    if (!dto.photo_id && !dto.photo) {
+      throw new BusinessException(400, this.i18n.t('messages.missing_photo'));
+    }
+    const userId = Number(this.ctx.user_or_fail.id);
+
+    // Laravel: now()->addYear(2) default expiry.
+    const now = new Date();
+    const defaultTo = `${now.getFullYear() + 2}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} 00:00:00`;
+
+    let workerId: number;
+    let personId: string | number;
+    let hcWorkerId: number;
+
+    if (dto.id && !dto.worker_id) {
+      // Branch 1 — mavjud WorkerHikCentral (id bo'yicha).
+      const [hw] = await this.db
+        .select({
+          id: worker_hik_centrals.id,
+          worker_id: worker_hik_centrals.worker_id,
+          person_id: worker_hik_centrals.hik_central_person_id,
+          worker_photo_id: worker_hik_centrals.worker_photo_id,
+          to: worker_hik_centrals.to,
+        })
+        .from(worker_hik_centrals)
+        .where(eq(worker_hik_centrals.id, Number(dto.id)))
+        .limit(1);
+      if (!hw) {
+        throw new BusinessException(
+          400,
+          this.i18n.t('messages.user_not_found'),
+        );
+      }
+      const [worker] = await this.db
+        .select({
+          id: workers.id,
+          last_name: workers.last_name,
+          first_name: workers.first_name,
+          middle_name: workers.middle_name,
+          card: workers.card,
+        })
+        .from(workers)
+        .where(eq(workers.id, hw.worker_id))
+        .limit(1);
+
+      // Face — photo_id o'zgargan bo'lsa HCP updatePersonFace.
+      if (Number(hw.worker_photo_id) !== Number(dto.photo_id)) {
+        const conv = await this.convertImage(
+          hw.worker_id,
+          dto.photo,
+          dto.photo_id,
+        );
+        const faceRes = await this.hcp.updatePersonFace(
+          String(hw.person_id),
+          conv.base64,
+        );
+        if (Number(faceRes.code) !== 0) {
+          throw new BusinessException(
+            400,
+            (faceRes.msg as string) ?? this.i18n.t('messages.server_error'),
+          );
+        }
+        await this.db
+          .update(worker_hik_centrals)
+          .set({
+            worker_photo_id: conv.photo_id ?? null,
+            to: dto.to ?? defaultTo,
+          })
+          .where(eq(worker_hik_centrals.id, hw.id));
+        await this.db
+          .update(worker_access_levels)
+          .set({ status: 1 })
+          .where(eq(worker_access_levels.worker_id, hw.worker_id));
+      }
+
+      // Expiry — to o'zgargan bo'lsa HCP editWorkerFromHCP.
+      const currentTo = hw.to ? String(hw.to).slice(0, 10) : null;
+      if ((dto.to ?? null) !== currentTo) {
+        const editRes = await this.hcp.editWorkerFromHCP(
+          String(hw.person_id),
+          worker ?? { id: hw.worker_id },
+          dto.to ?? null,
+        );
+        if (!editRes.status) {
+          throw new BusinessException(
+            400,
+            editRes.msg ?? this.i18n.t('messages.server_error'),
+          );
+        }
+        await this.db
+          .update(worker_hik_centrals)
+          .set({ to: dto.to ?? null })
+          .where(eq(worker_hik_centrals.id, hw.id));
+        await this.db
+          .update(worker_access_levels)
+          .set({ status: 1 })
+          .where(eq(worker_access_levels.worker_id, hw.worker_id));
+      }
+      workerId = hw.worker_id;
+      personId = hw.person_id ?? 0;
+      hcWorkerId = hw.id;
+    } else if (dto.worker_id && !dto.id) {
+      // Branch 2 — yangi worker (worker_hik_centrals'da mavjud bo'lmasligi shart).
+      const wid = Number(dto.worker_id);
+      const [exists] = await this.db
+        .select({ id: worker_hik_centrals.id })
+        .from(worker_hik_centrals)
+        .where(eq(worker_hik_centrals.worker_id, wid))
+        .limit(1);
+      if (exists) {
+        throw new BusinessException(400, this.i18n.t('messages.not_found'));
+      }
+      const [worker] = await this.db
+        .select({
+          id: workers.id,
+          last_name: workers.last_name,
+          first_name: workers.first_name,
+          middle_name: workers.middle_name,
+          sex: workers.sex,
+          card: workers.card,
+        })
+        .from(workers)
+        .where(eq(workers.id, wid))
+        .limit(1);
+      if (!worker) {
+        throw new BusinessException(400, this.i18n.t('messages.not_found'));
+      }
+      let orgIndexCode = '1';
+      const [firstAl] = await this.db
+        .select({
+          dept_id: hik_central_access_levels.hik_central_department_id,
+        })
+        .from(hik_central_access_levels)
+        .where(inArray(hik_central_access_levels.id, accessLevelIds))
+        .limit(1);
+      if (firstAl?.dept_id) {
+        const [dept] = await this.db
+          .select({ hc: hik_central_departments.hik_central_department_id })
+          .from(hik_central_departments)
+          .where(eq(hik_central_departments.id, Number(firstAl.dept_id)))
+          .limit(1);
+        if (dept?.hc) orgIndexCode = String(dept.hc);
+      }
+      const conv = await this.convertImage(wid, dto.photo, dto.photo_id);
+      const res = await this.hcp.addWorkerToServer(
+        worker,
+        conv.base64,
+        dto.to ?? null,
+        orgIndexCode,
+      );
+      if (!res.status || !res.personId) {
+        throw new BusinessException(
+          400,
+          res.msg ?? this.i18n.t('messages.server_error'),
+        );
+      }
+      const newId = await nextId(this.db, worker_hik_centrals);
+      await this.db.insert(worker_hik_centrals).values({
+        id: newId,
+        worker_id: wid,
+        hik_central_key: 1,
+        hik_central_person_id: Number(res.personId),
+        worker_photo_id: conv.photo_id ?? null,
+        to: dto.to ?? defaultTo,
+      });
+      workerId = wid;
+      personId = res.personId;
+      hcWorkerId = newId;
+    } else {
+      throw new BusinessException(400, this.i18n.t('messages.not_found'));
+    }
+
+    // ---- Access level diff (Laravel: array_diff attach/detach) ----
+    await this.db
+      .delete(worker_access_levels)
+      .where(
+        and(
+          eq(worker_access_levels.worker_id, workerId),
+          sql`${worker_access_levels.deleted_at} IS NOT NULL`,
+        ),
+      );
+    const existingWal = await this.db
+      .select({ al_id: worker_access_levels.hik_central_access_level_id })
+      .from(worker_access_levels)
+      .where(eq(worker_access_levels.worker_id, workerId));
+    const existingIds = existingWal.map((r) => Number(r.al_id));
+    let diffAC = accessLevelIds.filter((x) => !existingIds.includes(x));
+
+    if (diffAC.length > 5 && userId !== 1) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.turnstile.max_access_level_5'),
+      );
+    }
+    if (diffAC.length === 0) {
+      // Detach — olib tashlangan access level'lar.
+      diffAC = existingIds.filter((x) => !accessLevelIds.includes(x));
+      if (diffAC.length > 0) {
+        if (diffAC.length > 5) {
+          throw new BusinessException(
+            400,
+            this.i18n.t('messages.turnstile.max_access_level_5'),
+          );
+        }
+        const als = await this.db
+          .select({
+            id: hik_central_access_levels.id,
+            hcid: hik_central_access_levels.hik_central_access_level_id,
+            devices: hik_central_access_levels.devices,
+          })
+          .from(hik_central_access_levels)
+          .where(inArray(hik_central_access_levels.id, diffAC));
+        await this.assertDevicesOnline(als, false);
+        const detachedIds: number[] = [];
+        for (const al of als) {
+          const d = await this.hcp.detachWorkerFromAccessLevel(
+            [String(personId)],
+            String(al.hcid),
+          );
+          if (!d.status) continue;
+          detachedIds.push(al.id);
+        }
+        if (detachedIds.length) {
+          await this.db
+            .delete(worker_access_levels)
+            .where(
+              and(
+                eq(worker_access_levels.worker_id, workerId),
+                inArray(
+                  worker_access_levels.hik_central_access_level_id,
+                  detachedIds,
+                ),
+              ),
+            );
+        }
+      }
+      return { ok: true };
+    }
+
+    // Attach — yangi access level'lar.
+    const als = await this.db
+      .select({
+        id: hik_central_access_levels.id,
+        hcid: hik_central_access_levels.hik_central_access_level_id,
+        devices: hik_central_access_levels.devices,
+      })
+      .from(hik_central_access_levels)
+      .where(inArray(hik_central_access_levels.id, diffAC));
+    await this.assertDevicesOnline(als, userId === 1);
+    await this.attachWorkersToAccessLevels(als, personId, workerId, hcWorkerId);
+    return { ok: true };
+  }
+
+  // Laravel: checkStatusDevices — access level qurilmalaridan biri offline bo'lsa
+  // xato (bypass=true bo'lsa o'tkazadi — admin uchun).
+  private async assertDevicesOnline(
+    als: Array<{ devices: unknown }>,
+    bypass: boolean,
+  ): Promise<void> {
+    if (bypass) return;
+    const deviceIds = new Set<number>();
+    for (const al of als) {
+      for (const d of parseDevicesJson(al.devices)) deviceIds.add(d);
+    }
+    if (deviceIds.size === 0) return;
+    const offline = await this.db
+      .select({ device_id: h_c_p_devices.device_id })
+      .from(h_c_p_devices)
+      .where(
+        and(
+          inArray(h_c_p_devices.device_id, [...deviceIds]),
+          eq(h_c_p_devices.status, false),
+        ),
+      )
+      .limit(1);
+    if (offline.length) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.turnstile.device_not_active'),
+      );
+    }
+  }
+
+  // Laravel: attachWorkersToAccessLevels('attach') — HCP attach + wal upsert.
+  private async attachWorkersToAccessLevels(
+    als: Array<{ id: number; hcid: number | string | null }>,
+    personId: string | number,
+    workerId: number,
+    hcWorkerId: number,
+  ): Promise<void> {
+    for (const al of als) {
+      const attach = await this.hcp.attachWorkerToAccessLevel(
+        [String(personId)],
+        String(al.hcid ?? ''),
+      );
+      if (!attach.status) continue;
+      const [walExisting] = await this.db
+        .select({ id: worker_access_levels.id })
+        .from(worker_access_levels)
+        .where(
+          and(
+            eq(worker_access_levels.worker_id, workerId),
+            eq(worker_access_levels.hik_central_access_level_id, Number(al.id)),
+          ),
+        )
+        .limit(1);
+      if (walExisting) {
+        await this.db
+          .update(worker_access_levels)
+          .set({
+            worker_hik_central_id: hcWorkerId,
+            hik_central_key: 1,
+            hik_central_person_id: Number(personId),
+            status: 1,
+            deleted_at: null,
+            updated_at: sql`NOW()`,
+          })
+          .where(eq(worker_access_levels.id, walExisting.id));
+      } else {
+        const newId = await nextId(this.db, worker_access_levels);
+        await this.db.insert(worker_access_levels).values({
+          id: newId,
+          worker_id: workerId,
+          worker_hik_central_id: hcWorkerId,
+          hik_central_key: 1,
+          hik_central_person_id: Number(personId),
+          hik_central_access_level_id: Number(al.id),
+          status: 1,
+        });
+      }
+    }
   }
 
   // Laravel: HikCentralWorkerController::refreshAccessLevel.

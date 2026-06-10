@@ -637,7 +637,7 @@
       "two": "User"
     }
   },
-  "missing_photo": "Photo is missing",
+  "missing_photo": "Image selection is required.",
   "lms": {
     "edu_plan_not_found": "Education plan not found!",
     "edu_plan_or_lesson_is_required": "Edu plan or lesson is required!",
