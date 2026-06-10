@@ -37,6 +37,8 @@ import {
   staffing_approve_confirmations,
   lms_certificates,
   lms_certificate_confirmations,
+  reports,
+  report_confirmations,
   users as usersTable,
   workers,
 } from '@/db/schema';
@@ -142,6 +144,14 @@ const MODEL_TYPE_TABLE_MAP: Record<
     label: 'LMS Certificate',
     fqcn: 'Modules\\LMS\\Models\\LmsCertificate',
     confFqcn: 'Modules\\Confirmation\\Models\\LmsCertificateConfirmation',
+  },
+  report: {
+    doc: reports,
+    conf: report_confirmations,
+    fk: 'report_id',
+    label: 'REPORT',
+    fqcn: 'Modules\\Structure\\Models\\Report',
+    confFqcn: 'Modules\\Confirmation\\Models\\ReportConfirmation',
   },
 };
 
