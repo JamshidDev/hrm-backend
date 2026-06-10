@@ -3,14 +3,22 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class AbsentWorkersQueryDto {
   @ApiProperty({ example: '2026-04-01' })
+  @IsNotEmpty()
   @IsDateString()
   from_date!: string;
 
   @ApiProperty({ example: '2026-04-30' })
+  @IsNotEmpty()
   @IsDateString()
   to_date!: string;
 
