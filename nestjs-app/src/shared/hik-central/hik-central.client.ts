@@ -19,7 +19,10 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 
 // Laravel: CURLOPT_SSL_VERIFYPEER=false va VERIFYHOST=false — self-signed HCP serverga
 // ishonish uchun. node:https request bilan rejectUnauthorized=false beramiz.
-const HCP_AGENT = new HttpsAgent({ rejectUnauthorized: false, keepAlive: true });
+const HCP_AGENT = new HttpsAgent({
+  rejectUnauthorized: false,
+  keepAlive: true,
+});
 
 function postJson(
   url: string,
@@ -117,7 +120,10 @@ export class HikCentralClient {
   private readonly secret: string;
 
   constructor(config: ConfigService) {
-    this.baseUrl = (config.get<string>('HIK_CENTRAL_URL') ?? '').replace(/\/$/, '');
+    this.baseUrl = (config.get<string>('HIK_CENTRAL_URL') ?? '').replace(
+      /\/$/,
+      '',
+    );
     this.key = config.get<string>('HIK_CENTRAL_KEY') ?? '';
     this.secret = config.get<string>('HIK_CENTRAL_SECRET') ?? '';
   }
@@ -141,7 +147,10 @@ export class HikCentralClient {
   }
 
   // Laravel: requestCurl — POST JSON, 3 retry, return parsed object.
-  async post<T = unknown>(urlPath: string, body: unknown): Promise<HcpResponse<T>> {
+  async post<T = unknown>(
+    urlPath: string,
+    body: unknown,
+  ): Promise<HcpResponse<T>> {
     if (!this.configured()) {
       throw new BusinessException(500, 'HikCentral not configured');
     }
@@ -180,7 +189,9 @@ export class HikCentralClient {
   }
 
   // /artemis/api/resource/v1/org/orgList — paginated org list.
-  async groups(pageNo = 1): Promise<{ status: boolean; msg: HcpListResp<HcpOrg> | string }> {
+  async groups(
+    pageNo = 1,
+  ): Promise<{ status: boolean; msg: HcpListResp<HcpOrg> | string }> {
     const res = await this.post<HcpListResp<HcpOrg>>(
       '/artemis/api/resource/v1/org/orgList',
       { pageNo, pageSize: 500 },
@@ -300,9 +311,7 @@ export class HikCentralClient {
     );
     if (Number(res.code) === 0) {
       const personId =
-        typeof res.data === 'string'
-          ? res.data
-          : (res.data as { personId?: string } | undefined)?.personId;
+        typeof res.data === 'string' ? res.data : res.data?.personId;
       return { status: true, personId };
     }
     return { status: false, msg: res.msg };
@@ -317,6 +326,53 @@ export class HikCentralClient {
       personId: String(personId),
       faceData: photoBase64,
     });
+  }
+
+  // Laravel: editWorkerFromHCP — /person/single/update (expiry/info edit).
+  async editWorkerFromHCP(
+    personId: string | number,
+    worker: {
+      id: number | string;
+      last_name?: string | null;
+      first_name?: string | null;
+      middle_name?: string | null;
+      card?: number | null;
+    },
+    endTime: string | null,
+  ): Promise<{ status: boolean; personId?: string; msg?: string }> {
+    const isoCN = (d: Date) => {
+      const off = new Date(d.getTime() + 8 * 3600_000);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return (
+        `${off.getUTCFullYear()}-${pad(off.getUTCMonth() + 1)}-${pad(off.getUTCDate())}` +
+        `T${pad(off.getUTCHours())}:${pad(off.getUTCMinutes())}:${pad(off.getUTCSeconds())}+08:00`
+      );
+    };
+    const now = new Date();
+    const endDate = endTime
+      ? new Date(endTime)
+      : new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
+    const body = {
+      personId: String(personId),
+      personCode: String(worker.id),
+      personFamilyName: worker.last_name ?? '',
+      personGivenName: worker.first_name ?? '',
+      remark: worker.middle_name ?? '',
+      cards: [{ cardNo: String(worker.card ?? '') }],
+      beginTime: isoCN(new Date(now.getTime() - 4 * 3600_000)),
+      endTime: isoCN(endDate),
+    };
+    const res = await this.post<string>(
+      '/artemis/api/resource/v1/person/single/update',
+      body,
+    );
+    if (Number(res.code) === 0) {
+      return {
+        status: true,
+        personId: typeof res.data === 'string' ? res.data : undefined,
+      };
+    }
+    return { status: false, msg: res.msg };
   }
 
   // Laravel: doorEvents — /artemis/api/acs/v1/door/events.
@@ -351,7 +407,10 @@ export class HikCentralClient {
   }
 
   // /artemis/api/resource/v1/acsDevice/acsDeviceList — single page.
-  async devicesList(pageNo: number, pageSize: number): Promise<{
+  async devicesList(
+    pageNo: number,
+    pageSize: number,
+  ): Promise<{
     status: boolean;
     total?: number;
     list?: HcpAcsDevice[];
