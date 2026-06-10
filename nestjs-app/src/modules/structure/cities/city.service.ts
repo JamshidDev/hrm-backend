@@ -105,21 +105,21 @@ export class CityService {
   // ---- Helper'lar ----
 
   private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: cities.id })
-      .from(cities)
-      .where(and(eq(cities.id, id), notDeleted(cities)))
-      .limit(1);
-    if (!row) {
+    // drizzle-v2 relational API — bitta yozuv mavjudligini tekshirish.
+    const city = await this.db.query.cities.findFirst({
+      columns: { id: true },
+      where: { id, deleted_at: { isNull: true } },
+    });
+    if (!city) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
-    return row;
+    return city;
   }
 
   private async nextId(): Promise<number> {
-    const [row] = await this.db
+    const [maxIdRow] = await this.db
       .select({ maxId: sql<number>`COALESCE(MAX(${cities.id}), 0)` })
       .from(cities);
-    return Number(row?.maxId ?? 0) + 1;
+    return Number(maxIdRow?.maxId ?? 0) + 1;
   }
 }
