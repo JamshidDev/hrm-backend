@@ -3,15 +3,18 @@
 // CityResource faqat region.id va region.name dan foydalanadi).
 
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { and, eq, ilike } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { cities } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
-import { nowDb } from '@/common/utils/datetime.util';
+import {
+  insertRecord,
+  findByIdOrFail,
+  softDeleteById,
+} from '@/common/database/crud.helper';
 import { CityMapper } from '@/modules/structure/cities/city.mapper';
 import {
   QueryCityDto,
@@ -65,10 +68,8 @@ export class CityService {
   }
 
   async create(dto: CreateCityDto): Promise<void> {
-    const nextId = await this.nextId();
-
-    await this.db.insert(cities).values({
-      id: nextId,
+    // id'siz — insertRecord atomik MAX+1 beradi (transaction + advisory lock).
+    await insertRecord(this.db, cities, {
       region_id: dto.region_id,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
@@ -79,7 +80,7 @@ export class CityService {
   }
 
   async update(id: number, dto: UpdateCityDto): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, cities, id, this.i18n);
 
     await this.db
       .update(cities)
@@ -95,33 +96,7 @@ export class CityService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-
-    // Laravel softDelete app vaqti (now()) bilan yozadi — DB NOW() emas.
-    await this.db
-      .update(cities)
-      .set({ deleted_at: nowDb() })
-      .where(eq(cities.id, id));
-  }
-
-  // ---- Helper'lar ----
-
-  private async findById(id: number) {
-    // drizzle-v2 relational API — bitta yozuv mavjudligini tekshirish.
-    const city = await this.db.query.cities.findFirst({
-      columns: { id: true },
-      where: { id, deleted_at: { isNull: true } },
-    });
-    if (!city) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return city;
-  }
-
-  private async nextId(): Promise<number> {
-    const [maxIdRow] = await this.db
-      .select({ maxId: sql<number>`COALESCE(MAX(${cities.id}), 0)` })
-      .from(cities);
-    return Number(maxIdRow?.maxId ?? 0) + 1;
+    await findByIdOrFail(this.db, cities, id, this.i18n);
+    await softDeleteById(this.db, cities, id);
   }
 }

@@ -2,15 +2,18 @@
 // scopeSearch: name LIKE + country_id filter. with('country') eager load.
 
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { and, eq, ilike } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { regions } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
-import { nowDb } from '@/common/utils/datetime.util';
+import {
+  insertRecord,
+  findByIdOrFail,
+  softDeleteById,
+} from '@/common/database/crud.helper';
 import { RegionMapper } from '@/modules/structure/regions/region.mapper';
 import {
   QueryRegionDto,
@@ -65,10 +68,8 @@ export class RegionService {
   }
 
   async create(dto: CreateRegionDto): Promise<void> {
-    const nextId = await this.nextId();
-
-    await this.db.insert(regions).values({
-      id: nextId,
+    // id'siz — insertRecord atomik MAX+1 beradi (transaction + advisory lock).
+    await insertRecord(this.db, regions, {
       country_id: dto.country_id,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
@@ -79,7 +80,7 @@ export class RegionService {
   }
 
   async update(id: number, dto: UpdateRegionDto): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, regions, id, this.i18n);
 
     await this.db
       .update(regions)
@@ -95,33 +96,7 @@ export class RegionService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-
-    // Laravel softDelete app vaqti (now()) bilan yozadi — DB NOW() emas.
-    await this.db
-      .update(regions)
-      .set({ deleted_at: nowDb() })
-      .where(eq(regions.id, id));
-  }
-
-  // ---- Helper'lar ----
-
-  private async findById(id: number) {
-    // drizzle-v2 relational API — bitta yozuv mavjudligini tekshirish.
-    const region = await this.db.query.regions.findFirst({
-      columns: { id: true },
-      where: { id, deleted_at: { isNull: true } },
-    });
-    if (!region) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return region;
-  }
-
-  private async nextId(): Promise<number> {
-    const [maxIdRow] = await this.db
-      .select({ maxId: sql<number>`COALESCE(MAX(${regions.id}), 0)` })
-      .from(regions);
-    return Number(maxIdRow?.maxId ?? 0) + 1;
+    await findByIdOrFail(this.db, regions, id, this.i18n);
+    await softDeleteById(this.db, regions, id);
   }
 }
