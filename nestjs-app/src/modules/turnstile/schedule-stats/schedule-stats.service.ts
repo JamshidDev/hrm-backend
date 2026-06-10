@@ -18,16 +18,19 @@ import { RequestContext } from '@/common/context/request.context';
 import { ExcelService } from '@/shared/excel/excel.service';
 import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import { MinioService } from '@/shared/minio/minio.service';
-import { h_c_p_devices, vacations, worker_positions, workers } from '@/db/schema';
-import {
-  NO_DEVICE_ORG_IDS,
-  TURNSTILE_WHITELIST,
-} from '@/modules/turnstile/_shared/helpers';
+import { h_c_p_devices, worker_positions, workers } from '@/db/schema';
+import { TURNSTILE_WHITELIST } from '@/modules/turnstile/_shared/helpers';
 
 // Laravel VacationTypeEnum 1..8 → i18n key suffix.
 const VAC_TYPE_KEY: Record<number, string> = {
-  1: 'one', 2: 'two', 3: 'three', 4: 'four',
-  5: 'five', 6: 'six', 7: 'seven', 8: 'eight',
+  1: 'one',
+  2: 'two',
+  3: 'three',
+  4: 'four',
+  5: 'five',
+  6: 'six',
+  7: 'seven',
+  8: 'eight',
 };
 
 interface WpMinimal {
@@ -186,7 +189,6 @@ export class ScheduleStatsService {
           AND v.worker_id IS NULL
           AND wp.is_turnstile = TRUE
           AND wp.status = 2
-          AND wp.organization_id NOT IN (${sqlIdList([...NO_DEVICE_ORG_IDS])})
       )
       SELECT COUNT(*) AS cnt FROM sub
       WHERE status IN ('no_schedule_absent', 'scheduled_absent')
@@ -342,7 +344,9 @@ export class ScheduleStatsService {
       LIMIT 3
     `);
 
-    const statRow = rowsOf(statsRes)[0] as { current_in?: number | string; current_out?: number | string } | undefined;
+    const statRow = rowsOf(statsRes)[0] as
+      | { current_in?: number | string; current_out?: number | string }
+      | undefined;
     return {
       worker_stats: {
         current_in: num(statRow?.current_in),
@@ -412,7 +416,10 @@ export class ScheduleStatsService {
       GROUP BY hour_block
     `);
     const chartMap = new Map<number, number>();
-    for (const r of rowsOf(chartRes) as Array<{ hour_block: number | string; total: number | string }>) {
+    for (const r of rowsOf(chartRes) as Array<{
+      hour_block: number | string;
+      total: number | string;
+    }>) {
       chartMap.set(Number(r.hour_block), Number(r.total));
     }
     const daily = baseChart.map((b, i) => ({
@@ -433,7 +440,9 @@ export class ScheduleStatsService {
         AND event_date_and_time >= ${startOfDay}
         AND event_date_and_time <  ${endOfDay}
     `);
-    const authRow = rowsOf(authRes)[0] as { mobile_face_count?: number | string; total_count?: number | string } | undefined;
+    const authRow = rowsOf(authRes)[0] as
+      | { mobile_face_count?: number | string; total_count?: number | string }
+      | undefined;
     const mobile = num(authRow?.mobile_face_count);
     const total = num(authRow?.total_count);
     return {
@@ -547,7 +556,10 @@ export class ScheduleStatsService {
 
     // Laravel: getLateWorkersGroupedByDays — terminal_events INNER JOIN
     // turnstile_worker_schedules. Hozircha simplified — kunlik scheduled vs first-entry.
-    const dateList = sql.join(dates.map((d) => sql`${d}::date`), sql`, `);
+    const dateList = sql.join(
+      dates.map((d) => sql`${d}::date`),
+      sql`, `,
+    );
 
     const lateRes = await this.db.execute(sql`
       WITH days AS (SELECT UNNEST(ARRAY[${dateList}]) AS day_value)
@@ -663,13 +675,13 @@ export class ScheduleStatsService {
   // Output: paginated {id, last_name, first_name, middle_name, photo,
   //   last_event, direction, organization_name, department_name, position_name}.
   async lastEventWorkersPreview(q: PreviewQuery, direction: boolean) {
-    return this.currentLastEventPreview(q, { direction, excludeNoDeviceOrgs: false });
+    return this.currentLastEventPreview(q, { direction });
   }
 
   async comeWorkersPreview(q: PreviewQuery) {
+    // Laravel: comeWorkers 'view' — dontInstallDeviceOrgIds filtri olib tashlandi.
     return this.currentLastEventPreview(q, {
       direction: null, // any direction (whereNotNull)
-      excludeNoDeviceOrgs: true,
       authType: q.auth_type,
     });
   }
@@ -678,7 +690,6 @@ export class ScheduleStatsService {
     q: PreviewQuery,
     opts: {
       direction: boolean | null;
-      excludeNoDeviceOrgs: boolean;
       authType?: string;
     },
   ) {
@@ -690,14 +701,11 @@ export class ScheduleStatsService {
     const deptCsv = parseCsvInts(q.departments);
     if (allowedIds.length === 0) return emptyPaginate(page);
 
-    // Org filter (with optional dontInstallDeviceOrgIds exclusion).
     const orgListSql = sqlIdList(allowedIds);
-    const dontInstallExcl = opts.excludeNoDeviceOrgs
-      ? sql` AND o.id NOT IN (${sqlIdList([...NO_DEVICE_ORG_IDS])})`
-      : sql``;
-    const deptCond = deptCsv.length > 0
-      ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
-      : sql``;
+    const deptCond =
+      deptCsv.length > 0
+        ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
+        : sql``;
 
     // Direction filter.
     const dirCond =
@@ -739,7 +747,7 @@ export class ScheduleStatsService {
         ORDER BY te1.event_date_and_time DESC
         LIMIT 1
       ) AS te ON TRUE
-      WHERE workers.deleted_at IS NULL${searchCond}${dirCond}${authCond}${dontInstallExcl}
+      WHERE workers.deleted_at IS NULL${searchCond}${dirCond}${authCond}
     `;
 
     const [rowsRes, cntRes] = await Promise.all([
@@ -798,9 +806,10 @@ export class ScheduleStatsService {
     const searchCond = q.search
       ? sql` AND CONCAT(w.last_name, ' ', w.first_name, ' ', w.middle_name) ILIKE ${`%${q.search}%`}`
       : sql``;
-    const deptCond = deptCsv.length > 0
-      ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
-      : sql``;
+    const deptCond =
+      deptCsv.length > 0
+        ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
+        : sql``;
 
     // Card stats-one bilan IDENTICAL FROM/WHERE — joinlar minimal.
     // org/dept/pos info'larini keyin rows query'sida olamiz.
@@ -824,7 +833,6 @@ export class ScheduleStatsService {
         AND wp.status = 2
         AND wp.deleted_at IS NULL
         AND wp.organization_id IN (${sqlIdList(allowedIds)})${deptCond}
-        AND wp.organization_id NOT IN (${sqlIdList([...NO_DEVICE_ORG_IDS])})
         AND v.worker_id IS NULL
         AND w.deleted_at IS NULL${searchCond}
     `;
@@ -914,16 +922,19 @@ export class ScheduleStatsService {
     const deptCsv = parseCsvInts(q.departments);
     if (allowedIds.length === 0) return emptyPaginate(page);
 
-    const deptCond = deptCsv.length > 0
-      ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
-      : sql``;
+    const deptCond =
+      deptCsv.length > 0
+        ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
+        : sql``;
 
     // mode-specific SQL.
-    const timeCol = mode === 'late' ? sql`turnstile_worker_schedules.start_time` : sql`turnstile_worker_schedules.end_time`;
+    const timeCol =
+      mode === 'late'
+        ? sql`turnstile_worker_schedules.start_time`
+        : sql`turnstile_worker_schedules.end_time`;
     const teOrder = mode === 'late' ? sql`ASC` : sql`DESC`;
     const teDirection = mode === 'late' ? sql`TRUE` : sql`FALSE`;
     const teAlias = mode === 'late' ? 'te_first' : 'te_last';
-    const timeAlias = mode === 'late' ? 'first_entry_time' : 'last_exit_time';
     const minuteExpr =
       mode === 'late'
         ? sql`EXTRACT(EPOCH FROM (${sql.raw(teAlias)}.event_date_and_time::time - ${timeCol})) / 60`
@@ -1060,10 +1071,7 @@ export class ScheduleStatsService {
         ORDER BY d.id
         LIMIT ${perPage} OFFSET ${offset}
       `),
-      this.db
-        .select({ total: count() })
-        .from(h_c_p_devices)
-        .where(where),
+      this.db.select({ total: count() }).from(h_c_p_devices).where(where),
     ]);
 
     const data = rowsOf(rows).map((r: any) => ({
@@ -1128,7 +1136,11 @@ export class ScheduleStatsService {
     if (rows.length === 0) return { current_page: page, total, data: [] };
 
     // Batch-load worker_position relations.
-    const wpIds = [...new Set(rows.map((r: any) => Number(r.worker_position_id)).filter(Boolean))];
+    const wpIds = [
+      ...new Set(
+        rows.map((r: any) => Number(r.worker_position_id)).filter(Boolean),
+      ),
+    ];
     const wpDetails = await this.loadWorkerPositionsMinimal(wpIds);
 
     const data = await Promise.all(
@@ -1139,7 +1151,10 @@ export class ScheduleStatsService {
           worker_position: wp ? await this.mapWpMinimal(wp, lang) : null,
           type: {
             id: r.type,
-            name: this.translate(`messages.vacations.types.${VAC_TYPE_KEY[r.type]}`, lang),
+            name: this.translate(
+              `messages.vacations.types.${VAC_TYPE_KEY[r.type]}`,
+              lang,
+            ),
           },
           from: r.from,
           to: r.to,
@@ -1173,7 +1188,10 @@ export class ScheduleStatsService {
     return this.workerPositionPreview(q, {
       extraCond: sql`AND (wp.turnstile_privilege_start_minute != 0
                           OR wp.turnstile_privilege_end_minute != 0)`,
-      extraFields: ['turnstile_privilege_start_minute', 'turnstile_privilege_end_minute'],
+      extraFields: [
+        'turnstile_privilege_start_minute',
+        'turnstile_privilege_end_minute',
+      ],
       extraMap: (r) => ({
         start_minute: r.turnstile_privilege_start_minute,
         end_minute: r.turnstile_privilege_end_minute,
@@ -1231,9 +1249,7 @@ export class ScheduleStatsService {
         )`
       : sql``;
 
-    const extras = (opts.extraFields ?? [])
-      .map((f) => `, wp.${f}`)
-      .join('');
+    const extras = (opts.extraFields ?? []).map((f) => `, wp.${f}`).join('');
 
     const fromWhere = sql`
       FROM worker_positions wp
@@ -1347,13 +1363,13 @@ export class ScheduleStatsService {
     const startTime = `${date} ${q.start_time ?? '00:00'}:00`;
     const endTime = `${date} ${q.end_time ?? '23:59'}:00`;
     const allowedIds = await this.effectiveOrgIds(q);
-    if (allowedIds.length === 0)
-      return { events: emptyPaginate(page) };
+    if (allowedIds.length === 0) return { events: emptyPaginate(page) };
     const deptCsv = parseCsvInts(q.departments);
 
-    const dirFilter = q.direction != null
-      ? sql` AND te.direction = ${Number(q.direction) === 1}`
-      : sql``;
+    const dirFilter =
+      q.direction != null
+        ? sql` AND te.direction = ${Number(q.direction) === 1}`
+        : sql``;
 
     const fromWhere = sql`
       FROM terminal_events te
@@ -1361,7 +1377,6 @@ export class ScheduleStatsService {
         SELECT DISTINCT wp.worker_id FROM worker_positions wp
          WHERE wp.status = 2 AND wp.deleted_at IS NULL
            AND wp.organization_id IN (${sqlIdList(allowedIds)})
-           AND wp.organization_id NOT IN (${sqlIdList([...NO_DEVICE_ORG_IDS])})
            ${deptCsv.length > 0 ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})` : sql``}
       )
         AND te.event_date_and_time::date = ${date}::date
@@ -1381,7 +1396,9 @@ export class ScheduleStatsService {
     const total = num((rowsOf(cntRes)[0] as { cnt?: number })?.cnt);
     const rows = rowsOf(rowsRes);
 
-    const wIds = [...new Set(rows.map((r: any) => Number(r.worker_id)).filter(Boolean))];
+    const wIds = [
+      ...new Set(rows.map((r: any) => Number(r.worker_id)).filter(Boolean)),
+    ];
     const workersInfo = wIds.length
       ? await this.db
           .select({
@@ -1395,7 +1412,10 @@ export class ScheduleStatsService {
           .from(workers)
           .where(inArray(workers.id, wIds))
       : [];
-    const wMap = new Map<number, (typeof workersInfo)[number] & { photoUrl?: string | null }>();
+    const wMap = new Map<
+      number,
+      (typeof workersInfo)[number] & { photoUrl?: string | null }
+    >();
     for (const w of workersInfo) {
       wMap.set(w.id, { ...w, photoUrl: await this.minio.fileUrl(w.photo) });
     }
