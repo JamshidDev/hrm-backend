@@ -1,14 +1,10 @@
-// Region service. Laravel: Modules/Structure/Http/Controllers/RegionController.
-// scopeSearch: name LIKE + country_id filter. with('country') eager load.
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike } from 'drizzle-orm';
+import { eq, type SQLWrapper } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { regions } from '@/db/schema';
 import { paginate } from '@/common/pagination/paginate.util';
-import { notDeleted } from '@/common/database/soft-delete.helper';
 import {
   insertRecord,
   findByIdOrFail,
@@ -32,19 +28,22 @@ export class RegionService {
   async findAll(filters: QueryRegionDto): Promise<RegionListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-    // Bitta manba — count (Builder SQL) va list (relational object) bir xil
-    // filterdan kelib chiqadi (divergensiya/total mismatch oldini oladi).
-    const { countWhere, listWhere } = this.buildFilters(filters);
+    // BITTA object-where — list ham, count ham ($count(relationalQuery)) shundan.
+    const where = this.buildWhere(filters);
 
     return paginate({
       db: this.db,
-      countTable: regions,
-      countWhere,
-      // Relational API — country eager load.
+      // count: shu where'ning relational query'sini subquery qilib count qiladi.
+      // `as SQLWrapper` — PgRelationalQuery runtime'da SQLWrapper, tip imzosi
+      // $count param'iga to'g'ri kelmaydi (getSQL nomuvofiqligi).
+      count: () =>
+        this.db.$count(
+          this.db.query.regions.findMany({ where }) as unknown as SQLWrapper,
+        ),
       query: ({ limit, offset }) =>
         this.db.query.regions.findMany({
-          where: listWhere,
-          with: { country: true },
+          where,
+          with: { country: true }, // country eager load
           orderBy: { id: 'asc' },
           limit,
           offset,
@@ -55,23 +54,13 @@ export class RegionService {
     });
   }
 
-  // Count (Builder SQL) + list (relational object) filtri — BITTA manbadan.
-  // Laravel scopeSearch (name LIKE) + country_id filter.
-  private buildFilters(filters: QueryRegionDto) {
+  // Relational object-where — Laravel scopeSearch (name LIKE) + country_id.
+  private buildWhere(filters: QueryRegionDto) {
     const { search, country_id } = filters;
     return {
-      countWhere: and(
-        notDeleted(regions),
-        search ? ilike(regions.name, `%${search}%`) : undefined,
-        country_id ? eq(regions.country_id, country_id) : undefined,
-      ),
-      listWhere: {
-        // `as const` — method'dan qaytganda `true` literal saqlanadi (drizzle
-        // RelationsFieldFilter `isNull: true` kutadi, `boolean` emas).
-        deleted_at: { isNull: true as const },
-        ...(search ? { name: { ilike: `%${search}%` } } : {}),
-        ...(country_id ? { country_id } : {}),
-      },
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+      ...(country_id ? { country_id } : {}),
     };
   }
 

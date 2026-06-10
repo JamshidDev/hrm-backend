@@ -32,8 +32,12 @@ import type { DataSource, Tx } from '@/db/types';
 
 export interface PaginateOptions<TRow, TItem> {
   db: DataSource | Tx;
-  // Count query uchun jadval va WHERE.
-  countTable: PgTable;
+  // Count — IKKI yo'l:
+  //   (yangi) `count` thunk: db.$count(relationalQuery) — list bilan BITTA
+  //           object-where ishlatadi (dual-where yo'q). Berilsa, shu ishlatiladi.
+  //   (legacy) countTable + countWhere — Builder SQL count.
+  count?: () => Promise<number>;
+  countTable?: PgTable;
   countWhere?: SQL | undefined;
   // List query — user yozadi (relational API yoki select() builder ham bo'ladi).
   query: (args: { limit: number; offset: number }) => Promise<TRow[]>;
@@ -52,17 +56,31 @@ export interface PaginatedResult<T> {
 export async function paginate<TRow, TItem>(
   opts: PaginateOptions<TRow, TItem>,
 ): Promise<PaginatedResult<TItem>> {
-  const { db, countTable, countWhere, query, page, perPage, mapper } = opts;
+  const {
+    db,
+    count: countThunk,
+    countTable,
+    countWhere,
+    query,
+    page,
+    perPage,
+    mapper,
+  } = opts;
   const offset = (page - 1) * perPage;
 
-  // Count query — alohida.
-  const countQuery = db.select({ total: count() }).from(countTable);
-  if (countWhere) countQuery.where(countWhere);
+  // Count — `count` thunk berilsa (db.$count relational), aks holda Builder.
+  const runCount = async (): Promise<number> => {
+    if (countThunk) return countThunk();
+    const countQuery = db.select({ total: count() }).from(countTable!);
+    if (countWhere) countQuery.where(countWhere);
+    const [{ total }] = await countQuery;
+    return Number(total);
+  };
 
   // List + count parallel.
-  const [rows, [{ total }]] = await Promise.all([
+  const [rows, total] = await Promise.all([
     query({ limit: perPage, offset }),
-    countQuery,
+    runCount(),
   ]);
 
   return {
