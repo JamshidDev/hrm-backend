@@ -230,15 +230,26 @@ export class OrganizationService {
 
   async create(dto: CreateOrganizationDto): Promise<void> {
     const nextId = await this.nextId();
+    // Laravel store: faqat validated data — parent_id, city_id, name, name_ru,
+    // name_en, full_name, level, group, code, inn, lat, long, address, external,
+    // command_address.
     await this.db.insert(organizations).values({
       id: nextId,
+      parent_id: dto.parent_id ?? null,
       city_id: dto.city_id,
       name: dto.name,
+      name_ru: dto.name_ru ?? null,
+      name_en: dto.name_en ?? null,
       full_name: dto.full_name,
       level: dto.level,
       group: dto.group ?? false,
       code: dto.code,
-      parent_id: dto.parent_id ?? null,
+      inn: dto.inn ?? null,
+      lat: dto.lat ?? null,
+      long: dto.long ?? null,
+      address: dto.address ?? null,
+      external: dto.external ?? 0,
+      command_address: dto.command_address ?? null,
       _lft: 0, // rebuild oxirgi bola sifatida joylashtiradi (appendToNode/makeRoot).
       _rgt: 0,
     });
