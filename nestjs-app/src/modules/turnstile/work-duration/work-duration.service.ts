@@ -66,7 +66,7 @@ export class WorkDurationService {
     // hech narsa (Laravel filter bo'sh natija).
     const ids = await this.scope.ids();
     if (!ids.length) {
-      return { current_page: page, per_page: perPage, total: 0, data: [] };
+      return { current_page: page, total: 0, data: [] };
     }
     const orgList = sql.join(
       ids.map((n) => sql`${n}`),
@@ -106,7 +106,6 @@ export class WorkDurationService {
     ]);
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows,
     };

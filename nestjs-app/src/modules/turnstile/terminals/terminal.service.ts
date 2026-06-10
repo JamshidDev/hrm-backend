@@ -63,7 +63,6 @@ export class TerminalService {
     );
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       // TerminalResource field order: id, building, name, name_ru, name_en, ip_address, url.
       data: rows.map((r) => ({
