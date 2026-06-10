@@ -37,6 +37,8 @@ import {
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { BusinessException } from '@/common/exceptions/business.exception';
+import { MinioService } from '@/shared/minio/minio.service';
+import { injectDocxImage } from '@/modules/confirmation/documents/docx-image.util';
 
 const POSITION_STATUS_ACTIVE = 2;
 
@@ -45,6 +47,7 @@ export class ResumeService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
+    private readonly minio: MinioService,
   ) {}
 
   async generate(uuid: string): Promise<{ buffer: Buffer; filename: string }> {
@@ -340,7 +343,6 @@ export class ResumeService {
       incentives: 'taqdirlanmagan',
       military: '',
       deputy: '',
-      photo: '',
     };
 
     // ---- Render DOCX ----
@@ -382,7 +384,19 @@ export class ResumeService {
     }
 
     zip.file('word/document.xml', xml);
-    const buffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+    let buffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    // Laravel WorkerResumeHelper: photo MinIO'da bo'lsa setImageValue('photo',
+    // {width:113, height:149, ratio:false}) bilan ${photo} placeholder'ni rasm
+    // bilan almashtiradi. Bo'lmasa placeholder o'rnida qoladi (Laravel xulqi).
+    if (w.photo) {
+      try {
+        const photoBuf = await this.minio.getObject(w.photo);
+        buffer = injectDocxImage(buffer, 'photo', photoBuf, 113, 149);
+      } catch {
+        // Rasm o'qilmadi (Storage::exists false kabi) — rasm qo'yilmaydi.
+      }
+    }
     const filename = `${this.slug(fullName)}.docx`;
     return { buffer, filename };
   }
