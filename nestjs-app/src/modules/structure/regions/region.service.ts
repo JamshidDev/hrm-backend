@@ -105,21 +105,21 @@ export class RegionService {
   // ---- Helper'lar ----
 
   private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: regions.id })
-      .from(regions)
-      .where(and(eq(regions.id, id), notDeleted(regions)))
-      .limit(1);
-    if (!row) {
+    // drizzle-v2 relational API — bitta yozuv mavjudligini tekshirish.
+    const region = await this.db.query.regions.findFirst({
+      columns: { id: true },
+      where: { id, deleted_at: { isNull: true } },
+    });
+    if (!region) {
       throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
-    return row;
+    return region;
   }
 
   private async nextId(): Promise<number> {
-    const [row] = await this.db
+    const [maxIdRow] = await this.db
       .select({ maxId: sql<number>`COALESCE(MAX(${regions.id}), 0)` })
       .from(regions);
-    return Number(row?.maxId ?? 0) + 1;
+    return Number(maxIdRow?.maxId ?? 0) + 1;
   }
 }
