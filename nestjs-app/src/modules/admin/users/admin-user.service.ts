@@ -21,6 +21,7 @@ import {
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { ExcelService } from '@/shared/excel/excel.service';
 import { paginate } from '@/common/pagination/paginate.util';
 import { SanctumService } from '@/modules/auth/sanctum.service';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
@@ -54,7 +55,82 @@ export class AdminUserService {
     private readonly minio: MinioService,
     private readonly sanctum: SanctumService,
     private readonly ctx: RequestContext,
+    private readonly excel: ExcelService,
   ) {}
+
+  // GET /admin/wrong-worker-pins — Laravel ToDoController::wrongWorkerPins.
+  // Faol (status=2) xodimlardan noto'g'ri PIN'lilarni Excel qilib qaytaradi:
+  //   pin NULL, yoki uzunligi < 13, yoki PIN'ning 2..7-belgilari tug'ilgan sana
+  //   (DDMMYY) bilan mos kelmaydi. Org-scope YO'Q (Laravel ham qo'llamaydi).
+  async wrongWorkerPins(): Promise<{ buffer: Buffer; filename: string }> {
+    const lang = this.ctx.lang;
+    const result = await this.db.execute(sql`
+      SELECT
+        CONCAT_WS(' ', w.last_name, w.first_name, w.middle_name) AS full_name,
+        o.name AS organization_name,
+        d.name AS department_name,
+        p.name AS position_name,
+        w.pin,
+        TO_CHAR(w.birthday, 'DD.MM.YYYY') AS birthday
+      FROM worker_positions wp
+      JOIN workers w ON w.id = wp.worker_id
+      LEFT JOIN organizations o ON o.id = wp.organization_id
+      LEFT JOIN departments d ON d.id = wp.department_id
+      LEFT JOIN positions p ON p.id = wp.position_id
+      WHERE wp.status = 2
+        AND wp.deleted_at IS NULL
+        AND w.deleted_at IS NULL
+        AND (
+          w.pin IS NULL
+          OR LENGTH(w.pin::text) < 13
+          OR SUBSTRING(w.pin::text FROM 2 FOR 6) <> TO_CHAR(w.birthday, 'DDMMYY')
+        )
+      ORDER BY o.name, full_name
+    `);
+    const raw = result as { rows?: Record<string, unknown>[] };
+    const rows = Array.isArray(raw.rows)
+      ? raw.rows
+      : (result as Record<string, unknown>[]);
+
+    // Laravel DynamicExportFromArray heading: trans("messages.worker.{key}"),
+    // tarjima bo'lmasa — xom kalit (department_name/position_name shunday qoladi).
+    const heading = (key: string): string => {
+      const path = `messages.worker.${key}`;
+      const v = this.i18n.t(path, { lang });
+      return typeof v === 'string' && v !== path ? v : key;
+    };
+    const cols = [
+      'full_name',
+      'organization_name',
+      'department_name',
+      'position_name',
+      'pin',
+      'birthday',
+    ];
+
+    const buffer = await this.excel.build({
+      creator: 'HRM',
+      sheets: [
+        {
+          name: 'worker',
+          columns: cols.map((key) => ({
+            header: heading(key),
+            key,
+            width: 25,
+          })),
+          rows: rows.map((r) => ({
+            full_name: r.full_name ?? '',
+            organization_name: r.organization_name ?? null,
+            department_name: r.department_name ?? null,
+            position_name: r.position_name ?? null,
+            pin: r.pin ?? null,
+            birthday: r.birthday ?? null,
+          })),
+        },
+      ],
+    });
+    return { buffer, filename: 'wrong_worker_pins.xlsx' };
+  }
 
   async findAll(filters: QueryAdminUserDto): Promise<AdminUserListResponseDto> {
     const perPage = filters.per_page ?? 10;

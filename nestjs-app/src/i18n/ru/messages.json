@@ -44,6 +44,9 @@
   },
   "worker": {
     "full_name": "Полное имя",
+    "organization_name": "Название организации",
+    "pin": "ПИНФЛ",
+    "birthday": "Дата рождения",
     "position": "Должность",
     "organization": "Организация",
     "med": {

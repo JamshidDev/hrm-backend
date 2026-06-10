@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -10,8 +11,10 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -38,6 +41,9 @@ import {
   AdminUserDirectPermissionListResponseDto,
 } from '@/modules/admin/users/dto/admin-user.dto';
 
+const XLSX_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 @ApiTags('Admin / Users')
 @ApiBearerAuth('access-token')
 @UseGuards(AuthHybridGuard, PermissionGuard)
@@ -63,6 +69,20 @@ export class AdminUserController {
     @Query() query: QueryAdminUserDirectPermissionDto,
   ) {
     return this.service.findAllWithDirectPermissions(query);
+  }
+
+  // GET /admin/wrong-worker-pins — Laravel ToDoController::wrongWorkerPins.
+  @Get('wrong-worker-pins')
+  @HttpCode(HttpStatus.OK)
+  @RawResponse()
+  @Header('Content-Type', XLSX_MIME)
+  @ApiOperation({
+    summary: 'Download active workers with invalid PINs (Excel)',
+  })
+  async wrongWorkerPins(@Res() res: Response) {
+    const { buffer, filename } = await this.service.wrongWorkerPins();
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.end(buffer);
   }
 
   @Get('access-for-admin')

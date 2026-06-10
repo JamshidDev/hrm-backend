@@ -44,6 +44,9 @@
   },
   "worker": {
     "full_name": "To‘liq ism",
+    "organization_name": "Tashkilot nomi",
+    "pin": "JShShIR",
+    "birthday": "Tug‘ilgan sana",
     "position": "Lavozim",
     "organization": "Tashkilot",
     "med": {
