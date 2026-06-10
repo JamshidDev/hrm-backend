@@ -17,6 +17,7 @@ import {
   organizations,
   positions,
   report_details,
+  report_moth_pers,
   reports,
   specialities,
   universities,
@@ -106,10 +107,25 @@ export async function generateReport(
     )
     .limit(1);
   if (signed) {
-    throw new BusinessException(
-      400,
-      'Ushbu tashkilotda joriy oy uchun hisobot allaqachon imzolangan!',
-    );
+    // Laravel: imzolangan hisobot bo'lsa ham, foydalanuvchi tashkiloti uchun shu
+    // davrga ReportMothPer ruxsati MAVJUD BO'LMASA'gina xato tashlanadi.
+    const [monthPer] = await db
+      .select({ id: report_moth_pers.id })
+      .from(report_moth_pers)
+      .where(
+        and(
+          eq(report_moth_pers.organization_id, userOrganizationId),
+          eq(report_moth_pers.year, year),
+          eq(report_moth_pers.month, month),
+        ),
+      )
+      .limit(1);
+    if (!monthPer) {
+      throw new BusinessException(
+        400,
+        'Ushbu tashkilotda joriy oy uchun hisobot allaqachon imzolangan!',
+      );
+    }
   }
 
   // 1-5. Parallel agregatsiyalar.
@@ -296,7 +312,7 @@ async function fetchWorkerStats(
     SELECT
       wp.organization_id,
       COUNT(DISTINCT w.id) FILTER (WHERE wp.type IN (1, 6, 3)) as total,
-      SUM(wp.rate) as total_rate,
+      SUM(wp.rate) FILTER (WHERE wp.type IN (1, 6, 3)) as total_rate,
       COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '1' AND wp.type IN (1, 6, 3)) as men,
       COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '0' AND wp.type IN (1, 6, 3)) as women,
       COUNT(DISTINCT w.id) FILTER (WHERE c.type = 2) as part_time_contract,
