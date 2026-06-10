@@ -15,7 +15,7 @@ export function pageOf(q?: PageQueryLike) {
 }
 
 // MAX(id)+1 — used to keep Laravel parallel-running parity (no sequence collision).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export async function nextId(db: DataSource, table: any): Promise<number> {
   const [{ m }] = await db.select({ m: max(table.id) }).from(table);
   return Number(m ?? 0) + 1;
@@ -24,7 +24,13 @@ export async function nextId(db: DataSource, table: any): Promise<number> {
 // Laravel: ScheduleTypeEnum::get($type) — lang bo'yicha tarjima.
 // Source: lang/{uz,ru,en}/messages.php → turnstile.schedules.types.{one..five}.
 const SCHEDULE_TYPE_NAMES: Record<string, Record<number, string>> = {
-  uz: { 1: 'Smena', 2: 'Xar kunlik', 3: '15 kunlik', 4: '1 xaftalik', 5: 'Maxsus' },
+  uz: {
+    1: 'Smena',
+    2: 'Xar kunlik',
+    3: '15 kunlik',
+    4: '1 xaftalik',
+    5: 'Maxsus',
+  },
   ru: {
     1: 'Смена',
     2: 'Ежедневный',
@@ -49,7 +55,10 @@ export function scheduleTypeName(type: number, lang = 'uz'): string {
 export function scheduleTypeList(
   lang = 'uz',
 ): Array<{ id: number; name: string }> {
-  return [1, 2, 3, 4, 5].map((id) => ({ id, name: scheduleTypeName(id, lang) }));
+  return [1, 2, 3, 4, 5].map((id) => ({
+    id,
+    name: scheduleTypeName(id, lang),
+  }));
 }
 
 // Hardcoded white-list of worker_ids excluded from turnstile stats (Laravel: TurnstileService->whiteList).

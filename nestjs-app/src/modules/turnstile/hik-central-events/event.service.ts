@@ -93,7 +93,10 @@ export class EventService {
     if (ids.length === 0) {
       return { current_page: page, total: 0, data: [] };
     }
-    const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+    const orgList = sql.join(
+      ids.map((n) => sql`${n}`),
+      sql`, `,
+    );
     let extraOrgs: number[] | null = null;
     if (q.organizations) {
       extraOrgs = q.organizations
@@ -103,7 +106,10 @@ export class EventService {
     }
     const extraOrgCond =
       extraOrgs && extraOrgs.length > 0
-        ? sql` AND wp.organization_id IN (${sql.join(extraOrgs.map((n) => sql`${n}`), sql`, `)})`
+        ? sql` AND wp.organization_id IN (${sql.join(
+            extraOrgs.map((n) => sql`${n}`),
+            sql`, `,
+          )})`
         : sql``;
     const orgIdCond =
       q.organization_id != null && Number(q.organization_id) > 0
@@ -118,10 +124,16 @@ export class EventService {
     }
     const depCond =
       depIds && depIds.length > 0
-        ? sql` AND wp.department_id IN (${sql.join(depIds.map((n) => sql`${n}`), sql`, `)})`
+        ? sql` AND wp.department_id IN (${sql.join(
+            depIds.map((n) => sql`${n}`),
+            sql`, `,
+          )})`
         : sql``;
 
-    const whitelistCond = sql`AND wp.worker_id NOT IN (${sql.join([...TURNSTILE_WHITELIST].map((n) => sql`${n}`), sql`, `)})`;
+    const whitelistCond = sql`AND wp.worker_id NOT IN (${sql.join(
+      [...TURNSTILE_WHITELIST].map((n) => sql`${n}`),
+      sql`, `,
+    )})`;
 
     const workerIdsSubq = sql`
       SELECT DISTINCT wp.worker_id FROM worker_positions wp
@@ -155,7 +167,10 @@ export class EventService {
     ];
     if (searchWorkerIds) {
       conds.push(
-        sql`te.worker_id IN (${sql.join(searchWorkerIds.map((n) => sql`${n}`), sql`, `)})`,
+        sql`te.worker_id IN (${sql.join(
+          searchWorkerIds.map((n) => sql`${n}`),
+          sql`, `,
+        )})`,
       );
     }
     if (q.direction !== undefined && q.direction !== '') {
@@ -169,7 +184,10 @@ export class EventService {
         .filter((n) => Number.isFinite(n) && n > 0);
       if (alIds.length) {
         conds.push(
-          sql`te.hik_central_access_level_id IN (${sql.join(alIds.map((n) => sql`${n}`), sql`, `)})`,
+          sql`te.hik_central_access_level_id IN (${sql.join(
+            alIds.map((n) => sql`${n}`),
+            sql`, `,
+          )})`,
         );
       }
     }
@@ -297,7 +315,10 @@ export class EventService {
     if (ids.length === 0) {
       return { current_page: page, total: 0, data: [] };
     }
-    const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+    const orgList = sql.join(
+      ids.map((n) => sql`${n}`),
+      sql`, `,
+    );
     let extraOrgs: number[] | null = null;
     if (q.organizations) {
       extraOrgs = q.organizations
@@ -307,7 +328,10 @@ export class EventService {
     }
     const extraOrgCond =
       extraOrgs && extraOrgs.length > 0
-        ? sql` AND wp.organization_id IN (${sql.join(extraOrgs.map((n) => sql`${n}`), sql`, `)})`
+        ? sql` AND wp.organization_id IN (${sql.join(
+            extraOrgs.map((n) => sql`${n}`),
+            sql`, `,
+          )})`
         : sql``;
     const orgIdCond =
       q.organization_id != null && Number(q.organization_id) > 0
@@ -322,7 +346,10 @@ export class EventService {
     }
     const depCond =
       depIds && depIds.length > 0
-        ? sql` AND wp.department_id IN (${sql.join(depIds.map((n) => sql`${n}`), sql`, `)})`
+        ? sql` AND wp.department_id IN (${sql.join(
+            depIds.map((n) => sql`${n}`),
+            sql`, `,
+          )})`
         : sql``;
 
     const positionExists = sql`EXISTS (
@@ -333,10 +360,7 @@ export class EventService {
         AND wp.organization_id IN (${orgList})${extraOrgCond}${orgIdCond}${depCond}
     )`;
 
-    const conds: any[] = [
-      sql`workers.deleted_at IS NULL`,
-      positionExists,
-    ];
+    const conds: any[] = [sql`workers.deleted_at IS NULL`, positionExists];
 
     // search
     const searchCond = buildWorkerSearchCond(q.search);
@@ -409,7 +433,10 @@ export class EventService {
     const evResult = await this.db.execute(sql`
       SELECT worker_id, event_date_and_time, direction
       FROM terminal_events
-      WHERE worker_id IN (${sql.join(workerIds.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_id IN (${sql.join(
+        workerIds.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND event_date_and_time BETWEEN ${startStr} AND ${endStr}
       ORDER BY event_date_and_time
     `);
@@ -418,7 +445,7 @@ export class EventService {
       event_date_and_time: string;
       direction: boolean;
     }>;
-    const eventsByWorker = new Map<number, Array<typeof evRows[number]>>();
+    const eventsByWorker = new Map<number, Array<(typeof evRows)[number]>>();
     for (const e of evRows) {
       const wid = Number(e.worker_id);
       const arr = eventsByWorker.get(wid) ?? [];
@@ -472,7 +499,10 @@ export class EventService {
         sheets: [{ name: 'Sheet1', columns: [], rows: [] }],
       });
     }
-    const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+    const orgList = sql.join(
+      ids.map((n) => sql`${n}`),
+      sql`, `,
+    );
     let extraOrgs: number[] | null = null;
     if (q.organizations) {
       extraOrgs = q.organizations
@@ -482,7 +512,10 @@ export class EventService {
     }
     const extraOrgCond =
       extraOrgs && extraOrgs.length > 0
-        ? sql` AND wp.organization_id IN (${sql.join(extraOrgs.map((n) => sql`${n}`), sql`, `)})`
+        ? sql` AND wp.organization_id IN (${sql.join(
+            extraOrgs.map((n) => sql`${n}`),
+            sql`, `,
+          )})`
         : sql``;
     const orgIdCond =
       q.organization_id != null && Number(q.organization_id) > 0
@@ -532,7 +565,10 @@ export class EventService {
              direction,
              DATE(event_date_and_time)::text AS date
       FROM terminal_events
-      WHERE worker_id IN (${sql.join(workerIds.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_id IN (${sql.join(
+        workerIds.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND event_date_and_time >= ${startStr}
         AND event_date_and_time < ${endStr}
       ORDER BY event_date_and_time
@@ -576,7 +612,10 @@ export class EventService {
              end_time::text AS end_time,
              work_status
       FROM turnstile_worker_schedules
-      WHERE worker_id IN (${sql.join(workerIds.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_id IN (${sql.join(
+        workerIds.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND date >= ${from}::date
         AND date <= ${to}::date
     `);
@@ -614,7 +653,7 @@ export class EventService {
 
     // Translation labels
     const lang = this.ctx.lang;
-    const t = (key: string) => this.i18n.t(key, { lang }) as unknown as string;
+    const t = (key: string) => this.i18n.t(key, { lang });
     const labels = {
       full_name: t('messages.worker.full_name') || 'F.I.O',
       organization: t('messages.turnstile.organization_name') || 'Tashkilot',
@@ -656,9 +695,10 @@ export class EventService {
       for (const date of days) {
         const ts = tsByDate.get(date);
         const sc = schedByDate.get(date);
-        row[`${date}_event`] = ts && (ts.start || ts.end)
-          ? `${ts.start ?? ''}–${ts.end ?? ''}`
-          : '—';
+        row[`${date}_event`] =
+          ts && (ts.start || ts.end)
+            ? `${ts.start ?? ''}–${ts.end ?? ''}`
+            : '—';
         row[`${date}_schedule`] = sc?.start_time
           ? `${sc.start_time}–${sc.end_time ?? ''}`
           : '—';
@@ -669,12 +709,14 @@ export class EventService {
               ? labels.rest
               : '—';
         // late: schedule_start && turnstile_start && turnstile_start > schedule_start
-        const late =
-          !!(sc?.start_time && ts?.start && ts.start > sc.start_time);
+        const late = !!(
+          sc?.start_time &&
+          ts?.start &&
+          ts.start > sc.start_time
+        );
         row[`${date}_late`] = late ? labels.late : '—';
         // early: schedule_end && turnstile_end && turnstile_end < schedule_end
-        const early =
-          !!(sc?.end_time && ts?.end && ts.end < sc.end_time);
+        const early = !!(sc?.end_time && ts?.end && ts.end < sc.end_time);
         row[`${date}_early`] = early ? labels.early : '—';
       }
       rows.push(row);
@@ -687,11 +729,27 @@ export class EventService {
       { header: labels.position, key: 'position', width: 30 },
     ];
     for (const d of days) {
-      cols.push({ header: `${d} ${labels.event}`, key: `${d}_event`, width: 16 });
-      cols.push({ header: `${d} ${labels.schedule}`, key: `${d}_schedule`, width: 16 });
-      cols.push({ header: `${d} ${labels.work_status}`, key: `${d}_status`, width: 10 });
+      cols.push({
+        header: `${d} ${labels.event}`,
+        key: `${d}_event`,
+        width: 16,
+      });
+      cols.push({
+        header: `${d} ${labels.schedule}`,
+        key: `${d}_schedule`,
+        width: 16,
+      });
+      cols.push({
+        header: `${d} ${labels.work_status}`,
+        key: `${d}_status`,
+        width: 10,
+      });
       cols.push({ header: `${d} ${labels.late}`, key: `${d}_late`, width: 10 });
-      cols.push({ header: `${d} ${labels.early}`, key: `${d}_early`, width: 10 });
+      cols.push({
+        header: `${d} ${labels.early}`,
+        key: `${d}_early`,
+        width: 10,
+      });
     }
 
     return this.excel.build({
@@ -840,9 +898,9 @@ export class EventService {
             SELECT hik_central_access_level_id FROM organization_access_levels
             WHERE organization_id = ${Number(userOrgId)}
           `);
-          accessLevelIds = (
-            (oalRows as any).rows ?? oalRows
-          ).map((r: any) => Number(r.hik_central_access_level_id));
+          accessLevelIds = ((oalRows as any).rows ?? oalRows).map((r: any) =>
+            Number(r.hik_central_access_level_id),
+          );
         }
       }
       if (!accessLevelIds.length) {
@@ -856,7 +914,8 @@ export class EventService {
       // hik_central_access_level_devices → hik_central_device_id (internal IDs).
       const aldRows = await this.db
         .select({
-          hik_central_device_id: hik_central_access_level_devices.hik_central_device_id,
+          hik_central_device_id:
+            hik_central_access_level_devices.hik_central_device_id,
         })
         .from(hik_central_access_level_devices)
         .where(
@@ -935,7 +994,10 @@ export class EventService {
       const devDetailRows = await this.db.execute(sql`
         SELECT id, hik_central_device_id, area_name, status
         FROM hik_central_devices
-        WHERE id IN (${sql.join(internalDeviceIds.map((n) => sql`${n}`), sql`, `)})
+        WHERE id IN (${sql.join(
+          internalDeviceIds.map((n) => sql`${n}`),
+          sql`, `,
+        )})
       `);
       const ddRows = (devDetailRows as any).rows ?? devDetailRows;
       for (const d of ddRows as any[]) {
@@ -1060,8 +1122,14 @@ export class EventService {
               WHERE wp.worker_id = w.id AND wp.status = 2 AND wp.deleted_at IS NULL
              ) AS position_id
       FROM workers w
-      WHERE w.card IN (${sql.join([...cardNos].map((n) => sql`${n}`), sql`, `)})
-         OR w.pin  IN (${sql.join([...cardNos].map((n) => sql`${n}`), sql`, `)})
+      WHERE w.card IN (${sql.join(
+        [...cardNos].map((n) => sql`${n}`),
+        sql`, `,
+      )})
+         OR w.pin  IN (${sql.join(
+           [...cardNos].map((n) => sql`${n}`),
+           sql`, `,
+         )})
     `);
     const wRows = ((workerRows as any).rows ?? workerRows) as Array<{
       id: number | string;
@@ -1155,9 +1223,7 @@ function calcWorkDurationMinutes(
   if (!events.length) return 0;
   const today = dateStr === new Date().toISOString().slice(0, 10);
   const dayStart = new Date(`${dateStr}T00:00:00`);
-  const dayEnd = today
-    ? new Date()
-    : new Date(`${dateStr}T23:59:59`);
+  const dayEnd = today ? new Date() : new Date(`${dateStr}T23:59:59`);
 
   // Sort by time + fold same-direction.
   const sorted = [...events].sort(

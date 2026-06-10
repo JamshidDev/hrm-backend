@@ -59,8 +59,7 @@ export class OrganizationTerminalService {
     const roots: OrganizationTerminalNode[] = [];
     for (const o of orgs) {
       const node = nodeMap.get(o.id)!;
-      const parent =
-        o.parent_id != null ? nodeMap.get(o.parent_id) : undefined;
+      const parent = o.parent_id != null ? nodeMap.get(o.parent_id) : undefined;
       if (parent) parent.children.push(node);
       else roots.push(node);
     }

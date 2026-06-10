@@ -234,7 +234,10 @@ export class WorkDurationService {
             ),
           )
           .where(
-            and(inArray(worker_positions.id, wpIds), notDeleted(worker_positions)),
+            and(
+              inArray(worker_positions.id, wpIds),
+              notDeleted(worker_positions),
+            ),
           )
       : [];
     const wpMap = new Map(wpRows.map((w) => [w.id, w]));

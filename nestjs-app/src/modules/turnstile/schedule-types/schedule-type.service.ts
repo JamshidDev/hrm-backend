@@ -164,7 +164,9 @@ export class ScheduleTypeService {
             type_id: turnstile_schedule_groups.turnstile_schedule_type_id,
             groups: count(),
             // Laravel withSum — group yo'q/hammasi null bo'lsa null (0 emas).
-            workers: sql<number | null>`SUM(${turnstile_schedule_groups.workers_count})::int`,
+            workers: sql<
+              number | null
+            >`SUM(${turnstile_schedule_groups.workers_count})::int`,
           })
           .from(turnstile_schedule_groups)
           .where(

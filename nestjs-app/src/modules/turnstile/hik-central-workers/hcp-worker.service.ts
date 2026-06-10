@@ -131,10 +131,16 @@ export class HcpWorkerService {
             .filter((n) => Number.isInteger(n) && n > 0);
         }
 
-        const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+        const orgList = sql.join(
+          ids.map((n) => sql`${n}`),
+          sql`, `,
+        );
         const extraOrgCond =
           extraOrgs && extraOrgs.length > 0
-            ? sql` AND wp.organization_id IN (${sql.join(extraOrgs.map((n) => sql`${n}`), sql`, `)})`
+            ? sql` AND wp.organization_id IN (${sql.join(
+                extraOrgs.map((n) => sql`${n}`),
+                sql`, `,
+              )})`
             : sql``;
         const orgIdCond =
           organizationId !== null
@@ -142,7 +148,10 @@ export class HcpWorkerService {
             : sql``;
         const depCond =
           depIds && depIds.length > 0
-            ? sql` AND wp.department_id IN (${sql.join(depIds.map((n) => sql`${n}`), sql`, `)})`
+            ? sql` AND wp.department_id IN (${sql.join(
+                depIds.map((n) => sql`${n}`),
+                sql`, `,
+              )})`
             : sql``;
 
         conds.push(
@@ -183,7 +192,9 @@ export class HcpWorkerService {
       : sql``;
     const walWhereParts: SQL[] = [];
     if (accessLevelId !== null) {
-      walWhereParts.push(sql`wal.hik_central_access_level_id = ${accessLevelId}`);
+      walWhereParts.push(
+        sql`wal.hik_central_access_level_id = ${accessLevelId}`,
+      );
     }
     if (statusVal !== null) {
       walWhereParts.push(sql`wal.status = ${statusVal}`);
@@ -271,7 +282,10 @@ export class HcpWorkerService {
           org_full_name: organizations.full_name,
         })
         .from(worker_positions)
-        .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+        .leftJoin(
+          departments,
+          eq(departments.id, worker_positions.department_id),
+        )
         .leftJoin(positions, eq(positions.id, worker_positions.position_id))
         .leftJoin(
           organizations,
@@ -296,13 +310,17 @@ export class HcpWorkerService {
     const hcpIds = [...hcpByWorker.values()].map((h) => Number(h.id));
 
     // worker_access_levels for hcpPerson (top 4 by status DESC).
-    const walsByHcp = new Map<number, Array<{
-      id: number;
-      hik_central_access_level_id: number;
-      status: number;
-      access_level_name: string | null;
-    }>>();
-    let alPhotoMap: Map<number, { id: number; photo: string | null }> = new Map();
+    const walsByHcp = new Map<
+      number,
+      Array<{
+        id: number;
+        hik_central_access_level_id: number;
+        status: number;
+        access_level_name: string | null;
+      }>
+    >();
+    const alPhotoMap: Map<number, { id: number; photo: string | null }> =
+      new Map();
     if (hcpIds.length) {
       // Laravel: $q->orderByDesc('status')->limit(4) — per-hcpPerson top 4.
       // Bizda window function bilan top-4-per-group olamiz.
@@ -317,7 +335,10 @@ export class HcpWorkerService {
                  ROW_NUMBER() OVER (PARTITION BY wal.worker_hik_central_id ORDER BY wal.status DESC, wal.id ASC) AS rn
           FROM worker_access_levels wal
           LEFT JOIN hik_central_access_levels hcal ON hcal.id = wal.hik_central_access_level_id
-          WHERE wal.worker_hik_central_id IN (${sql.join(hcpIds.map((n) => sql`${n}`), sql`, `)})
+          WHERE wal.worker_hik_central_id IN (${sql.join(
+            hcpIds.map((n) => sql`${n}`),
+            sql`, `,
+          )})
             AND wal.deleted_at IS NULL
         ) t
         WHERE rn <= 4
@@ -388,7 +409,7 @@ export class HcpWorkerService {
           status: a.status,
         }));
         const photoObj = hcp.worker_photo_id
-          ? alPhotoMap.get(Number(hcp.worker_photo_id)) ?? null
+          ? (alPhotoMap.get(Number(hcp.worker_photo_id)) ?? null)
           : null;
         hcpResource = {
           id: Number(hcp.id),
@@ -559,9 +580,7 @@ export class HcpWorkerService {
           sql`${hik_central_access_levels.deleted_at} IS NULL`,
         ),
       )
-      .where(
-        eq(organization_access_levels.organization_id, Number(userOrgId)),
-      );
+      .where(eq(organization_access_levels.organization_id, Number(userOrgId)));
     // Laravel orderBy YO'Q — PG natural order. Aks holda parity uchun barchasini olib,
     // hik_central_access_levels.id ga ko'ra Laravel plan'iga moslash.
 
@@ -631,10 +650,7 @@ export class HcpWorkerService {
       );
     }
     if (!dto.photo_id && !dto.photo) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.missing_photo'),
-      );
+      throw new BusinessException(400, this.i18n.t('messages.missing_photo'));
     }
 
     // Worker lookup
@@ -741,7 +757,7 @@ export class HcpWorkerService {
         hik_central_person_id: Number(res.personId),
         worker_photo_id: conv.photo_id ?? null,
         to: to ? `${to.slice(0, 10)} 00:00:00` : null,
-      } as any);
+      });
       hcpRow = { id, person_id: res.personId };
     } else {
       // Update face if photo changed.
@@ -820,7 +836,7 @@ export class HcpWorkerService {
             hik_central_person_id: Number(hcpRow.person_id),
             hik_central_access_level_id: Number(al.id),
             status: 1,
-          } as any);
+          });
         }
       } else {
         // Force-delete the wal if attach failed
@@ -857,24 +873,15 @@ export class HcpWorkerService {
         .where(eq(worker_photos.id, Number(photoId)))
         .limit(1);
       if (!wp?.photo) {
-        throw new BusinessException(
-          400,
-          this.i18n.t('messages.missing_photo'),
-        );
+        throw new BusinessException(400, this.i18n.t('messages.missing_photo'));
       }
       const url = await this.minio.fileUrl(wp.photo);
       if (!url) {
-        throw new BusinessException(
-          400,
-          this.i18n.t('messages.missing_photo'),
-        );
+        throw new BusinessException(400, this.i18n.t('messages.missing_photo'));
       }
       const res = await fetch(url);
       if (!res.ok) {
-        throw new BusinessException(
-          400,
-          this.i18n.t('messages.missing_photo'),
-        );
+        throw new BusinessException(400, this.i18n.t('messages.missing_photo'));
       }
       const buf = Buffer.from(await res.arrayBuffer());
       const base64 = buf.toString('base64');
@@ -897,7 +904,7 @@ export class HcpWorkerService {
       id: newPhotoId,
       worker_id: workerId,
       photo: photoPath,
-    } as any);
+    });
     return { base64: stripped, photo_id: newPhotoId };
   }
 
@@ -1163,10 +1170,7 @@ export class HcpWorkerService {
 // db.execute() driver natijasi: ba'zan {rows:[]}, ba'zan to'g'ridan-to'g'ri array.
 function rowsOf(result: unknown): Record<string, unknown>[] {
   const r = result as { rows?: unknown[] };
-  return (Array.isArray(r.rows) ? r.rows : result) as Record<
-    string,
-    unknown
-  >[];
+  return (Array.isArray(r.rows) ? r.rows : result) as Record<string, unknown>[];
 }
 
 // hik_central_access_levels.devices — varchar storing JSON array of device_ids.
