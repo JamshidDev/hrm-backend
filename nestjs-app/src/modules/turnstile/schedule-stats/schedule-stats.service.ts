@@ -1086,7 +1086,6 @@ export class ScheduleStatsService {
           AND d.organization_id IN (${sqlIdList(allowedIds)})
           AND d.status = ${online}${searchCond ? sql`` : sql``}
           ${q.search ? sql` AND d.name ILIKE ${`%${q.search}%`}` : sql``}
-        ORDER BY d.id
         LIMIT ${perPage} OFFSET ${offset}
       `),
       this.db.select({ total: count() }).from(h_c_p_devices).where(where),
