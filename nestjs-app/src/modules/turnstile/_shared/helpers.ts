@@ -21,22 +21,35 @@ export async function nextId(db: DataSource, table: any): Promise<number> {
   return Number(m ?? 0) + 1;
 }
 
-// Laravel: ScheduleTypeEnum::get($type) — translated label.
-// Source: lang/uz/messages.php → turnstile.schedules.types.{one..five}.
-export function scheduleTypeName(type: number): string {
-  const map: Record<number, string> = {
-    1: 'Smena',
-    2: 'Xar kunlik',
-    3: '15 kunlik',
-    4: '1 xaftalik',
-    5: 'Maxsus',
-  };
+// Laravel: ScheduleTypeEnum::get($type) — lang bo'yicha tarjima.
+// Source: lang/{uz,ru,en}/messages.php → turnstile.schedules.types.{one..five}.
+const SCHEDULE_TYPE_NAMES: Record<string, Record<number, string>> = {
+  uz: { 1: 'Smena', 2: 'Xar kunlik', 3: '15 kunlik', 4: '1 xaftalik', 5: 'Maxsus' },
+  ru: {
+    1: 'Смена',
+    2: 'Ежедневный',
+    3: '15-дневный',
+    4: 'Неделя (1 недельный)',
+    5: 'Особенный',
+  },
+  en: {
+    1: 'Shift',
+    2: 'Daily',
+    3: '15-day schedule',
+    4: 'Weekly (1-week)',
+    5: 'Custom schedule',
+  },
+};
+export function scheduleTypeName(type: number, lang = 'uz'): string {
+  const map = SCHEDULE_TYPE_NAMES[lang] ?? SCHEDULE_TYPE_NAMES.uz;
   return map[type] ?? '';
 }
 
 // Laravel: ScheduleTypeEnum::list — array of {id, name} (5 entries).
-export function scheduleTypeList(): Array<{ id: number; name: string }> {
-  return [1, 2, 3, 4, 5].map((id) => ({ id, name: scheduleTypeName(id) }));
+export function scheduleTypeList(
+  lang = 'uz',
+): Array<{ id: number; name: string }> {
+  return [1, 2, 3, 4, 5].map((id) => ({ id, name: scheduleTypeName(id, lang) }));
 }
 
 // Hardcoded white-list of worker_ids excluded from turnstile stats (Laravel: TurnstileService->whiteList).
