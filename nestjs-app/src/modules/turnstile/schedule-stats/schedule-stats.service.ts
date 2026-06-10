@@ -1227,20 +1227,15 @@ export class ScheduleStatsService {
   // Bizning yondashuv (developer talabi): preview'ni CARD filteriga keltirish.
   // ────────────────────────────────────────────────────────────────────────
   async notIncludedSchedulePreview(q: PreviewQuery) {
+    // Laravel: WorkerPosition::filter(...)->whereDoesntHave('scheduleDays',
+    // whereDate('date', $date)) — aniq sana uchun jadvali yo'q pozitsiyalar.
+    // is_turnstile / oy-oralig'i / vacation shartlari Laravel'da YO'Q.
     const date = parseDate(q.date);
-    const monthStart = monthStartOf(date);
-    const monthEnd = monthEndOf(date);
     return this.workerPositionPreview(q, {
       extraCond: sql`
-        AND wp.is_turnstile = TRUE
         AND wp.id NOT IN (
           SELECT ts.worker_position_id FROM turnstile_worker_schedules ts
-           WHERE ts.date BETWEEN ${monthStart}::date AND ${monthEnd}::date
-        )
-        AND wp.worker_id NOT IN (
-          SELECT v.worker_id FROM vacations v
-           WHERE v.from <= ${monthEnd}::date
-             AND v.to >= ${monthStart}::date
+           WHERE ts.date = ${date} AND ts.deleted_at IS NULL
         )
       `,
     });
