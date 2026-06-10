@@ -7,6 +7,7 @@ import { and, asc, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
+import { LaravelValidationException } from '@/common/exceptions/validation.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
@@ -64,7 +65,13 @@ export class WorkerScheduleService {
     has_schedule?: string;
     search?: string;
   }) {
-    if (!q.date) throw new BusinessException(422, 'date is required');
+    // Laravel: `date` => required|date. Bo'sh bo'lsa 422 { message, errors:{date} }
+    // shaklida (`Sana maydoni to'ldirilishi shart.`) — business-exception emas.
+    if (!q.date) {
+      throw new LaravelValidationException([
+        { property: 'date', constraints: { isNotEmpty: 'date' }, children: [] },
+      ]);
+    }
     const { page, perPage, offset } = pageOf(q);
 
     // Parse date → month start/end. Non-ISO date (masalan "2026-5-01") JS'da
