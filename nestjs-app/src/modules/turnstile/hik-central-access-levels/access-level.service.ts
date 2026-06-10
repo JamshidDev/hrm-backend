@@ -396,7 +396,6 @@ export class AccessLevelService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => {
         // Laravel: $devicesCache->whereIn('device_id', $this->devices) — devicesCache
@@ -414,7 +413,7 @@ export class AccessLevelService {
           hik_server: 'isup.das-uty.uz',
           name: r.name,
           description: (r as any).description ?? null,
-          devices_count: myDevs.length,
+          devices_count: (r as any).devices_count ?? 0,
           department: r.hik_central_department_id
             ? (deptMap.get(r.hik_central_department_id) ?? null)
             : null,
