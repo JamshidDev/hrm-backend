@@ -152,7 +152,7 @@ export class ScheduleGroupService {
             ? {
                 id: Number(st.id),
                 name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type) },
+                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
               }
             : null,
           created_at: formatLaravelTs(r.created_at),

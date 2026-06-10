@@ -373,7 +373,7 @@ export class WorkerScheduleService {
             ? {
                 id: Number(st.id),
                 name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type) },
+                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
               }
             : null,
           is_turnstile: r.is_turnstile,
@@ -1365,7 +1365,7 @@ export class WorkerScheduleService {
             ? {
                 id: Number(st.id),
                 name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type) },
+                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
               }
             : null,
         };
