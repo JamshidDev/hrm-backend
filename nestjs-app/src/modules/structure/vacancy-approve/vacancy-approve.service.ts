@@ -1,13 +1,8 @@
-// VacancyApprove service. Laravel: VacancyApproveOrganizationController.
-// Pivot-like table organizations[from] ↔ organizations[to].
-
 import { Injectable } from '@nestjs/common';
-import { count, eq, inArray, sql } from 'drizzle-orm';
-import { I18nService } from 'nestjs-i18n';
+import { count, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { vacancy_approve_organizations, organizations } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import {
   QueryVacancyApproveDto,
@@ -28,7 +23,6 @@ interface OrgMinRow {
 export class VacancyApproveService {
   constructor(
     @InjectDb() private readonly db: DataSource,
-    private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
   ) {}
 
@@ -40,7 +34,6 @@ export class VacancyApproveService {
     const lang = this.ctx.lang;
     const offset = (page - 1) * perPage;
 
-    // Total + list parallel.
     const [list, [{ total }]] = await Promise.all([
       this.db
         .select()
@@ -50,7 +43,6 @@ export class VacancyApproveService {
       this.db.select({ total: count() }).from(vacancy_approve_organizations),
     ]);
 
-    // Org IDs ni yig'amiz va batch load qilamiz.
     const orgIds = new Set<number>();
     for (const r of list) {
       orgIds.add(r.from_organization_id);
@@ -72,8 +64,6 @@ export class VacancyApproveService {
     };
   }
 
-  // Laravel attach: from_organization_id uchun barcha eski yozuvlarni o'chirib,
-  // yangi to_organization_ids ro'yxatini insert qiladi.
   async attach(dto: AttachVacancyApproveDto): Promise<void> {
     await this.db.transaction(async (tx) => {
       await tx
@@ -96,15 +86,11 @@ export class VacancyApproveService {
     });
   }
 
-  // Laravel: VacancyApproveOrganization::find($id)?->delete();
-  // → silently passes if not found (no 404).
   async remove(id: number): Promise<void> {
     await this.db
       .delete(vacancy_approve_organizations)
       .where(eq(vacancy_approve_organizations.id, id));
   }
-
-  // ---- Helper'lar ----
 
   private async fetchOrganizations(
     ids: number[],
@@ -144,12 +130,5 @@ export class VacancyApproveService {
     if (lang === 'ru') name = org.name_ru ?? org.name;
     else if (lang === 'en') name = org.name_en ?? org.name;
     return { id: org.id, name, group: org.group };
-  }
-
-  // Stale lint silencer.
-  private _x(): void {
-    void this.i18n;
-    void BusinessException;
-    void sql;
   }
 }
