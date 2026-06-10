@@ -6,6 +6,7 @@ import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { sql } from 'drizzle-orm';
@@ -167,8 +168,8 @@ export class SyncService {
         const w = u?.worker_id ? wMap.get(Number(u.worker_id)) ?? null : null;
         return {
           id: Number(r.id),
-          created_at: r.created_at,
-          updated_at: r.updated_at,
+          created_at: toLaravelTimestamp(r.created_at),
+          updated_at: toLaravelTimestamp(r.updated_at),
           sync_events_count: Number(r.events_count ?? 0),
           status: r.status,
           error: r.error,
