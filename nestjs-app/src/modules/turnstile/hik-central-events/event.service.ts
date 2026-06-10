@@ -653,7 +653,8 @@ export class EventService {
 
     // Translation labels
     const lang = this.ctx.lang;
-    const t = (key: string) => this.i18n.t(key, { lang });
+    const t = (key: string): string =>
+      this.i18n.t(key, { lang }) as unknown as string;
     const labels = {
       full_name: t('messages.worker.full_name') || 'F.I.O',
       organization: t('messages.turnstile.organization_name') || 'Tashkilot',
