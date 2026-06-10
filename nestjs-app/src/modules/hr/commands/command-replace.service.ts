@@ -1567,11 +1567,11 @@ export class CommandReplaceService {
       // Pension bloki.
       if (add.pension_count) {
         scalars.year = String(add.pension_count.year ?? '');
-        scalars.count = `lavozim maoshining ${add.pension_count.count ?? ''} barobari miqdorida`;
+        scalars.count = `${add.pension_count.count ?? ''} barobari miqdorida`;
         blocks.pension_count = 1;
       } else if (add.pension_coefficient) {
         scalars.year = String(add.pension_coefficient.year ?? '');
-        scalars.count = `lavozim maoshining ${add.pension_coefficient.count ?? ''} foizi miqdorida`;
+        scalars.count = `${add.pension_coefficient.count ?? ''} foizi miqdorida`;
         scalars.codes = '172,269‑moddalariga';
         blocks.pension_count = 1;
       }
