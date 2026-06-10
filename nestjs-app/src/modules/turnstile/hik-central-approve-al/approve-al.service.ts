@@ -101,7 +101,6 @@ export class ApproveAlService {
         })
         .from(turnstile_worker_approves)
         .where(where)
-        .orderBy(desc(turnstile_worker_approves.id))
         .limit(perPage)
         .offset(offset),
       this.db
@@ -115,7 +114,7 @@ export class ApproveAlService {
       ...new Set(
         rows
           .flatMap((r) => [r.organization_id, r.receiver_organization_id])
-          .filter(Boolean) as number[],
+          .filter(Boolean),
       ),
     ];
     const orgRows = orgIds.length
@@ -146,9 +145,7 @@ export class ApproveAlService {
           .from(users)
           .where(inArray(users.id, userIds))
       : [];
-    const workerIds = uRows
-      .map((u) => u.worker_id)
-      .filter(Boolean) as number[];
+    const workerIds = uRows.map((u) => u.worker_id).filter(Boolean) as number[];
     const wRows = workerIds.length
       ? await this.db
           .select({
@@ -196,7 +193,7 @@ export class ApproveAlService {
     const userBlock = (uid: number | null) => {
       if (!uid) return null;
       const u = uMap.get(Number(uid));
-      const w = u?.worker_id ? wMap.get(Number(u.worker_id)) ?? null : null;
+      const w = u?.worker_id ? (wMap.get(Number(u.worker_id)) ?? null) : null;
       return { id: Number(uid), worker: w };
     };
 
@@ -214,8 +211,7 @@ export class ApproveAlService {
         approved: r.approved,
         user: userBlock(r.user_id),
         receiver_user: userBlock(r.receiver_id),
-        status:
-          Number(r.organization_id) === userOrgId ? 'sended' : 'received',
+        status: Number(r.organization_id) === userOrgId ? 'sended' : 'received',
       })),
     };
   }
@@ -238,13 +234,13 @@ export class ApproveAlService {
       .from(turnstile_worker_approves)
       .where(eq(turnstile_worker_approves.id, approvalId))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
 
     // organizations (sender + receiver)
-    const orgIds = [
-      row.organization_id,
-      row.receiver_organization_id,
-    ].filter(Boolean) as number[];
+    const orgIds = [row.organization_id, row.receiver_organization_id].filter(
+      Boolean,
+    );
     const orgRows = orgIds.length
       ? await this.db
           .select({
@@ -347,10 +343,10 @@ export class ApproveAlService {
         : Promise.resolve([] as any[]),
     ]);
     const wPhotoUrls = await Promise.all(
-      (wRows2 as any[]).map((w) => this.minio.fileUrl(w.photo)),
+      wRows2.map((w) => this.minio.fileUrl(w.photo)),
     );
     const wMap = new Map(
-      (wRows2 as any[]).map(
+      wRows2.map(
         (w, i) =>
           [
             Number(w.id),
@@ -364,14 +360,10 @@ export class ApproveAlService {
           ] as const,
       ),
     );
-    const dMap = new Map(
-      (dRows as any[]).map((d) => [Number(d.id), d] as const),
-    );
-    const pMap = new Map(
-      (pRows as any[]).map((p) => [Number(p.id), p] as const),
-    );
+    const dMap = new Map(dRows.map((d) => [Number(d.id), d] as const));
+    const pMap = new Map(pRows.map((p) => [Number(p.id), p] as const));
     const wpOrgFullMap = new Map(
-      (wpOrgRows as any[]).map(
+      wpOrgRows.map(
         (o) => [Number(o.id), o.full_name as string | null] as const,
       ),
     );
@@ -408,7 +400,7 @@ export class ApproveAlService {
         const pos = r.position_id ? pMap.get(Number(r.position_id)) : null;
         const dep = r.department_id ? dMap.get(Number(r.department_id)) : null;
         const orgFull = r.organization_id
-          ? wpOrgFullMap.get(Number(r.organization_id)) ?? null
+          ? (wpOrgFullMap.get(Number(r.organization_id)) ?? null)
           : null;
         const wpShape = {
           position_name: pos?.name ?? null,
@@ -418,7 +410,7 @@ export class ApproveAlService {
         };
         return {
           id: Number(r.wp_id),
-          worker: r.worker_id ? wMap.get(Number(r.worker_id)) ?? null : null,
+          worker: r.worker_id ? (wMap.get(Number(r.worker_id)) ?? null) : null,
           post_name: getFullPosition(wpShape),
           post_short_name: getShortPosition(wpShape),
         };
@@ -441,7 +433,10 @@ export class ApproveAlService {
     const userId = Number(this.ctx.user_or_fail.id);
 
     if (!receiverOrgId || !body.title) {
-      throw new BusinessException(422, 'receiver_organization_id and title required');
+      throw new BusinessException(
+        422,
+        'receiver_organization_id and title required',
+      );
     }
     // Laravel: receiver_organization === user.org → 422 receiver_organization_is_you
     if (receiverOrgId === userOrgId) {
@@ -480,7 +475,7 @@ export class ApproveAlService {
           organization_id: userOrgId,
           user_id: userId,
           updated_at: sql`NOW()`,
-        } as any)
+        })
         .where(eq(turnstile_worker_approves.id, approvalId));
     } else {
       approvalId = await nextId(this.db, turnstile_worker_approves);
@@ -494,7 +489,7 @@ export class ApproveAlService {
         approved: 1,
         created_at: sql`NOW()`,
         updated_at: sql`NOW()`,
-      } as any);
+      });
     }
 
     // Sync pivots (delete-then-insert).
@@ -523,14 +518,12 @@ export class ApproveAlService {
         ),
     ]);
     if (wpIds.length) {
-      await this.db
-        .insert(turnstile_worker_approve_worker_positions)
-        .values(
-          wpIds.map((wp) => ({
-            turnstile_worker_approve_id: approvalId,
-            worker_position_id: wp,
-          })),
-        );
+      await this.db.insert(turnstile_worker_approve_worker_positions).values(
+        wpIds.map((wp) => ({
+          turnstile_worker_approve_id: approvalId,
+          worker_position_id: wp,
+        })),
+      );
     }
     if (alIds.length) {
       await this.db.insert(turnstile_worker_access_levels).values(
@@ -555,7 +548,8 @@ export class ApproveAlService {
       .from(turnstile_worker_approves)
       .where(eq(turnstile_worker_approves.id, id))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     if (Number(row.approved) === 2) {
       throw new BusinessException(
         400,
@@ -583,10 +577,11 @@ export class ApproveAlService {
       .from(turnstile_worker_approves)
       .where(eq(turnstile_worker_approves.id, approvalId))
       .limit(1);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     await this.db
       .update(turnstile_worker_approves)
-      .set({ approved, updated_at: sql`NOW()` } as any)
+      .set({ approved, updated_at: sql`NOW()` })
       .where(eq(turnstile_worker_approves.id, approvalId));
 
     if (status === 'approved') {
@@ -779,7 +774,7 @@ export class ApproveAlService {
           .set({
             worker_photo_id: lastPhoto.id,
             updated_at: sql`NOW()`,
-          } as any)
+          })
           .where(eq(worker_hik_centrals.id, hcpId));
       } else {
         hcpId = await nextId(this.db, worker_hik_centrals);
@@ -791,7 +786,7 @@ export class ApproveAlService {
           worker_photo_id: lastPhoto.id,
           created_at: sql`NOW()`,
           updated_at: sql`NOW()`,
-        } as any);
+        });
       }
 
       // Upsert worker_access_levels for each access_level.
@@ -819,7 +814,7 @@ export class ApproveAlService {
               hik_central_person_id: personId,
               to: endTimeStr,
               updated_at: sql`NOW()`,
-            } as any)
+            })
             .where(eq(worker_access_levels.id, existingWal.id));
         } else {
           const walId = await nextId(this.db, worker_access_levels);
@@ -834,7 +829,7 @@ export class ApproveAlService {
             to: endTimeStr,
             created_at: sql`NOW()`,
             updated_at: sql`NOW()`,
-          } as any);
+          });
         }
       }
       personIds.push(String(personId));
@@ -844,10 +839,7 @@ export class ApproveAlService {
     if (personIds.length) {
       for (const al of alRows) {
         try {
-          await this.hcp.attachWorkerToAccessLevel(
-            personIds,
-            String(al.hcid),
-          );
+          await this.hcp.attachWorkerToAccessLevel(personIds, String(al.hcid));
         } catch (e) {
           this.logger.warn(
             `HCP attach failed for access_level ${al.id}: ${(e as Error).message}`,

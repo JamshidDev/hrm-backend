@@ -326,6 +326,17 @@ export class LmsEduPlanService {
     const where = and(
       eq(edu_plan_workers.edu_plan_id, eduPlanId),
       notDeleted(edu_plan_workers),
+      // Laravel: ->whereHas('worker_position.worker') — worker_position'i (va
+      // uning worker'i) o'chirilgan/yo'q yozuvlar chiqarilmaydi (soft-delete).
+      sql`EXISTS (
+        SELECT 1 FROM worker_positions wp
+        WHERE wp.id = ${edu_plan_workers.worker_position_id}
+          AND wp.deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM workers w
+            WHERE w.id = wp.worker_id AND w.deleted_at IS NULL
+          )
+      )`,
     );
 
     return lmsPaginate({

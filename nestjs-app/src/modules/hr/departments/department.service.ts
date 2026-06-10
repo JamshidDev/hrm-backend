@@ -5,7 +5,13 @@ import { and, asc, desc, eq, ilike, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
-import { departments, organizations, worker_positions } from '@/db/schema';
+import {
+  cities,
+  departments,
+  organizations,
+  regions,
+  worker_positions,
+} from '@/db/schema';
 import { OrgScopeService } from '@/common/database/org-scope.service';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
@@ -194,6 +200,8 @@ export class DepartmentService {
       name_ru: dto.name_ru ?? null,
       name_en: dto.name_en ?? null,
       comment: dto.comment ?? null,
+      region_id: dto.region_id ?? null,
+      city_id: dto.city_id,
       level: dto.level,
       parent_id: dto.parent_id ?? null,
     });
@@ -209,6 +217,8 @@ export class DepartmentService {
         name_ru: dto.name_ru ?? null,
         name_en: dto.name_en ?? null,
         comment: dto.comment ?? null,
+        region_id: dto.region_id ?? null,
+        city_id: dto.city_id,
         level: dto.level,
         parent_id: dto.parent_id ?? null,
       })
@@ -284,6 +294,14 @@ export class DepartmentService {
         parent_pk: parent.id,
         parent_name: parent.name,
         parent_level: parent.level,
+        // Laravel with('city:id,name,name_en,name_ru') — CityOnlyResource.
+        city_pk: cities.id,
+        city_name: cities.name,
+        city_name_ru: cities.name_ru,
+        city_name_en: cities.name_en,
+        // Laravel with('region:id,name') — RegionMinimalResource.
+        region_pk: regions.id,
+        region_name: regions.name,
       })
       .from(departments)
       .leftJoin(
@@ -295,6 +313,15 @@ export class DepartmentService {
         eq(departments.organization_id, organizations.id),
       )
       .leftJoin(parent, eq(parent.id, departments.parent_id))
+      // City/Region SoftDeletes — eager load soft-deleted'larni chiqarib tashlaydi.
+      .leftJoin(
+        cities,
+        and(eq(cities.id, departments.city_id), notDeleted(cities)),
+      )
+      .leftJoin(
+        regions,
+        and(eq(regions.id, departments.region_id), notDeleted(regions)),
+      )
       .where(where)
       .groupBy(
         departments.id,
@@ -302,6 +329,12 @@ export class DepartmentService {
         parent.id,
         parent.name,
         parent.level,
+        cities.id,
+        cities.name,
+        cities.name_ru,
+        cities.name_en,
+        regions.id,
+        regions.name,
       )
       .orderBy(asc(departments.organization_id), desc(departments.id))
       .limit(limit)
@@ -336,6 +369,15 @@ export class DepartmentService {
             level: r.parent_level ?? 0,
           }
         : null,
+      city: r.city_pk
+        ? {
+            id: r.city_pk,
+            name: r.city_name,
+            name_ru: r.city_name_ru,
+            name_en: r.city_name_en,
+          }
+        : null,
+      region: r.region_pk ? { id: r.region_pk, name: r.region_name } : null,
     }));
   }
 

@@ -117,11 +117,12 @@ export class AccessLevelService {
 
     // 4) UPSERT access_levels (by hik_central_access_level_id+hik_central_key).
     if (accessLevelsData.length) {
-      const values = accessLevelsData
-        .map((d) => sql`(
+      const values = accessLevelsData.map(
+        (d) => sql`(
           ${d.hik_central_access_level_id}, ${d.hik_central_key},
           ${d.name}, ${d.description}, ${d.devices_count}, NOW(), NOW()
-        )`);
+        )`,
+      );
       await this.db.execute(sql`
         INSERT INTO hik_central_access_levels
           (hik_central_access_level_id, hik_central_key, name, description, devices_count, created_at, updated_at)
@@ -170,7 +171,10 @@ export class AccessLevelService {
         })
         .from(hik_central_access_levels)
         .where(
-          inArray(hik_central_access_levels.hik_central_access_level_id, accessLevelIds),
+          inArray(
+            hik_central_access_levels.hik_central_access_level_id,
+            accessLevelIds,
+          ),
         );
       for (const r of rows) {
         if (r.ext != null) alMap.set(Number(r.ext), Number(r.id));
@@ -365,7 +369,9 @@ export class AccessLevelService {
         try {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            return parsed.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+            return parsed
+              .map((v) => Number(v))
+              .filter((n) => Number.isFinite(n));
           }
         } catch {
           // fall through
@@ -396,7 +402,6 @@ export class AccessLevelService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => {
         // Laravel: $devicesCache->whereIn('device_id', $this->devices) — devicesCache
@@ -414,7 +419,7 @@ export class AccessLevelService {
           hik_server: 'isup.das-uty.uz',
           name: r.name,
           description: (r as any).description ?? null,
-          devices_count: myDevs.length,
+          devices_count: (r as any).devices_count ?? 0,
           department: r.hik_central_department_id
             ? (deptMap.get(r.hik_central_department_id) ?? null)
             : null,
@@ -487,7 +492,10 @@ export class AccessLevelService {
 
   // Laravel `OrganizationAccessLevel::updateOrCreate` parity — agar yozuv bor
   // bo'lsa hech narsa qilmaydi, yo'q bo'lsa yangi ID bilan yaratadi.
-  private async upsertOrgAccessLevel(orgId: number, alId: number): Promise<void> {
+  private async upsertOrgAccessLevel(
+    orgId: number,
+    alId: number,
+  ): Promise<void> {
     const existing = await this.db
       .select({ id: organization_access_levels.id })
       .from(organization_access_levels)

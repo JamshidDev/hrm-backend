@@ -33,6 +33,7 @@ export class ScheduleTypeService {
 
   // Laravel: index — flat array (no pagination), no Resource (raw map).
   async list() {
+    const lang = (this.ctx.lang ?? 'uz').toLowerCase();
     const rows = await this.db
       .select()
       .from(turnstile_schedule_types)
@@ -41,7 +42,7 @@ export class ScheduleTypeService {
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
-      type: { id: r.type, name: scheduleTypeName(r.type) },
+      type: { id: r.type, name: scheduleTypeName(r.type, lang) },
       days: r.days,
     }));
   }
@@ -102,7 +103,7 @@ export class ScheduleTypeService {
     }
 
     // Per-type: groups count + workers count, org-scope (+optional dep) filtered.
-    const cMap = new Map<number, { groups: number; workers: number }>();
+    const cMap = new Map<number, { groups: number; workers: number | null }>();
     if (rows.length && orgScopeCond) {
       const typeIds = rows.map((r) => r.id);
 
@@ -162,11 +163,15 @@ export class ScheduleTypeService {
           .select({
             type_id: turnstile_schedule_groups.turnstile_schedule_type_id,
             groups: count(),
-            workers: sql<number>`COALESCE(SUM(${turnstile_schedule_groups.workers_count}), 0)::int`,
+            // Laravel withSum — group yo'q/hammasi null bo'lsa null (0 emas).
+            workers: sql<
+              number | null
+            >`SUM(${turnstile_schedule_groups.workers_count})::int`,
           })
           .from(turnstile_schedule_groups)
           .where(
             and(
+              notDeleted(turnstile_schedule_groups),
               inArray(
                 turnstile_schedule_groups.turnstile_schedule_type_id,
                 typeIds,
@@ -179,7 +184,7 @@ export class ScheduleTypeService {
         for (const a of aggRes) {
           cMap.set(Number(a.type_id), {
             groups: Number(a.groups),
-            workers: Number(a.workers),
+            workers: a.workers == null ? null : Number(a.workers),
           });
         }
       }
@@ -197,9 +202,9 @@ export class ScheduleTypeService {
       data: rows.map((r) => ({
         id: r.id,
         name: localeName(r),
-        type: { id: r.type, name: scheduleTypeName(r.type) },
+        type: { id: r.type, name: scheduleTypeName(r.type, lang) },
         groups: cMap.get(r.id)?.groups ?? 0,
-        workers: cMap.get(r.id)?.workers ?? 0,
+        workers: cMap.get(r.id)?.workers ?? null,
         days: r.days,
       })),
     };

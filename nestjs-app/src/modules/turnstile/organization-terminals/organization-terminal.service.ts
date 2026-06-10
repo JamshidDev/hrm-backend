@@ -9,22 +9,31 @@ import { organization_terminals, organizations, terminals } from '@/db/schema';
 import { nextId } from '@/modules/turnstile/_shared/helpers';
 import type { SyncOrganizationTerminalsDto } from '@/modules/turnstile/organization-terminals/dto/organization-terminal.dto';
 
+export interface OrganizationTerminalNode {
+  id: number;
+  name: string | null;
+  group: boolean;
+  children: OrganizationTerminalNode[];
+  terminals_count: number;
+}
+
 @Injectable()
 export class OrganizationTerminalService {
   constructor(@InjectDb() private readonly db: DataSource) {}
 
-  // Laravel: index — organizations with terminals_count, returned as toTree().
-  // We return flat list (frontend may treeify by parent_id).
-  async list() {
+  // Laravel: index — Organization::withCount('terminals')->get()->toTree().
+  // BARCHA org (scope yo'q), NestedSet _lft tartibida, parent_id bo'yicha
+  // rekursiv tree. Har node: {id, name, group, terminals_count, children}.
+  async list(): Promise<OrganizationTerminalNode[]> {
     const orgs = await this.db
       .select({
         id: organizations.id,
         name: organizations.name,
+        group: organizations.group,
         parent_id: organizations.parent_id,
       })
       .from(organizations)
-      .where(notDeleted(organizations))
-      .orderBy(organizations.id);
+      .where(notDeleted(organizations));
     const counts = await this.db
       .select({
         organization_id: organization_terminals.organization_id,
@@ -36,7 +45,25 @@ export class OrganizationTerminalService {
     const cMap = new Map<number, number>(
       counts.map((c) => [c.organization_id, Number(c.total)] as const),
     );
-    return orgs.map((o) => ({ ...o, terminals_count: cMap.get(o.id) ?? 0 }));
+
+    const nodeMap = new Map<number, OrganizationTerminalNode>();
+    for (const o of orgs) {
+      nodeMap.set(o.id, {
+        id: o.id,
+        name: o.name,
+        group: o.group ?? false,
+        children: [],
+        terminals_count: cMap.get(o.id) ?? 0,
+      });
+    }
+    const roots: OrganizationTerminalNode[] = [];
+    for (const o of orgs) {
+      const node = nodeMap.get(o.id)!;
+      const parent = o.parent_id != null ? nodeMap.get(o.parent_id) : undefined;
+      if (parent) parent.children.push(node);
+      else roots.push(node);
+    }
+    return roots;
   }
 
   // Laravel: TerminalMinimalResource — faqat {id, name}.

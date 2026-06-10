@@ -7,6 +7,7 @@ import { and, asc, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
+import { LaravelValidationException } from '@/common/exceptions/validation.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
@@ -64,7 +65,13 @@ export class WorkerScheduleService {
     has_schedule?: string;
     search?: string;
   }) {
-    if (!q.date) throw new BusinessException(422, 'date is required');
+    // Laravel: `date` => required|date. Bo'sh bo'lsa 422 { message, errors:{date} }
+    // shaklida (`Sana maydoni to'ldirilishi shart.`) — business-exception emas.
+    if (!q.date) {
+      throw new LaravelValidationException([
+        { property: 'date', constraints: { isNotEmpty: 'date' }, children: [] },
+      ]);
+    }
     const { page, perPage, offset } = pageOf(q);
 
     // Parse date → month start/end. Non-ISO date (masalan "2026-5-01") JS'da
@@ -85,7 +92,10 @@ export class WorkerScheduleService {
     if (ids.length === 0) {
       return { current_page: page, total: 0, data: [] };
     }
-    const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+    const orgList = sql.join(
+      ids.map((n) => sql`${n}`),
+      sql`, `,
+    );
 
     // search filter → worker name → worker_ids list.
     let searchWorkerIds: number[] | null = null;
@@ -149,7 +159,8 @@ export class WorkerScheduleService {
           position_id: worker_positions.position_id,
           department_id: worker_positions.department_id,
           organization_id: worker_positions.organization_id,
-          turnstile_schedule_type_id: worker_positions.turnstile_schedule_type_id,
+          turnstile_schedule_type_id:
+            worker_positions.turnstile_schedule_type_id,
           is_turnstile: worker_positions.is_turnstile,
           turnstile_privilege_start_minute:
             worker_positions.turnstile_privilege_start_minute,
@@ -185,9 +196,7 @@ export class WorkerScheduleService {
     ];
     const stIds = [
       ...new Set(
-        rows
-          .map((r) => Number(r.turnstile_schedule_type_id))
-          .filter(Boolean),
+        rows.map((r) => Number(r.turnstile_schedule_type_id)).filter(Boolean),
       ),
     ];
 
@@ -240,17 +249,20 @@ export class WorkerScheduleService {
                daily_minutes, daytime, evening_time,
                fact_daily_minutes, fact_daytime, fact_evening_time, cause
         FROM turnstile_worker_schedules
-        WHERE worker_position_id IN (${sql.join(wpIds.map((n) => sql`${n}`), sql`, `)})
+        WHERE worker_position_id IN (${sql.join(
+          wpIds.map((n) => sql`${n}`),
+          sql`, `,
+        )})
           AND date BETWEEN ${startStr}::date AND ${endStr}::date
           AND deleted_at IS NULL
       `),
     ]);
 
     const photoUrls = await Promise.all(
-      (wRows as any[]).map((w) => this.minio.fileUrl(w.photo)),
+      wRows.map((w) => this.minio.fileUrl(w.photo)),
     );
     const wMap = new Map(
-      (wRows as any[]).map(
+      wRows.map(
         (w, i) =>
           [
             Number(w.id),
@@ -264,17 +276,11 @@ export class WorkerScheduleService {
           ] as const,
       ),
     );
-    const posMap = new Map(
-      (posRows as any[]).map((p) => [Number(p.id), p] as const),
-    );
-    const depMap = new Map(
-      (depRows as any[]).map((d) => [Number(d.id), d] as const),
-    );
-    const stMap = new Map(
-      (stRows as any[]).map((s) => [Number(s.id), s] as const),
-    );
+    const posMap = new Map(posRows.map((p) => [Number(p.id), p] as const));
+    const depMap = new Map(depRows.map((d) => [Number(d.id), d] as const));
+    const stMap = new Map(stRows.map((s) => [Number(s.id), s] as const));
 
-    const schedRowsArr = (((schedRows as any).rows ?? schedRows) as Array<{
+    const schedRowsArr = ((schedRows as any).rows ?? schedRows) as Array<{
       id: number | string;
       worker_position_id: number | string;
       date: string;
@@ -288,8 +294,11 @@ export class WorkerScheduleService {
       fact_daytime: number;
       fact_evening_time: number;
       cause: string | null;
-    }>);
-    const schedByWp = new Map<number, Map<string, (typeof schedRowsArr)[number]>>();
+    }>;
+    const schedByWp = new Map<
+      number,
+      Map<string, (typeof schedRowsArr)[number]>
+    >();
     for (const sd of schedRowsArr) {
       const wpid = Number(sd.worker_position_id);
       let byDate = schedByWp.get(wpid);
@@ -312,15 +321,21 @@ export class WorkerScheduleService {
 
     const lang = this.ctx.lang;
     const localizedSt = (s: any): string =>
-      lang === 'ru' ? (s.name_ru ?? s.name) : lang === 'en' ? (s.name_en ?? s.name) : s.name;
+      lang === 'ru'
+        ? (s.name_ru ?? s.name)
+        : lang === 'en'
+          ? (s.name_en ?? s.name)
+          : s.name;
 
     return {
       current_page: page,
       total: Number(total),
       data: rows.map((r) => {
-        const w = r.worker_id ? wMap.get(Number(r.worker_id)) ?? null : null;
+        const w = r.worker_id ? (wMap.get(Number(r.worker_id)) ?? null) : null;
         const pos = r.position_id ? posMap.get(Number(r.position_id)) : null;
-        const dep = r.department_id ? depMap.get(Number(r.department_id)) : null;
+        const dep = r.department_id
+          ? depMap.get(Number(r.department_id))
+          : null;
         const st = r.turnstile_schedule_type_id
           ? stMap.get(Number(r.turnstile_schedule_type_id))
           : null;
@@ -373,7 +388,7 @@ export class WorkerScheduleService {
             ? {
                 id: Number(st.id),
                 name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type) },
+                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
               }
             : null,
           is_turnstile: r.is_turnstile,
@@ -435,7 +450,11 @@ export class WorkerScheduleService {
     // 1) is_turnstile field → privilege upsert.
     if (body.is_turnstile !== undefined) {
       setPatch.is_turnstile = !!body.is_turnstile;
-      await this.upsertPrivilege(workerPositionId, 'is_turnstile', body.comment ?? null);
+      await this.upsertPrivilege(
+        workerPositionId,
+        'is_turnstile',
+        body.comment ?? null,
+      );
     }
 
     // 2) start_minute.
@@ -467,13 +486,16 @@ export class WorkerScheduleService {
       await this.db
         .delete(worker_position_turnstile_privileges)
         .where(
-          eq(worker_position_turnstile_privileges.worker_position_id, workerPositionId),
+          eq(
+            worker_position_turnstile_privileges.worker_position_id,
+            workerPositionId,
+          ),
         );
     }
 
     await this.db
       .update(worker_positions)
-      .set(setPatch as any)
+      .set(setPatch)
       .where(eq(worker_positions.id, workerPositionId));
   }
 
@@ -488,7 +510,10 @@ export class WorkerScheduleService {
       .from(worker_position_turnstile_privileges)
       .where(
         and(
-          eq(worker_position_turnstile_privileges.worker_position_id, workerPositionId),
+          eq(
+            worker_position_turnstile_privileges.worker_position_id,
+            workerPositionId,
+          ),
           eq(worker_position_turnstile_privileges.type, type),
         ),
       )
@@ -497,7 +522,9 @@ export class WorkerScheduleService {
       await this.db
         .update(worker_position_turnstile_privileges)
         .set({ comment, updated_at: sql`NOW()` })
-        .where(eq(worker_position_turnstile_privileges.id, Number(existing.id)));
+        .where(
+          eq(worker_position_turnstile_privileges.id, Number(existing.id)),
+        );
     } else {
       const newId = await nextId(this.db, worker_position_turnstile_privileges);
       await this.db.insert(worker_position_turnstile_privileges).values({
@@ -507,7 +534,7 @@ export class WorkerScheduleService {
         comment,
         created_at: sql`NOW()`,
         updated_at: sql`NOW()`,
-      } as any);
+      });
     }
   }
 
@@ -568,24 +595,30 @@ export class WorkerScheduleService {
              to_char(event_date_and_time, 'YYYY-MM-DD HH24:MI:SS') AS ts,
              direction
       FROM terminal_events
-      WHERE worker_position_id IN (${sql.join(wpIds.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_position_id IN (${sql.join(
+        wpIds.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND event_date_and_time >= ${startStr}::timestamp
         AND event_date_and_time <  ${endStr}::timestamp
         AND deleted_at IS NULL
       ORDER BY worker_position_id, event_date_and_time
     `);
-    const eventRows = (((eventsRes as any).rows ?? eventsRes) as Array<{
+    const eventRows = ((eventsRes as any).rows ?? eventsRes) as Array<{
       worker_position_id: number | string;
       d: string;
       ts: string;
       direction: boolean | null;
-    }>);
+    }>;
 
     // 4) Group: wp_id → date → { first_in, last_out }.
     //    Since events are pre-sorted by event_date_and_time ASC, we can compute
     //    first_in (direction=true) by keeping the FIRST seen, and last_out
     //    (direction=false) by keeping the LAST seen.
-    const evByWp = new Map<number, Map<string, { first_in: string | null; last_out: string | null }>>();
+    const evByWp = new Map<
+      number,
+      Map<string, { first_in: string | null; last_out: string | null }>
+    >();
     for (const e of eventRows) {
       const wpid = Number(e.worker_position_id);
       let byDate = evByWp.get(wpid);
@@ -749,7 +782,10 @@ export class WorkerScheduleService {
       SELECT worker_position_id, date::text AS date, work_status,
              daily_minutes, daytime, evening_time
       FROM turnstile_worker_schedules
-      WHERE worker_position_id IN (${sql.join(wpIds.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_position_id IN (${sql.join(
+        wpIds.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND date BETWEEN ${startStr}::date AND ${endStr}::date
         AND deleted_at IS NULL
     `);
@@ -785,14 +821,14 @@ export class WorkerScheduleService {
     const vacRes = await this.db.execute(sql`
       SELECT worker_id, "from"::text AS f, "to"::text AS t
       FROM vacations
-      WHERE worker_id IN (${sql.join(wIds.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_id IN (${sql.join(
+        wIds.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND "from" >= ${startStr}::date
         AND deleted_at IS NULL
     `);
-    const vacByWorker = new Map<
-      number,
-      Array<{ from: string; to: string }>
-    >();
+    const vacByWorker = new Map<number, Array<{ from: string; to: string }>>();
     for (const v of ((vacRes as any).rows ?? vacRes) as Array<{
       worker_id: number | string;
       f: string;
@@ -808,7 +844,10 @@ export class WorkerScheduleService {
     type WorkerRow = {
       full_name: string;
       table_number: string | null;
-      days: Array<{ day: number; statuses: Array<{ status: number; hours: number | '' }> }>;
+      days: Array<{
+        day: number;
+        statuses: Array<{ status: number; hours: number | '' }>;
+      }>;
       halfMonth: { day: number; day_hours: number; evening_hours: number };
       fullMonth: {
         day: number;
@@ -930,7 +969,7 @@ export class WorkerScheduleService {
       { header: 'Bayram kun', key: 'holiday_day', width: 12 },
       { header: 'Bayram ish', key: 'holiday_work', width: 12 },
       { header: 'Dam kun', key: 'week_day', width: 10 },
-      { header: 'Ta\'til', key: 'vacation_day', width: 10 },
+      { header: "Ta'til", key: 'vacation_day', width: 10 },
     );
 
     const rows: Array<Record<string, unknown>> = [];
@@ -995,9 +1034,7 @@ export class WorkerScheduleService {
           headerStyle: { bold: true, align: 'center' },
           headerRows: [
             {
-              values: [
-                `${orgName} — ${monthName(month)} ${year}`,
-              ],
+              values: [`${orgName} — ${monthName(month)} ${year}`],
               style: { bold: true, fontSize: 14 },
             },
           ],
@@ -1014,7 +1051,7 @@ export class WorkerScheduleService {
       sheets: [
         {
           name: 'Timesheet',
-          columns: [{ header: 'Bo\'sh', key: 'empty', width: 20 }],
+          columns: [{ header: "Bo'sh", key: 'empty', width: 20 }],
           rows: [],
         },
       ],
@@ -1045,10 +1082,13 @@ export class WorkerScheduleService {
     const lang = (this.ctx.lang ?? 'uz').toLowerCase();
 
     // 1) Org-scope (childIds + organizations CSV + organization_id).
-    const orgScopeCond = await this.scope.whereOrg(departments.organization_id, {
-      organizations: q.organizations,
-      organization_id: q.organization_id,
-    });
+    const orgScopeCond = await this.scope.whereOrg(
+      departments.organization_id,
+      {
+        organizations: q.organizations,
+        organization_id: q.organization_id,
+      },
+    );
 
     // 2) TimesheetHR role → restrict to user's assigned departments.
     const userId = Number(this.ctx.user_or_fail.id);
@@ -1101,11 +1141,11 @@ export class WorkerScheduleService {
           .from(organizations)
           .where(inArray(organizations.id, orgIds))
       : [];
-    const orgMap = new Map(
-      orgRows.map((o) => [Number(o.id), o] as const),
-    );
+    const orgMap = new Map(orgRows.map((o) => [Number(o.id), o] as const));
 
-    const orgName = (o: (typeof orgRows)[number] | undefined): string | null => {
+    const orgName = (
+      o: (typeof orgRows)[number] | undefined,
+    ): string | null => {
       if (!o) return null;
       if (lang === 'ru') return o.name_ru ?? o.name;
       if (lang === 'en') return o.name_en ?? o.name;
@@ -1167,7 +1207,10 @@ export class WorkerScheduleService {
     if (ids.length === 0) {
       return { current_page: page, total: 0, data: [] };
     }
-    const orgList = sql.join(ids.map((n) => sql`${n}`), sql`, `);
+    const orgList = sql.join(
+      ids.map((n) => sql`${n}`),
+      sql`, `,
+    );
 
     // search → worker_ids.
     let searchWorkerIds: number[] | null = null;
@@ -1220,7 +1263,8 @@ export class WorkerScheduleService {
           id: worker_positions.id,
           worker_id: worker_positions.worker_id,
           position_id: worker_positions.position_id,
-          turnstile_schedule_type_id: worker_positions.turnstile_schedule_type_id,
+          turnstile_schedule_type_id:
+            worker_positions.turnstile_schedule_type_id,
           turnstile_schedule_group_id:
             worker_positions.turnstile_schedule_group_id,
         })
@@ -1249,16 +1293,12 @@ export class WorkerScheduleService {
     ];
     const stIds = [
       ...new Set(
-        rows
-          .map((r) => Number(r.turnstile_schedule_type_id))
-          .filter(Boolean),
+        rows.map((r) => Number(r.turnstile_schedule_type_id)).filter(Boolean),
       ),
     ];
     const grpIds = [
       ...new Set(
-        rows
-          .map((r) => Number(r.turnstile_schedule_group_id))
-          .filter(Boolean),
+        rows.map((r) => Number(r.turnstile_schedule_group_id)).filter(Boolean),
       ),
     ];
 
@@ -1306,10 +1346,10 @@ export class WorkerScheduleService {
     ]);
 
     const photoUrls = await Promise.all(
-      (wRows as any[]).map((w) => this.minio.fileUrl(w.photo)),
+      wRows.map((w) => this.minio.fileUrl(w.photo)),
     );
     const wMap = new Map(
-      (wRows as any[]).map(
+      wRows.map(
         (w, i) =>
           [
             Number(w.id),
@@ -1323,25 +1363,23 @@ export class WorkerScheduleService {
           ] as const,
       ),
     );
-    const posMap = new Map(
-      (posRows as any[]).map((p) => [Number(p.id), p] as const),
-    );
-    const stMap = new Map(
-      (stRows as any[]).map((s) => [Number(s.id), s] as const),
-    );
-    const grpMap = new Map(
-      (grpRows as any[]).map((g) => [Number(g.id), g] as const),
-    );
+    const posMap = new Map(posRows.map((p) => [Number(p.id), p] as const));
+    const stMap = new Map(stRows.map((s) => [Number(s.id), s] as const));
+    const grpMap = new Map(grpRows.map((g) => [Number(g.id), g] as const));
 
     const lang = this.ctx.lang;
     const localizedSt = (s: any): string =>
-      lang === 'ru' ? (s.name_ru ?? s.name) : lang === 'en' ? (s.name_en ?? s.name) : s.name;
+      lang === 'ru'
+        ? (s.name_ru ?? s.name)
+        : lang === 'en'
+          ? (s.name_en ?? s.name)
+          : s.name;
 
     return {
       current_page: page,
       total: Number(total),
       data: rows.map((r) => {
-        const w = r.worker_id ? wMap.get(Number(r.worker_id)) ?? null : null;
+        const w = r.worker_id ? (wMap.get(Number(r.worker_id)) ?? null) : null;
         const pos = r.position_id ? posMap.get(Number(r.position_id)) : null;
         const st = r.turnstile_schedule_type_id
           ? stMap.get(Number(r.turnstile_schedule_type_id))
@@ -1365,7 +1403,7 @@ export class WorkerScheduleService {
             ? {
                 id: Number(st.id),
                 name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type) },
+                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
               }
             : null,
         };
@@ -1416,7 +1454,11 @@ export class WorkerScheduleService {
     work_date?: string;
     count?: number | string;
   }): Promise<unknown> {
-    if (!body.start_date || !body.end_date || body.schedule_type === undefined) {
+    if (
+      !body.start_date ||
+      !body.end_date ||
+      body.schedule_type === undefined
+    ) {
       throw new BusinessException(422, 'The given data was invalid.');
     }
     const startStr = normalizeDate(body.start_date);
@@ -1442,7 +1484,7 @@ export class WorkerScheduleService {
 
     const rawCount = body.count != null ? Number(body.count) : 1;
     const count = Number.isInteger(rawCount) && rawCount >= 1 ? rawCount : 1;
-    const days = Array.isArray(schedule.days) ? (schedule.days as any[]) : [];
+    const days = Array.isArray(schedule.days) ? schedule.days : [];
 
     switch (Number(schedule.type)) {
       case 1:
@@ -1704,7 +1746,9 @@ export class WorkerScheduleService {
     endStr: string,
     count: number,
   ): { work_days: any[] } {
-    const schedule = (rawDays && typeof rawDays === 'object' ? rawDays : {}) as {
+    const schedule = (
+      rawDays && typeof rawDays === 'object' ? rawDays : {}
+    ) as {
       days?: any[];
       half_day?: { day1?: any; day2?: any };
     };
@@ -1858,7 +1902,9 @@ export class WorkerScheduleService {
         .from(turnstile_schedule_types)
         .where(eq(turnstile_schedule_types.type, 5))
         .limit(1);
-      schedule = r ? { id: r.id, name: r.name, type: r.type, days: r.days } : null;
+      schedule = r
+        ? { id: r.id, name: r.name, type: r.type, days: r.days }
+        : null;
     } else if (body.schedule_type) {
       const [r] = await this.db
         .select({
@@ -1870,7 +1916,9 @@ export class WorkerScheduleService {
         .from(turnstile_schedule_types)
         .where(eq(turnstile_schedule_types.id, Number(body.schedule_type)))
         .limit(1);
-      schedule = r ? { id: r.id, name: r.name, type: r.type, days: r.days } : null;
+      schedule = r
+        ? { id: r.id, name: r.name, type: r.type, days: r.days }
+        : null;
     }
     if (!schedule) {
       throw new BusinessException(400, 'schedule not found');
@@ -1924,10 +1972,7 @@ export class WorkerScheduleService {
     schedule: { id: number; name: string; days: any },
   ): Promise<{ work_days: any[] }> {
     if (!body.start_date || !body.end_date) {
-      throw new BusinessException(
-        422,
-        'start_date and end_date are required',
-      );
+      throw new BusinessException(422, 'start_date and end_date are required');
     }
     const startStr = normalizeDate(body.start_date);
     const endStr = normalizeDate(body.end_date);
@@ -1935,9 +1980,7 @@ export class WorkerScheduleService {
       throw new BusinessException(422, 'date format Y-m-d');
     }
 
-    const scheduleDays = Array.isArray(schedule.days)
-      ? (schedule.days as any[])
-      : [];
+    const scheduleDays = Array.isArray(schedule.days) ? schedule.days : [];
     if (!scheduleDays.length) {
       throw new BusinessException(400, 'schedule has no days defined');
     }
@@ -1945,7 +1988,10 @@ export class WorkerScheduleService {
     // Filter null worker_position_id entries (Laravel: whereNotNull).
     // Frontend N ta bo'sh slot yuborishi mumkin — barchasi filterlanadi.
     const rawList = (body.schedule_workers ?? []).filter(
-      (sw) => sw && sw.worker_position_id != null && Number(sw.worker_position_id) > 0,
+      (sw) =>
+        sw &&
+        sw.worker_position_id != null &&
+        Number(sw.worker_position_id) > 0,
     );
 
     // Dedupe by worker_position_id — keep FIRST occurrence.
@@ -1972,7 +2018,10 @@ export class WorkerScheduleService {
 
     // Resolve worker_position → worker_id map.
     const wpRows = await this.db
-      .select({ id: worker_positions.id, worker_id: worker_positions.worker_id })
+      .select({
+        id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+      })
       .from(worker_positions)
       .where(inArray(worker_positions.id, wpIds));
     const wpMap = new Map<number, number | null>(
@@ -2019,7 +2068,7 @@ export class WorkerScheduleService {
         end_date: endStr,
         created_at: sql`NOW()`,
         updated_at: sql`NOW()`,
-      } as any);
+      });
 
       // 2) Build work_days per worker by shift offset.
       for (const sw of swList) {
@@ -2085,7 +2134,7 @@ export class WorkerScheduleService {
           turnstile_schedule_type_id: Number(body.schedule_type),
           turnstile_schedule_group_id: groupId,
           updated_at: sql`NOW()`,
-        } as any)
+        })
         .where(inArray(worker_positions.id, wpIds));
     });
 
@@ -2147,7 +2196,9 @@ export class WorkerScheduleService {
     if (!start || !end) {
       throw new BusinessException(422, 'invalid start_date/end_date format');
     }
-    const wpIdsRaw = (body.worker_position_ids ?? []).map(Number).filter(Number.isFinite);
+    const wpIdsRaw = (body.worker_position_ids ?? [])
+      .map(Number)
+      .filter(Number.isFinite);
     const wpIds = [...new Set(wpIdsRaw)];
     if (wpIds.length !== wpIdsRaw.length) {
       throw new BusinessException(400, 'unique_workers_count');
@@ -2210,7 +2261,7 @@ export class WorkerScheduleService {
           end_date: end,
           created_at: sql`NOW()`,
           updated_at: sql`NOW()`,
-        } as any);
+        });
       }
     }
 
@@ -2221,7 +2272,7 @@ export class WorkerScheduleService {
         start_date: sql`LEAST(COALESCE(${turnstile_schedule_groups.start_date}, ${start}::date), ${start}::date)`,
         end_date: sql`GREATEST(COALESCE(${turnstile_schedule_groups.end_date}, ${end}::date), ${end}::date)`,
         updated_at: sql`NOW()`,
-      } as any)
+      })
       .where(eq(turnstile_schedule_groups.id, groupId));
 
     // Load holidays in range.
@@ -2335,7 +2386,7 @@ export class WorkerScheduleService {
         turnstile_schedule_type_id: schedule.id,
         turnstile_schedule_group_id: groupId,
         updated_at: sql`NOW()`,
-      } as any)
+      })
       .where(inArray(worker_positions.id, wpIds));
 
     await this.refreshGroupCounts(groupId);
@@ -2373,7 +2424,7 @@ export class WorkerScheduleService {
     // Flatten work_days by status.
     const createDays: Array<{
       worker_position_id: number;
-      day: NonNullable<typeof swList[number]['work_days']>[number];
+      day: NonNullable<(typeof swList)[number]['work_days']>[number];
     }> = [];
     const deleteDays: Array<{
       worker_position_id: number;
@@ -2402,8 +2453,14 @@ export class WorkerScheduleService {
       const dates = [...new Set(deleteDays.map((d) => d.date))];
       await this.db.execute(sql`
         DELETE FROM turnstile_worker_schedules
-        WHERE worker_position_id IN (${sql.join(wpIds.map((n) => sql`${n}`), sql`, `)})
-          AND date IN (${sql.join(dates.map((d) => sql`${d}::date`), sql`, `)})
+        WHERE worker_position_id IN (${sql.join(
+          wpIds.map((n) => sql`${n}`),
+          sql`, `,
+        )})
+          AND date IN (${sql.join(
+            dates.map((d) => sql`${d}::date`),
+            sql`, `,
+          )})
       `);
     }
 
@@ -2419,7 +2476,10 @@ export class WorkerScheduleService {
 
     // 3) Get WorkerPosition.worker_id map.
     const wpRows = await this.db
-      .select({ id: worker_positions.id, worker_id: worker_positions.worker_id })
+      .select({
+        id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+      })
       .from(worker_positions)
       .where(inArray(worker_positions.id, wpIds));
     const wpMap = new Map<number, number | null>(
@@ -2432,16 +2492,16 @@ export class WorkerScheduleService {
     if (body.start_date && body.end_date) {
       const conflictRes = await this.db.execute(sql`
         SELECT 1 FROM turnstile_worker_schedules
-        WHERE worker_position_id IN (${sql.join(wpIds.map((n) => sql`${n}`), sql`, `)})
+        WHERE worker_position_id IN (${sql.join(
+          wpIds.map((n) => sql`${n}`),
+          sql`, `,
+        )})
           AND date BETWEEN ${body.start_date}::date AND ${body.end_date}::date
         LIMIT 1
       `);
       const conflictRows = (conflictRes as any).rows ?? conflictRes;
       if (Array.isArray(conflictRows) && conflictRows.length > 0) {
-        throw new BusinessException(
-          400,
-          'worker_has_schedule_in_this_period',
-        );
+        throw new BusinessException(400, 'worker_has_schedule_in_this_period');
       }
     }
 
@@ -2483,7 +2543,7 @@ export class WorkerScheduleService {
         setPatch.updated_at = sql`NOW()`;
         await this.db
           .update(turnstile_schedule_groups)
-          .set(setPatch as any)
+          .set(setPatch)
           .where(eq(turnstile_schedule_groups.id, groupId));
       }
     } else {
@@ -2504,7 +2564,7 @@ export class WorkerScheduleService {
         end_date: endDate,
         created_at: sql`NOW()`,
         updated_at: sql`NOW()`,
-      } as any);
+      });
     }
 
     // 6) Upsert turnstile_worker_schedules (chunked).
@@ -2563,7 +2623,7 @@ export class WorkerScheduleService {
         turnstile_schedule_type_id: schedule.id,
         turnstile_schedule_group_id: groupId,
         updated_at: sql`NOW()`,
-      } as any)
+      })
       .where(inArray(worker_positions.id, wpIds));
 
     // 8) Refresh workers_count + worker_positions_count on group.
@@ -2592,7 +2652,7 @@ export class WorkerScheduleService {
         workers_count: Number(row.workers_count),
         worker_positions_count: Number(row.worker_positions_count),
         updated_at: sql`NOW()`,
-      } as any)
+      })
       .where(eq(turnstile_schedule_groups.id, groupId));
   }
   // Laravel: TurnstileWorkerScheduleGenerateController::replacementWorkers
@@ -2632,15 +2692,23 @@ export class WorkerScheduleService {
     const wp2 = Number(body.worker_position_2);
     const date = normalizeDate(body.date);
     if (
-      !Number.isInteger(worker1) || worker1 <= 0 ||
-      !Number.isInteger(wp1) || wp1 <= 0 ||
-      !Number.isInteger(worker2) || worker2 <= 0 ||
-      !Number.isInteger(wp2) || wp2 <= 0 ||
+      !Number.isInteger(worker1) ||
+      worker1 <= 0 ||
+      !Number.isInteger(wp1) ||
+      wp1 <= 0 ||
+      !Number.isInteger(worker2) ||
+      worker2 <= 0 ||
+      !Number.isInteger(wp2) ||
+      wp2 <= 0 ||
       !date
     ) {
       throw new BusinessException(422, 'The given data was invalid.');
     }
-    if (body.status === undefined || body.status === null || body.status === '') {
+    if (
+      body.status === undefined ||
+      body.status === null ||
+      body.status === ''
+    ) {
       throw new BusinessException(422, 'The given data was invalid.');
     }
     // Laravel boolean coercion: true/1/'1'/'true' → true.
@@ -2677,7 +2745,7 @@ export class WorkerScheduleService {
           AND worker_position_id = ${wp1}
           AND ${dateCond}
       `);
-      const workerOneDays = (((w1Res as any).rows ?? w1Res) as Array<{
+      const workerOneDays = ((w1Res as any).rows ?? w1Res) as Array<{
         turnstile_schedule_group_id: number | null;
         date: string;
         work_status: number | null;
@@ -2690,7 +2758,7 @@ export class WorkerScheduleService {
         fact_daytime: number | null;
         fact_evening_time: number | null;
         cause: number | null;
-      }>);
+      }>;
 
       // 2) worker_1 qatorlarini forceDelete (Laravel forceDelete → hard delete).
       await tx.execute(sql`
@@ -2714,10 +2782,7 @@ export class WorkerScheduleService {
       // 4) workerOneDays ni qaytadan INSERT — worker_2 sifatida.
       //    Laravel `replicate()` qoldiq maydonlarni (group, date, time'lar) saqlaydi.
       if (workerOneDays.length) {
-        const nowDb = new Date()
-          .toISOString()
-          .replace('T', ' ')
-          .slice(0, 19);
+        const nowDb = new Date().toISOString().replace('T', ' ').slice(0, 19);
         const CHUNK = 500;
         for (let i = 0; i < workerOneDays.length; i += CHUNK) {
           const chunk = workerOneDays.slice(i, i + CHUNK);
@@ -2750,17 +2815,32 @@ export class WorkerScheduleService {
 // Common codes: 1=Я (kunduzgi ish), 2=N (kechgi ish), 14=O (ta'til/vacation), 33=В (dam kun).
 function statusLabel(code: number): string {
   switch (code) {
-    case 1: return 'Я';
-    case 2: return 'N';
-    case 14: return 'O';
-    case 33: return 'В';
-    default: return String(code);
+    case 1:
+      return 'Я';
+    case 2:
+      return 'N';
+    case 14:
+      return 'O';
+    case 33:
+      return 'В';
+    default:
+      return String(code);
   }
 }
 
 const MONTH_NAMES = [
-  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-  'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr',
+  'Yanvar',
+  'Fevral',
+  'Mart',
+  'Aprel',
+  'May',
+  'Iyun',
+  'Iyul',
+  'Avgust',
+  'Sentabr',
+  'Oktabr',
+  'Noyabr',
+  'Dekabr',
 ];
 function monthName(m: number): string {
   return MONTH_NAMES[m - 1] ?? String(m);

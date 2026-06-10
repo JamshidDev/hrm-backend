@@ -49,6 +49,18 @@ export class CreateOrganizationDto {
   @MaxLength(255)
   name!: string;
 
+  @ApiPropertyOptional({ example: 'Название организации', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name_ru?: string | null;
+
+  @ApiPropertyOptional({ example: 'Organization name', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name_en?: string | null;
+
   @ApiProperty({ example: '"Tashkilot nomi" AJ' })
   @IsString()
   @IsNotEmpty()
@@ -72,10 +84,47 @@ export class CreateOrganizationDto {
   @MaxLength(15)
   code!: string;
 
-  @ApiPropertyOptional({ example: 1 })
+  @ApiPropertyOptional({ example: 123456789, nullable: true })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  inn?: number | null;
+
+  @ApiPropertyOptional({ example: '41.3', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  lat?: string | null;
+
+  @ApiPropertyOptional({ example: '69.2', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  long?: string | null;
+
+  @ApiPropertyOptional({ example: 'Toshkent sh.', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  address?: string | null;
+
+  @ApiPropertyOptional({ example: 0, nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  external?: number | null;
+
+  @ApiPropertyOptional({ example: 'Toshkent sh.', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  command_address?: string | null;
+
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Exists('organizations', 'id')
   parent_id?: number;
 }
 

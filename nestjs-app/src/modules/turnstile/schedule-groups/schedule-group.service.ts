@@ -75,7 +75,9 @@ export class ScheduleGroupService {
     }
     // search: by group.name ILIKE
     if (q.search?.trim()) {
-      conds.push(sql`${turnstile_schedule_groups.name} ILIKE ${`%${q.search.trim()}%`}`);
+      conds.push(
+        sql`${turnstile_schedule_groups.name} ILIKE ${`%${q.search.trim()}%`}`,
+      );
     }
     const where = and(...conds);
 
@@ -109,9 +111,7 @@ export class ScheduleGroupService {
     // Batch eager-load schedule_types.
     const stIds = [
       ...new Set(
-        rows
-          .map((r) => Number(r.turnstile_schedule_type_id))
-          .filter(Boolean),
+        rows.map((r) => Number(r.turnstile_schedule_type_id)).filter(Boolean),
       ),
     ];
     const stRows = stIds.length
@@ -152,7 +152,7 @@ export class ScheduleGroupService {
             ? {
                 id: Number(st.id),
                 name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type) },
+                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
               }
             : null,
           created_at: formatLaravelTs(r.created_at),
@@ -175,7 +175,7 @@ export class ScheduleGroupService {
           turnstile_schedule_group_id: null,
           turnstile_schedule_type_id: null,
           updated_at: sql`NOW()`,
-        } as any)
+        })
         .where(eq(worker_positions.turnstile_schedule_group_id, groupId));
 
       // 2) Force-delete all schedule rows for this group (raw SQL — partition table).
@@ -213,10 +213,7 @@ export class ScheduleGroupService {
     if (dto.end_date) {
       // Validate format Y-m-d.
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dto.end_date)) {
-        throw new BusinessException(
-          422,
-          'end_date must be in Y-m-d format',
-        );
+        throw new BusinessException(422, 'end_date must be in Y-m-d format');
       }
       const newEndDate = dto.end_date;
 
@@ -231,10 +228,7 @@ export class ScheduleGroupService {
           .where(eq(turnstile_schedule_groups.id, groupId))
           .limit(1);
         if (!group) {
-          throw new BusinessException(
-            404,
-            this.i18n.t('messages.not_found'),
-          );
+          throw new BusinessException(404, this.i18n.t('messages.not_found'));
         }
 
         // 2) New end_date must NOT exceed current end_date.
@@ -254,9 +248,9 @@ export class ScheduleGroupService {
             AND date >= ${newEndDate}::date
             AND fact_daily_minutes IS NOT NULL
         `);
-        const [{ c }] = (((checkRes as any).rows ?? checkRes) as Array<{
+        const [{ c }] = ((checkRes as any).rows ?? checkRes) as Array<{
           c: number;
-        }>);
+        }>;
         if (Number(c) > 0) {
           throw new BusinessException(
             400,
@@ -279,7 +273,7 @@ export class ScheduleGroupService {
         if (dto.name !== undefined) setPatch.name = dto.name;
         await tx
           .update(turnstile_schedule_groups)
-          .set(setPatch as any)
+          .set(setPatch)
           .where(eq(turnstile_schedule_groups.id, groupId));
       });
       return;
@@ -399,14 +393,14 @@ export class ScheduleGroupService {
       department_name: string | null;
       organization_name: string | null;
     }>;
-    const total = Number(
-      (((totalRes as any).rows ?? totalRes)[0] as any)?.total ?? 0,
-    );
+    const total = Number(((totalRes as any).rows ?? totalRes)[0]?.total ?? 0);
     if (workersRows.length === 0) {
       return { current_page: page, total, data: [] };
     }
 
-    const workerIdList = [...new Set(workersRows.map((r) => Number(r.worker_id)))];
+    const workerIdList = [
+      ...new Set(workersRows.map((r) => Number(r.worker_id))),
+    ];
 
     // 2) Schedule days for these workers within the month.
     const daysRes = await this.db.execute(sql`
@@ -415,7 +409,10 @@ export class ScheduleGroupService {
              to_char(end_time, 'HH24:MI') AS end_time,
              daily_minutes, fact_daily_minutes
       FROM turnstile_worker_schedules
-      WHERE worker_id IN (${sql.join(workerIdList.map((n) => sql`${n}`), sql`, `)})
+      WHERE worker_id IN (${sql.join(
+        workerIdList.map((n) => sql`${n}`),
+        sql`, `,
+      )})
         AND date BETWEEN ${startStr}::date AND ${endStr}::date
         AND turnstile_schedule_group_id = ${groupId}
       ORDER BY worker_id, date

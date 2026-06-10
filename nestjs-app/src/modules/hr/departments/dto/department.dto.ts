@@ -68,6 +68,19 @@ export class CreateDepartmentDto {
   @Min(1)
   level!: number;
 
+  // Laravel: 'region_id' => ['nullable', 'integer'].
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  region_id?: number | null;
+
+  // Laravel: 'city_id' => ['required', 'integer'].
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  city_id!: number;
+
   @ApiPropertyOptional({ example: 1, nullable: true })
   @IsOptional()
   @Type(() => Number)
@@ -114,6 +127,19 @@ export class UpdateDepartmentDto {
   @IsInt()
   @Min(1)
   level!: number;
+
+  // Laravel: 'region_id' => ['nullable', 'integer'].
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  region_id?: number | null;
+
+  // Laravel: 'city_id' => ['required', 'integer'] — update'da ham required.
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  city_id!: number;
 
   @ApiPropertyOptional({ example: 1, nullable: true })
   @IsOptional()
@@ -181,6 +207,30 @@ export class DepartmentItemDto {
   organization!: DepartmentOrgMinDto | null;
 }
 
+// CityOnlyResource — {id, name, name_ru, name_en}.
+export class DepartmentCityDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Toshkent', nullable: true })
+  name!: string | null;
+
+  @ApiProperty({ example: 'Ташкент', nullable: true })
+  name_ru!: string | null;
+
+  @ApiProperty({ example: 'Tashkent', nullable: true })
+  name_en!: string | null;
+}
+
+// RegionMinimalResource — {id, name}.
+export class DepartmentRegionDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Toshkent viloyati', nullable: true })
+  name!: string | null;
+}
+
 // DepartmentWithJoinResource (index endpoint) — extends DepartmentItem with parent/worker_rate/children flag.
 export class DepartmentWithJoinDto {
   @ApiProperty({ example: 1 })
@@ -212,6 +262,12 @@ export class DepartmentWithJoinDto {
 
   @ApiProperty({ example: false })
   children!: boolean;
+
+  @ApiProperty({ type: DepartmentCityDto, nullable: true })
+  city!: DepartmentCityDto | null;
+
+  @ApiProperty({ type: DepartmentRegionDto, nullable: true })
+  region!: DepartmentRegionDto | null;
 }
 
 // DepartmentListResource — minimal (Laravel: id+name+level int).

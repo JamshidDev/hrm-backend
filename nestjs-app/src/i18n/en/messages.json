@@ -44,6 +44,9 @@
   },
   "worker": {
     "full_name": "Full Name",
+    "organization_name": "Organization name",
+    "pin": "PIN",
+    "birthday": "Date of Birth",
     "position": "Position",
     "organization": "Organization",
     "med": {

@@ -6,6 +6,7 @@ import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { sql } from 'drizzle-orm';
@@ -65,7 +66,10 @@ export class SyncService {
         conds.push(
           sql`${sync_h_c_p_access_logs.user_id} IN (
             SELECT id FROM users
-            WHERE organization_id IN (${sql.join(orgIds.map((n) => sql`${n}`), sql`, `)})
+            WHERE organization_id IN (${sql.join(
+              orgIds.map((n) => sql`${n}`),
+              sql`, `,
+            )})
               AND deleted_at IS NULL
           )`,
         );
@@ -112,9 +116,7 @@ export class SyncService {
           .from(users)
           .where(inArray(users.id, userIds))
       : [];
-    const workerIds = uRows
-      .map((u) => u.worker_id)
-      .filter(Boolean) as number[];
+    const workerIds = uRows.map((u) => u.worker_id).filter(Boolean) as number[];
     const wRows = workerIds.length
       ? await this.db
           .select({
@@ -163,12 +165,12 @@ export class SyncService {
       current_page: page,
       total: Number(total),
       data: rows.map((r) => {
-        const u = r.user_id ? uMap.get(Number(r.user_id)) ?? null : null;
-        const w = u?.worker_id ? wMap.get(Number(u.worker_id)) ?? null : null;
+        const u = r.user_id ? (uMap.get(Number(r.user_id)) ?? null) : null;
+        const w = u?.worker_id ? (wMap.get(Number(u.worker_id)) ?? null) : null;
         return {
           id: Number(r.id),
-          created_at: r.created_at,
-          updated_at: r.updated_at,
+          created_at: toLaravelTimestamp(r.created_at),
+          updated_at: toLaravelTimestamp(r.updated_at),
           sync_events_count: Number(r.events_count ?? 0),
           status: r.status,
           error: r.error,
@@ -202,7 +204,9 @@ export class SyncService {
           al_id: organization_access_levels.hik_central_access_level_id,
         })
         .from(organization_access_levels)
-        .where(eq(organization_access_levels.organization_id, Number(userOrgId)));
+        .where(
+          eq(organization_access_levels.organization_id, Number(userOrgId)),
+        );
       const alIds = oalRows.map((r) => Number(r.al_id));
       if (alIds.length) {
         const devRows = await this.db
