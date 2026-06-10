@@ -1,10 +1,5 @@
-// LearningCenter service. Laravel: LMS/LearningCenterController.
-//   - index: with('users.worker'), search name/name_ru/name_en, orderByDesc(id).
-//   - store/update: create + users.sync (M:M via learning_center_users pivot).
-//   - destroy: cascade soft-delete (users, groups, edu_plans).
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -14,9 +9,9 @@ import {
   users,
   workers,
 } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
   LearningCenterMapper,
@@ -43,44 +38,41 @@ export class LearningCenterService {
   ): Promise<LearningCenterListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-
-    // Search: name OR name_ru OR name_en.
     const search = filters.search?.trim();
-    const where = and(
-      notDeleted(learning_centers),
-      search
-        ? or(
-            ilike(learning_centers.name, `%${search}%`),
-            ilike(learning_centers.name_ru, `%${search}%`),
-            ilike(learning_centers.name_en, `%${search}%`),
-          )
-        : undefined,
-    );
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search
+        ? {
+            OR: [
+              { name: { ilike: `%${search}%` } },
+              { name_ru: { ilike: `%${search}%` } },
+              { name_en: { ilike: `%${search}%` } },
+            ],
+          }
+        : {}),
+    };
 
-    // Builder API: paginate centers (no users yet).
     const result = await paginate({
       db: this.db,
-      countTable: learning_centers,
-      countWhere: where,
+      count: () =>
+        this.db.$count(
+          sql`(${this.db.query.learning_centers.findMany({ where })})`,
+        ),
       query: ({ limit, offset }) =>
-        this.db
-          .select()
-          .from(learning_centers)
-          .where(where)
-          // Laravel: orderByDesc('id').
-          .orderBy(sql`${learning_centers.id} DESC`)
-          .limit(limit)
-          .offset(offset),
+        this.db.query.learning_centers.findMany({
+          where,
+          orderBy: { id: 'desc' },
+          limit,
+          offset,
+        }),
       page,
       perPage,
       mapper: (c) => c,
     });
 
-    // Fetch users (M:M via pivot) for current page's center IDs.
     const centerIds = result.data.map((c) => c.id);
     const usersByCenter = await this.fetchUsersForCenters(centerIds);
 
-    // Map each center with users + mapper (async, with MinIO URL).
     const data = await Promise.all(
       result.data.map((c) => {
         const row: LearningCenterRow = {
@@ -121,7 +113,7 @@ export class LearningCenterService {
   }
 
   async update(id: number, dto: UpdateLearningCenterDto): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, learning_centers, id, this.i18n);
 
     await this.db.transaction(async (tx) => {
       await tx
@@ -141,32 +133,10 @@ export class LearningCenterService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-    // Laravel cascadeDeletes: ['users', 'groups', 'edu_plans'].
-    // Soft delete center → cascade soft-deletes pivot users, groups, edu_plans.
-    // Hozircha faqat center'ni soft-delete qilamiz. Cascade keyin alohida task.
-    await this.db
-      .update(learning_centers)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(learning_centers.id, id));
+    await findByIdOrFail(this.db, learning_centers, id, this.i18n);
+    await softDeleteById(this.db, learning_centers, id);
   }
 
-  // ---- Helper'lar ----
-
-  private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: learning_centers.id })
-      .from(learning_centers)
-      .where(and(eq(learning_centers.id, id), notDeleted(learning_centers)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return row;
-  }
-
-  // Laravel users()->sync($userIds) — pivot table'da eski yozuvlarni o'chirish
-  // va yangilarini qo'shish.
   private async syncUsers(
     tx: Parameters<Parameters<DataSource['transaction']>[0]>[0],
     centerId: number,
@@ -187,15 +157,12 @@ export class LearningCenterService {
     }
   }
 
-  // Center IDs uchun barcha bog'liq user'larni (worker bilan) qaytaradi.
-  // Pivot JSON shape — har user uchun status pivot'dan.
   private async fetchUsersForCenters(
     centerIds: number[],
   ): Promise<Record<number, LearningCenterUserRow[]>> {
     const result: Record<number, LearningCenterUserRow[]> = {};
     if (centerIds.length === 0) return result;
 
-    // JOIN: pivot + users + workers (left join, soft-delete safe).
     const rows = await this.db
       .select({
         center_id: learning_center_users.learning_center_id,
