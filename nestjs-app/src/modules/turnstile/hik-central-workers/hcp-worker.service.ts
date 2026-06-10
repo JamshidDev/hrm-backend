@@ -1051,7 +1051,6 @@ export class HcpWorkerService {
     ]);
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows,
     };
@@ -1108,7 +1107,6 @@ export class HcpWorkerService {
     ]);
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows,
     };
@@ -1156,7 +1154,6 @@ export class HcpWorkerService {
     );
     return {
       current_page: page,
-      per_page: perPage,
       total,
       data: rows.map((r) => ({ ...r, worker: wMap.get(r.worker_id) ?? null })),
     };

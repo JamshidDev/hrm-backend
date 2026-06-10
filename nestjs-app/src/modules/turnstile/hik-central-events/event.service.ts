@@ -717,7 +717,6 @@ export class EventService {
       date,
       data: {
         current_page: page,
-        per_page: perPage,
         total: 0,
         data: [] as Array<unknown>,
       },
