@@ -24,6 +24,7 @@ import {
 import { getShortPosition } from '@/modules/hr/_shared/position-helper';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { pageOf } from '@/modules/turnstile/_shared/helpers';
+import { MinioService } from '@/shared/minio/minio.service';
 
 export interface WorkDurationQuery {
   page?: number;
@@ -31,6 +32,8 @@ export interface WorkDurationQuery {
   search?: string;
   start?: string;
   end?: string;
+  organizations?: string;
+  organization_id?: number | string;
 }
 
 export interface TerminalLogExportQuery {
@@ -51,6 +54,7 @@ export class WorkDurationService {
     private readonly i18n: I18nService,
     private readonly excel: ExcelService,
     private readonly exportRunner: ExportTaskRunner,
+    private readonly minio: MinioService,
   ) {}
 
   private readonly logger = new Logger(WorkDurationService.name);
@@ -73,21 +77,49 @@ export class WorkDurationService {
       sql`, `,
     );
 
+    // Laravel filterByOrganizations: childIds AND ?organizations(CSV) AND
+    // ?organization_id — barchasi AND (intersect).
+    let extraOrg = sql``;
+    if (q.organizations) {
+      const csv = q.organizations
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (csv.length) {
+        extraOrg = sql`${extraOrg} AND wp.organization_id IN (${sql.join(
+          csv.map((n) => sql`${n}`),
+          sql`, `,
+        )})`;
+      }
+    }
+    const orgId = Number(q.organization_id);
+    if (Number.isFinite(orgId) && orgId > 0) {
+      extraOrg = sql`${extraOrg} AND wp.organization_id = ${orgId}`;
+    }
+
+    // Laravel: whereHas('worker', whereHas('positions', filter)) — worker MAVJUD
+    // & soft-delete emas, VA scope ichida ACTIVE pozitsiyasi bor.
     const conds = [
       notDeleted(terminal_logs),
       sql`EXISTS (
-        SELECT 1 FROM worker_positions wp
-        WHERE wp.worker_id = ${terminal_logs.worker_id}
+        SELECT 1 FROM workers w
+        JOIN worker_positions wp
+          ON wp.worker_id = w.id
           AND wp.deleted_at IS NULL
-          AND wp.organization_id IN (${orgList})
+          AND wp.status = 2
+          AND wp.organization_id IN (${orgList})${extraOrg}
+        WHERE w.id = ${terminal_logs.worker_id}
+          AND w.deleted_at IS NULL
       )`,
     ];
     // search — worker fullname (Laravel when(search, worker.searchByFullName)).
     if (q.search) {
       const cond = buildWorkerSearchCond(q.search);
       if (cond) {
+        // buildWorkerSearchCond `"workers".col` ishlatadi — subquery FROM ham
+        // alias'siz `workers` bo'lishi kerak (aks holda FROM-clause xatosi).
         conds.push(
-          sql`EXISTS (SELECT 1 FROM workers w WHERE w.id = ${terminal_logs.worker_id} AND w.deleted_at IS NULL AND (${cond}))`,
+          sql`EXISTS (SELECT 1 FROM ${workers} WHERE ${eq(workers.id, terminal_logs.worker_id)} AND ${notDeleted(workers)} AND (${cond}))`,
         );
       }
     }
@@ -107,8 +139,148 @@ export class WorkDurationService {
     return {
       current_page: page,
       total: Number(total),
-      data: rows,
+      data: await this.mapLogs(rows),
     };
+  }
+
+  // Laravel LogResource: { id, worker(minimal), worker_position(short str),
+  // terminal(+building), organization(worker_position.organization), event_time,
+  // event_type }. Relation'lar batch-load (N+1 oldini olish).
+  private async mapLogs(
+    rows: Array<{
+      id: number;
+      worker_id: number | null;
+      worker_position_id: number | null;
+      terminal_id: number | null;
+      event_time: string | null;
+      event_type: boolean | null;
+    }>,
+  ) {
+    if (!rows.length) return [];
+    const lang = this.ctx.lang;
+    const workerIds = [
+      ...new Set(rows.map((r) => r.worker_id).filter((x): x is number => !!x)),
+    ];
+    const wpIds = [
+      ...new Set(
+        rows.map((r) => r.worker_position_id).filter((x): x is number => !!x),
+      ),
+    ];
+    const terminalIds = [
+      ...new Set(
+        rows.map((r) => r.terminal_id).filter((x): x is number => !!x),
+      ),
+    ];
+
+    const workerRows = workerIds.length
+      ? await this.db
+          .select({
+            id: workers.id,
+            photo: workers.photo,
+            last_name: workers.last_name,
+            first_name: workers.first_name,
+            middle_name: workers.middle_name,
+          })
+          .from(workers)
+          .where(inArray(workers.id, workerIds))
+      : [];
+    const workerMap = new Map<number, Record<string, unknown>>();
+    await Promise.all(
+      workerRows.map(async (w) =>
+        workerMap.set(w.id, {
+          id: w.id,
+          photo: await this.minio.fileUrl(w.photo),
+          last_name: w.last_name,
+          first_name: w.first_name,
+          middle_name: w.middle_name,
+        }),
+      ),
+    );
+
+    const wpRows = wpIds.length
+      ? await this.db
+          .select({
+            id: worker_positions.id,
+            position_name: positions.name,
+            department_name: departments.name,
+            department_level: departments.level,
+            org_id: organizations.id,
+            org_name: organizations.name,
+            org_name_ru: organizations.name_ru,
+            org_name_en: organizations.name_en,
+            org_group: organizations.group,
+            org_full_name: organizations.full_name,
+          })
+          .from(worker_positions)
+          .leftJoin(
+            positions,
+            and(
+              eq(positions.id, worker_positions.position_id),
+              notDeleted(positions),
+            ),
+          )
+          .leftJoin(
+            departments,
+            and(
+              eq(departments.id, worker_positions.department_id),
+              notDeleted(departments),
+            ),
+          )
+          .leftJoin(
+            organizations,
+            and(
+              eq(organizations.id, worker_positions.organization_id),
+              notDeleted(organizations),
+            ),
+          )
+          .where(
+            and(inArray(worker_positions.id, wpIds), notDeleted(worker_positions)),
+          )
+      : [];
+    const wpMap = new Map(wpRows.map((w) => [w.id, w]));
+
+    // Laravel `with('terminal:id,name,name_ru,name_en')` building_id'ni
+    // tanlamaydi → `terminal.building` relation yuklanolmaydi → DOIM null.
+    const terminalRows = terminalIds.length
+      ? await this.db
+          .select({ id: terminals.id, name: terminals.name })
+          .from(terminals)
+          .where(and(inArray(terminals.id, terminalIds), notDeleted(terminals)))
+      : [];
+    const terminalMap = new Map(terminalRows.map((t) => [t.id, t]));
+
+    return rows.map((r) => {
+      const wp = r.worker_position_id
+        ? wpMap.get(r.worker_position_id)
+        : undefined;
+      const t = r.terminal_id ? terminalMap.get(r.terminal_id) : undefined;
+      const orgName = wp
+        ? lang === 'ru'
+          ? wp.org_name_ru
+          : lang === 'en'
+            ? wp.org_name_en
+            : wp.org_name
+        : null;
+      return {
+        id: r.id,
+        worker: (r.worker_id && workerMap.get(r.worker_id)) || null,
+        worker_position: wp
+          ? getShortPosition({
+              position_name: wp.position_name,
+              department_name: wp.department_name,
+              department_level: wp.department_level,
+              organization_full_name: wp.org_full_name,
+            })
+          : '',
+        terminal: t ? { id: t.id, name: t.name, building: null } : null,
+        organization:
+          wp && wp.org_id
+            ? { id: wp.org_id, name: orgName, group: wp.org_group ?? false }
+            : null,
+        event_time: r.event_time,
+        event_type: r.event_type,
+      };
+    });
   }
 
   // Laravel: WorkDurationController::logs — worker's logs for a specific date.
