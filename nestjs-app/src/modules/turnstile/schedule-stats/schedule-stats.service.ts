@@ -22,16 +22,34 @@ import { h_c_p_devices, worker_positions, workers } from '@/db/schema';
 import { TURNSTILE_WHITELIST } from '@/modules/turnstile/_shared/helpers';
 
 // Laravel VacationTypeEnum 1..8 → i18n key suffix.
-const VAC_TYPE_KEY: Record<number, string> = {
-  1: 'one',
-  2: 'two',
-  3: 'three',
-  4: 'four',
-  5: 'five',
-  6: 'six',
-  7: 'seven',
-  8: 'eight',
-};
+// Laravel VacationTypeEnum::get — raw command type (41..55) → ta'til turi kaliti.
+// 41,42,43,44,46→one; 45,49→three; 48→two; 51→five; 52→four; 53→seven; 55→six;
+// default→eight.
+function vacationTypeKey(type: number): string {
+  switch (type) {
+    case 41:
+    case 42:
+    case 43:
+    case 44:
+    case 46:
+      return 'one';
+    case 45:
+    case 49:
+      return 'three';
+    case 48:
+      return 'two';
+    case 51:
+      return 'five';
+    case 52:
+      return 'four';
+    case 53:
+      return 'seven';
+    case 55:
+      return 'six';
+    default:
+      return 'eight';
+  }
+}
 
 interface WpMinimal {
   id: number;
@@ -1152,7 +1170,7 @@ export class ScheduleStatsService {
           type: {
             id: r.type,
             name: this.translate(
-              `messages.vacations.types.${VAC_TYPE_KEY[r.type]}`,
+              `messages.vacations.types.${vacationTypeKey(r.type)}`,
               lang,
             ),
           },
