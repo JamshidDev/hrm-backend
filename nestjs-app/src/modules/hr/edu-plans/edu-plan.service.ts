@@ -143,9 +143,20 @@ export class EduPlanService {
     // Laravel scopeSearchByFullName parity — split by space, AND between terms.
     const searchCond = buildWorkerSearchCond(filters.search);
 
+    // Laravel WorkerPosition::filter(auth, request all) — org-scope (organizations
+    // + organization_id + role childIds).
+    const inScope = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {
+        organizations: filters.organizations,
+        organization_id: filters.organization_id,
+      },
+    );
+
     const where = and(
       eq(worker_positions.status, 2),
       notDeleted(worker_positions),
+      inScope,
       searchCond,
     );
 
@@ -181,7 +192,12 @@ export class EduPlanService {
           eq(positionsTable.id, worker_positions.position_id),
         )
         .where(where)
-        .orderBy(asc(worker_positions.id))
+        // Laravel: orderBy organization_id, department_id, department_position_id.
+        .orderBy(
+          asc(worker_positions.organization_id),
+          asc(worker_positions.department_id),
+          asc(worker_positions.department_position_id),
+        )
         .limit(perPage)
         .offset(offset),
       this.db
@@ -191,29 +207,23 @@ export class EduPlanService {
         .where(where),
     ]);
 
+    // Laravel SearchWorkersResource: {id, worker:{id,last_name,first_name,
+    // middle_name}, position: position?->name}. paginate() per_page qaytarmaydi.
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
-      data: await Promise.all(
-        rows.map(async (r) => ({
-          id: r.id,
-          worker: r.worker_id
-            ? {
-                id: r.worker_id,
-                last_name: r.worker_last,
-                first_name: r.worker_first,
-                middle_name: r.worker_middle,
-                photo: await this.minio.fileUrl(r.worker_photo),
-              }
-            : null,
-          organization: r.org_name ? { name: r.org_name } : null,
-          department: r.dept_name
-            ? { name: r.dept_name, level: r.dept_level }
-            : null,
-          position: r.pos_name ? { name: r.pos_name } : null,
-        })),
-      ),
+      data: rows.map((r) => ({
+        id: r.id,
+        worker: r.worker_id
+          ? {
+              id: r.worker_id,
+              last_name: r.worker_last,
+              first_name: r.worker_first,
+              middle_name: r.worker_middle,
+            }
+          : null,
+        position: r.pos_name ?? null,
+      })),
     };
   }
 

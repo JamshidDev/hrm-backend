@@ -1,8 +1,15 @@
 // Document DTO. Laravel: Confirmation/DocumentController + DocumentConfirmationController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
+// OnlyOffice frontend callbackUrl'ida `file_url` query qiymati encode qilinmaydi,
+// shuning uchun uning ichidagi `?expires=&model=&signature=` top-level query'ga
+// "oqib" o'tadi → `model` 2 marta keladi → Express uni massiv qiladi. Laravel
+// takroriy query'da oxirgisini oladi; biz ham massivdan oxirgi qiymatni olamiz.
+const lastIfArray = ({ value }: { value: unknown }): unknown =>
+  Array.isArray(value) ? value[value.length - 1] : value;
 
 // Laravel: $request->model + $request->document_id (show / history / base64).
 export class DocumentQueryDto {
@@ -17,10 +24,61 @@ export class DocumentQueryDto {
   document_id!: number;
 }
 
+// POST /api/v1/confirmation/document/signature — E-IMZO raqamli imzo (yoki
+// biometrik / button) bilan confirmation'ni tasdiqlash. Laravel:
+// DocumentController::confirmation → DocumentConfirmationFlowService::approve.
+// Frontend `{model, confirmation_id, code(PKCS7), pin, ...}` yuboradi.
 export class DocumentSignatureDto {
-  @ApiProperty() @IsString() @IsNotEmpty() model_type!: string;
-  @ApiProperty() @Type(() => Number) @IsInt() model_id!: number;
-  @ApiPropertyOptional() @IsOptional() @IsString() signature?: string;
+  @ApiProperty({ example: 'commands' })
+  @IsString()
+  @IsNotEmpty()
+  model!: string;
+
+  @ApiProperty({ example: 286581 })
+  @Type(() => Number)
+  @IsInt()
+  confirmation_id!: number;
+
+  // E-IMZO PKCS7 (attached) imzo — DIGITAL imzo uchun majburiy.
+  @ApiPropertyOptional({ description: 'E-IMZO PKCS7 base64 signature' })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  // Sertifikat PIN'i (verify natijasi bilan solishtiriladi; test PIN'lar bor).
+  @ApiPropertyOptional({ description: 'Imzolovchi PIN (JSHSHIR/STIR)' })
+  @IsOptional()
+  @IsString()
+  pin?: string;
+
+  // ConfirmationStatusEnum: 3=SUCCESS(tasdiq), 4=REJECTED(rad). Default approve.
+  @ApiPropertyOptional({
+    example: 3,
+    description: '4=rad etish, aks holda tasdiq',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  status?: number;
+
+  // ConfirmationTypeEnum: 1=DIGITAL, 2=BIOMETRIC, 3=BUTTON. Default DIGITAL.
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  confirmation_type?: number;
+
+  // Rad etishda izoh.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  comment?: string;
+
+  // Biometrik imzo rasmi (data:image/png;base64,...).
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  signature?: string;
 }
 
 export class ForwardConfirmationDto {
@@ -30,8 +88,9 @@ export class ForwardConfirmationDto {
 }
 
 export class DocumentBase64QueryDto {
-  @ApiProperty() @IsString() @IsNotEmpty() model_type!: string;
-  @ApiProperty() @Type(() => Number) @IsInt() model_id!: number;
+  // Laravel: $request->model + $request->document_id (frontend shu nomlarni yuboradi).
+  @ApiProperty() @IsString() @IsNotEmpty() model!: string;
+  @ApiProperty() @Type(() => Number) @IsInt() document_id!: number;
 }
 
 // OnlyOffice Document Server callback BODY. Laravel: DocumentEditorCallbackService.
@@ -57,11 +116,13 @@ export class DocumentUpdateDto {
 // OnlyOffice callback URL'iga frontend qo'shadigan query parametrlar.
 export class DocumentUpdateQueryDto {
   @ApiProperty({ description: 'Model (contracts, commands, ...)' })
+  @Transform(lastIfArray)
   @IsString()
   @IsNotEmpty()
   model!: string;
 
   @ApiProperty({ example: 1 })
+  @Transform(lastIfArray)
   @Type(() => Number)
   @IsInt()
   document_id!: number;

@@ -7,16 +7,23 @@
 
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
-import { WorkDurationService } from '@/modules/turnstile/work-duration/work-duration.service';
+import {
+  WorkDurationService,
+  type TerminalLogExportQuery,
+} from '@/modules/turnstile/work-duration/work-duration.service';
 
 @ApiTags('Turnstile / Work Duration')
 @ApiBearerAuth('access-token')
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/turnstile')
 export class WorkDurationController {
-  constructor(private readonly service: WorkDurationService) {}
+  constructor(
+    private readonly service: WorkDurationService,
+    private readonly i18n: I18nService,
+  ) {}
 
   @Get('work-duration')
   @ApiOperation({ summary: 'Paginated terminal logs (work duration list)' })
@@ -36,9 +43,13 @@ export class WorkDurationController {
     return buildSuccess(true, await this.service.terminalLogs(q));
   }
 
+  // Laravel: Helper::response(trans('messages.export.success')) — fonda Excel.
   @Get('terminal-logs/export')
-  @ApiOperation({ summary: 'Export terminal logs to Excel (stub url)' })
-  async terminalLogsExport() {
-    return buildSuccess(true, this.service.terminalLogsExport());
+  @ApiOperation({
+    summary: 'Export late-comers terminal logs to Excel (async)',
+  })
+  async terminalLogsExport(@Query() q: TerminalLogExportQuery) {
+    await this.service.terminalLogsExport(q);
+    return buildSuccess(this.i18n.t('messages.export.success'), []);
   }
 }

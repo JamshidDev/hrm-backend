@@ -1087,7 +1087,12 @@ export class HcpWorkerService {
   // Laravel: TurnstileController::addedLogs — workers added to HCP audit log.
   async addedLogs(q: QueryHcpWorkerDto) {
     const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(hcp_added_worker_logs);
+    // Laravel HcpAddedWorkerLog::query()->filter($user) — rol/org-scope.
+    const inScope = await this.scope.whereOrg(
+      hcp_added_worker_logs.organization_id,
+      { organizations: q.organizations, organization_id: q.organization_id },
+    );
+    const where = and(notDeleted(hcp_added_worker_logs), inScope);
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select()

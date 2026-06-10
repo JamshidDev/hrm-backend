@@ -48,7 +48,11 @@ export function toLaravelDateTime(
     // PG raw: "YYYY-MM-DD HH:MM:SS" — already correct.
     if (!v.includes('T')) return v;
     // ISO format → strip T and milliseconds/timezone.
-    return v.replace('T', ' ').replace(/\.\d+/, '').replace(/Z$/, '').replace(/[+-]\d{2}:?\d{2}$/, '');
+    return v
+      .replace('T', ' ')
+      .replace(/\.\d+/, '')
+      .replace(/Z$/, '')
+      .replace(/[+-]\d{2}:?\d{2}$/, '');
   }
   // Date object → "YYYY-MM-DD HH:MM:SS" UTC.
   return v.toISOString().slice(0, 19).replace('T', ' ');

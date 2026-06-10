@@ -28,18 +28,25 @@ export class NotificationsQueryDto {
 
   // Laravel: parameter MAVJUDLIGI yetarli (qiymat e'tiborga olinmaydi) — agar
   // `?count=...` kelsa, response sifatida faqat COUNT qaytariladi.
-  @ApiPropertyOptional({ description: 'parameter mavjudligi shart, qiymat ahamiyatsiz' })
-  @IsOptional() count?: string | boolean;
+  @ApiPropertyOptional({
+    description: 'parameter mavjudligi shart, qiymat ahamiyatsiz',
+  })
+  @IsOptional()
+  count?: string | boolean;
 
   // Laravel: parameter mavjudligi → `whereNull('read_at')` (faqat o'qilmaganlar).
-  @ApiPropertyOptional({ description: 'mavjudligi → faqat o\'qilmaganlar' })
-  @IsOptional() read_at?: string | boolean;
+  @ApiPropertyOptional({ description: "mavjudligi → faqat o'qilmaganlar" })
+  @IsOptional()
+  read_at?: string | boolean;
 }
 
 export class MarkNotificationsDto {
   // Laravel: 'all' bo'lsa — barcha unread'larni mark-read. Aks holda 'ids' kerak.
   @ApiPropertyOptional() @IsOptional() all?: boolean;
-  @ApiPropertyOptional({ example: ['notif-uuid-1', 'notif-uuid-2'], type: [String] })
+  @ApiPropertyOptional({
+    example: ['notif-uuid-1', 'notif-uuid-2'],
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -73,11 +80,22 @@ export class UpdateUserDto {
   password?: string;
 }
 
+// Laravel UpdateOrganizationInfoRequest — command_address/city_id/address required.
 export class UpdateOrganizationInfoDto {
-  @ApiProperty({ example: 'Updated org name' })
+  @ApiProperty({ example: 'Buyruq manzili' })
   @IsString()
   @IsNotEmpty()
-  name!: string;
+  command_address!: string;
+
+  @ApiProperty({ example: 92 })
+  @Type(() => Number)
+  @IsInt()
+  city_id!: number;
+
+  @ApiProperty({ example: 'Toshkent sh.' })
+  @IsString()
+  @IsNotEmpty()
+  address!: string;
 }
 
 export class AccessForAdminDto {

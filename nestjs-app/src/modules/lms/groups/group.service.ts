@@ -6,7 +6,18 @@
 
 import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, max, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  max,
+  sql,
+} from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -15,6 +26,7 @@ import {
   departments,
   edu_plan_workers,
   edu_plans,
+  exams,
   group_workers,
   groups,
   learning_centers,
@@ -22,9 +34,12 @@ import {
   lms_protocols,
   organizations,
   positions,
+  topics,
+  worker_exams,
   worker_positions,
   workers,
 } from '@/db/schema';
+import { examWhomName } from '@/modules/exam/_shared/enums';
 import { getShortPosition } from '@/modules/hr/_shared/position-helper';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
@@ -57,7 +72,10 @@ export class LmsGroupService {
   //     workers to that group (UPDATE edu_plan_workers SET group_id = group.id).
   async generate(dto: GenerateGroupsDto) {
     if (!dto.edu_plan_id) {
-      throw new BusinessException(400, this.i18n.t('messages.lms.edu_plan_not_found'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.lms.edu_plan_not_found'),
+      );
     }
 
     // 1) Load edu_plan + learning_center.
@@ -77,7 +95,10 @@ export class LmsGroupService {
       .where(and(eq(edu_plans.id, dto.edu_plan_id), notDeleted(edu_plans)))
       .limit(1);
     if (!ep) {
-      throw new BusinessException(400, this.i18n.t('messages.lms.edu_plan_not_found'));
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.lms.edu_plan_not_found'),
+      );
     }
 
     // 2) Load all edu_plan_workers (id, group_id) for shuffle + assignment tracking.
@@ -99,9 +120,7 @@ export class LmsGroupService {
     const existingGroups = await this.db
       .select({ id: groups.id, code: groups.code })
       .from(groups)
-      .where(
-        and(eq(groups.edu_plan_id, ep.id), notDeleted(groups)),
-      )
+      .where(and(eq(groups.edu_plan_id, ep.id), notDeleted(groups)))
       .orderBy(asc(groups.id));
 
     const groupList: Array<{ id: number; code: number }> = [...existingGroups];
@@ -116,9 +135,7 @@ export class LmsGroupService {
       const lcCode = String(ep.lc_code ?? '');
 
       // Sequential nextId for groups table (Laravel: PG sequence, but our pattern is MAX+1).
-      const [{ m }] = await this.db
-        .select({ m: max(groups.id) })
-        .from(groups);
+      const [{ m }] = await this.db.select({ m: max(groups.id) }).from(groups);
       let nextGroupId = Number(m ?? 0);
 
       const totalGroups = Number(ep.count_groups ?? 1);
@@ -154,9 +171,7 @@ export class LmsGroupService {
 
     // 4) Workers already assigned to any group — exclude from pool.
     const assigned = new Set(
-      epwRows
-        .filter((r) => r.group_id != null)
-        .map((r) => Number(r.worker_id)),
+      epwRows.filter((r) => r.group_id != null).map((r) => Number(r.worker_id)),
     );
     const pool = epwRows
       .filter((r) => !assigned.has(Number(r.worker_id)))
@@ -173,9 +188,7 @@ export class LmsGroupService {
     let cursor = 0;
     for (const g of groupList) {
       // Current count for this group.
-      const current = epwRows.filter(
-        (r) => Number(r.group_id) === g.id,
-      ).length;
+      const current = epwRows.filter((r) => Number(r.group_id) === g.id).length;
       const needed = countWorkersPerGroup - current;
       if (needed <= 0) continue;
       const slice = pool.slice(cursor, cursor + needed);
@@ -279,12 +292,22 @@ export class LmsGroupService {
   // GroupWorkersResource: { id, worker, position (short), worker_position_id, certificate }
   async groupWorkers(q: GroupListQueryDto) {
     const { page, perPage } = readPaging(q);
-    const where = q.group_id
-      ? and(
-          eq(edu_plan_workers.group_id, q.group_id),
-          notDeleted(edu_plan_workers),
-        )
-      : notDeleted(edu_plan_workers);
+    const conds = [notDeleted(edu_plan_workers)];
+    if (q.group_id) {
+      conds.push(eq(edu_plan_workers.group_id, q.group_id));
+    }
+    // Laravel: when(protocol_id, whereDoesntHave('certificate')) — protocol_id
+    // berilgan bo'lsa, FAQAT sertifikati YO'Q xodimlar (hasOne edu_plan_worker_id).
+    if (q.protocol_id) {
+      conds.push(
+        sql`NOT EXISTS (
+          SELECT 1 FROM lms_certificates c
+          WHERE c.edu_plan_worker_id = ${edu_plan_workers.id}
+            AND c.deleted_at IS NULL
+        )`,
+      );
+    }
+    const where = and(...conds);
 
     const [rows, [{ total }]] = await Promise.all([
       this.db
@@ -298,10 +321,7 @@ export class LmsGroupService {
         .orderBy(asc(edu_plan_workers.id))
         .limit(perPage)
         .offset((page - 1) * perPage),
-      this.db
-        .select({ total: count() })
-        .from(edu_plan_workers)
-        .where(where),
+      this.db.select({ total: count() }).from(edu_plan_workers).where(where),
     ]);
 
     if (!rows.length) {
@@ -343,19 +363,13 @@ export class LmsGroupService {
     ]);
 
     const depIds = [
-      ...new Set(
-        (wpRows as any[]).map((r) => Number(r.department_id)).filter(Boolean),
-      ),
+      ...new Set(wpRows.map((r) => Number(r.department_id)).filter(Boolean)),
     ];
     const posIds = [
-      ...new Set(
-        (wpRows as any[]).map((r) => Number(r.position_id)).filter(Boolean),
-      ),
+      ...new Set(wpRows.map((r) => Number(r.position_id)).filter(Boolean)),
     ];
     const wpOrgIds = [
-      ...new Set(
-        (wpRows as any[]).map((r) => Number(r.organization_id)).filter(Boolean),
-      ),
+      ...new Set(wpRows.map((r) => Number(r.organization_id)).filter(Boolean)),
     ];
 
     const [dRows, pRows, wpOrgRows, certRows] = await Promise.all([
@@ -377,7 +391,10 @@ export class LmsGroupService {
         : Promise.resolve([] as any[]),
       wpOrgIds.length
         ? this.db
-            .select({ id: organizations.id, full_name: organizations.full_name })
+            .select({
+              id: organizations.id,
+              full_name: organizations.full_name,
+            })
             .from(organizations)
             .where(inArray(organizations.id, wpOrgIds))
         : Promise.resolve([] as any[]),
@@ -390,6 +407,11 @@ export class LmsGroupService {
           cert_to: lms_certificates.cert_to,
           serial: lms_certificates.serial,
           number: lms_certificates.number,
+          start_exam_result: lms_certificates.start_exam_result,
+          end_exam_result: lms_certificates.end_exam_result,
+          confirmation_file: lms_certificates.confirmation_file,
+          generate: lms_certificates.generate,
+          confirmation: lms_certificates.confirmation,
         })
         .from(lms_certificates)
         .where(
@@ -404,10 +426,10 @@ export class LmsGroupService {
     ]);
 
     const wPhotoUrls = await Promise.all(
-      (wRows as any[]).map((w) => this.minio.fileUrl(w.photo)),
+      wRows.map((w) => this.minio.fileUrl(w.photo)),
     );
     const wMap = new Map(
-      (wRows as any[]).map(
+      wRows.map(
         (w, i) =>
           [
             Number(w.id),
@@ -421,11 +443,11 @@ export class LmsGroupService {
           ] as const,
       ),
     );
-    const wpMap = new Map((wpRows as any[]).map((wp) => [Number(wp.id), wp] as const));
-    const dMap = new Map((dRows as any[]).map((d) => [Number(d.id), d] as const));
-    const pMap = new Map((pRows as any[]).map((p) => [Number(p.id), p] as const));
+    const wpMap = new Map(wpRows.map((wp) => [Number(wp.id), wp] as const));
+    const dMap = new Map(dRows.map((d) => [Number(d.id), d] as const));
+    const pMap = new Map(pRows.map((p) => [Number(p.id), p] as const));
     const wpOrgFullMap = new Map(
-      (wpOrgRows as any[]).map(
+      wpOrgRows.map(
         (o) => [Number(o.id), o.full_name as string | null] as const,
       ),
     );
@@ -434,6 +456,31 @@ export class LmsGroupService {
         (c) => [Number(c.edu_plan_worker_id), c] as const,
       ),
     );
+    // confirmation_file presigned URL'lar (batch) — Laravel Helper::fileUrl.
+    const certFileUrls = await Promise.all(
+      (certRows as any[]).map((c) =>
+        c.confirmation_file
+          ? this.minio.fileUrl(c.confirmation_file as string)
+          : Promise.resolve(null),
+      ),
+    );
+    const certFileMap = new Map(
+      (certRows as any[]).map(
+        (c, i) => [Number(c.edu_plan_worker_id), certFileUrls[i]] as const,
+      ),
+    );
+    // ConfirmationStatusEnum → i18n label (1=process..5=deleted).
+    const confWord: Record<number, string> = {
+      1: 'process',
+      2: 'read',
+      3: 'success',
+      4: 'rejected',
+      5: 'deleted',
+    };
+    const confName = (v: number | null): string => {
+      const w = v != null ? confWord[v] : undefined;
+      return w ? this.i18n.t(`messages.confirmation.status.${w}`) : '';
+    };
 
     return {
       current_page: page,
@@ -448,12 +495,12 @@ export class LmsGroupService {
           wp && wp.department_id ? dMap.get(Number(wp.department_id)) : null;
         const orgFull =
           wp && wp.organization_id
-            ? wpOrgFullMap.get(Number(wp.organization_id)) ?? null
+            ? (wpOrgFullMap.get(Number(wp.organization_id)) ?? null)
             : null;
         const cert = certMap.get(Number(r.id));
         return {
           id: Number(r.id),
-          worker: r.worker_id ? wMap.get(Number(r.worker_id)) ?? null : null,
+          worker: r.worker_id ? (wMap.get(Number(r.worker_id)) ?? null) : null,
           position: getShortPosition({
             position_name: pos?.name ?? null,
             department_name: dep?.name ?? null,
@@ -468,6 +515,14 @@ export class LmsGroupService {
                 cert_to: cert.cert_to,
                 serial: cert.serial,
                 number: cert.number,
+                start_exam_result: cert.start_exam_result,
+                end_exam_result: cert.end_exam_result,
+                confirmation_file: certFileMap.get(Number(r.id)) ?? null,
+                generate: cert.generate,
+                confirmation: {
+                  id: cert.confirmation,
+                  name: confName(cert.confirmation),
+                },
               }
             : null,
         };
@@ -498,10 +553,85 @@ export class LmsGroupService {
     });
   }
 
-  /** GET /lms/worker-exams — paginatsiya stub. */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  // GET /lms/worker-exams — Laravel GroupController::workerExams.
+  //   WorkerExam where worker_id=request, ended NOT NULL, whereHas(exam.topic),
+  //   with(exam.topic), orderByDesc(id), paginate → WorkerExamResource:
+  //   {id, created, ended, result, exam: ExamResource}.
   async workerExams(q: GroupListQueryDto) {
-    const { page } = readPaging(q);
-    return { current_page: page, total: 0, data: [] };
+    const { page, perPage } = readPaging(q);
+    const workerId = Number((q as { worker_id?: number | string }).worker_id);
+
+    const where = and(
+      notDeleted(worker_exams),
+      workerId ? eq(worker_exams.worker_id, workerId) : sql`FALSE`,
+      isNotNull(worker_exams.ended),
+      // whereHas('exam', whereHas('topic')) — exam + topic mavjud bo'lishi shart.
+      sql`EXISTS (
+        SELECT 1 FROM exams e JOIN topics t ON t.id = e.topic_id
+        WHERE e.id = ${worker_exams.exam_id} AND t.deleted_at IS NULL
+      )`,
+    );
+
+    return lmsPaginate({
+      db: this.db,
+      countTable: worker_exams,
+      countWhere: where,
+      page,
+      perPage,
+      query: ({ limit, offset }) =>
+        this.db
+          .select({
+            id: worker_exams.id,
+            created: worker_exams.created,
+            ended: worker_exams.ended,
+            result: worker_exams.result,
+            exam_id: worker_exams.exam_id,
+            e_name: exams.name,
+            e_whom: exams.whom,
+            e_deadline: exams.deadline,
+            e_variant: exams.variant,
+            e_minute: exams.minute,
+            e_tests_count: exams.tests_count,
+            e_chances: exams.chances,
+            e_active: exams.active,
+            e_description: exams.description,
+            t_id: topics.id,
+            t_name: topics.name,
+          })
+          .from(worker_exams)
+          .leftJoin(exams, eq(exams.id, worker_exams.exam_id))
+          .leftJoin(topics, eq(topics.id, exams.topic_id))
+          .where(where)
+          .orderBy(desc(worker_exams.id))
+          .limit(limit)
+          .offset(offset),
+      mapper: () => ({}) as never,
+      // eslint-disable-next-line @typescript-eslint/require-await
+      mapList: async (rows: Record<string, unknown>[]) =>
+        rows.map((r) => ({
+          id: r.id,
+          created: r.created,
+          ended: r.ended,
+          result: r.result,
+          exam: r.exam_id
+            ? {
+                id: r.exam_id,
+                name: r.e_name,
+                whom: {
+                  id: r.e_whom,
+                  name: examWhomName(Number(r.e_whom)),
+                },
+                topic: r.t_id ? { id: r.t_id, name: r.t_name } : null,
+                deadline: r.e_deadline,
+                variant: r.e_variant,
+                minute: r.e_minute,
+                tests_count: r.e_tests_count,
+                chances: r.e_chances,
+                active: r.e_active,
+                description: r.e_description,
+              }
+            : null,
+        })),
+    });
   }
 }

@@ -5,7 +5,8 @@
 //   - Bu yerda asosiy stub'lar: document base64 return, signature record,
 //     forward, generate-url, history, files.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { CommandConfirmationService } from '@/modules/hr/commands/command-confirmation.service';
 import { and, count, desc, eq, gt, ne, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +22,7 @@ import {
   document_chats,
   document_files,
   document_histories,
+  signatures,
   signature_urls,
   commands,
   sended_workers,
@@ -33,6 +35,8 @@ import {
   worker_applications,
   staffing_approves,
   staffing_approve_confirmations,
+  lms_certificates,
+  lms_certificate_confirmations,
   users as usersTable,
   workers,
 } from '@/db/schema';
@@ -41,6 +45,8 @@ import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ConvertService } from '@/shared/convert/convert.service';
+import * as QRCode from 'qrcode';
+import { injectDocxImage } from '@/modules/confirmation/documents/docx-image.util';
 import {
   DocumentBase64QueryDto,
   DocumentConfirmDto,
@@ -55,7 +61,15 @@ import {
 
 const MODEL_TYPE_TABLE_MAP: Record<
   string,
-  { doc: unknown; conf: unknown; fk: string; label: string; fqcn: string }
+  {
+    doc: unknown;
+    conf: unknown;
+    fk: string;
+    label: string;
+    fqcn: string;
+    // ModelTypeEnum::confirmationModelClass() — signatures.model_type uchun.
+    confFqcn: string;
+  }
 > = {
   contracts: {
     doc: contracts,
@@ -63,6 +77,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'contract_id',
     label: 'Contracts',
     fqcn: 'Modules\\HR\\Models\\Contract',
+    confFqcn: 'Modules\\Confirmation\\Models\\ContractConfirmation',
   },
   commands: {
     doc: commands,
@@ -70,6 +85,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'command_id',
     label: 'Commands',
     fqcn: 'Modules\\HR\\Models\\Command',
+    confFqcn: 'Modules\\Confirmation\\Models\\CommandConfirmation',
   },
   'contract-additional': {
     doc: contract_additional,
@@ -77,6 +93,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'contract_additional_id',
     label: 'Contract Additional',
     fqcn: 'Modules\\HR\\Models\\ContractAdditional',
+    confFqcn: 'Modules\\Confirmation\\Models\\ContractAdditionalConfirmation',
   },
   timesheet: {
     doc: time_sheets,
@@ -84,6 +101,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'time_sheet_id',
     label: 'Timesheet',
     fqcn: 'Modules\\TimeSheet\\Models\\TimeSheet',
+    confFqcn: 'Modules\\Confirmation\\Models\\TimesheetConfirmation',
   },
   'vacation-schedule': {
     doc: vacation_schedule_years,
@@ -91,6 +109,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'vacation_schedule_year_id',
     label: 'Vacation schedule',
     fqcn: 'Modules\\HR\\Models\\VacationScheduleYear',
+    confFqcn: 'Modules\\Confirmation\\Models\\VacationScheduleConfirmation',
   },
   'worker-application': {
     doc: worker_applications,
@@ -98,6 +117,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'worker_application_id',
     label: 'Worker Application',
     fqcn: 'Modules\\HR\\Models\\WorkerApplication',
+    confFqcn: 'Modules\\Confirmation\\Models\\WorkerApplicationConfirmation',
   },
   med: {
     doc: sended_workers,
@@ -105,6 +125,7 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'sended_worker_id',
     label: 'Med',
     fqcn: 'Modules\\Med\\Models\\SendedWorker',
+    confFqcn: 'Modules\\Confirmation\\Models\\SendedWorkerConfirmation',
   },
   'staffing-approve': {
     doc: staffing_approves,
@@ -112,6 +133,15 @@ const MODEL_TYPE_TABLE_MAP: Record<
     fk: 'staffing_approve_id',
     label: 'Staffing Approve',
     fqcn: 'Modules\\Economist\\Models\\StaffingApprove',
+    confFqcn: 'Modules\\Confirmation\\Models\\StaffingApproveConfirmation',
+  },
+  'lms-certificate': {
+    doc: lms_certificates,
+    conf: lms_certificate_confirmations,
+    fk: 'lms_certificate_id',
+    label: 'LMS Certificate',
+    fqcn: 'Modules\\LMS\\Models\\LmsCertificate',
+    confFqcn: 'Modules\\Confirmation\\Models\\LmsCertificateConfirmation',
   },
 };
 
@@ -126,6 +156,8 @@ const CONFIRMATION_STATUS_KEYS: Record<number, string> = {
 
 @Injectable()
 export class DocumentService {
+  private readonly logger = new Logger(DocumentService.name);
+
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
@@ -133,57 +165,364 @@ export class DocumentService {
     private readonly minio: MinioService,
     private readonly config: ConfigService,
     private readonly convert: ConvertService,
+    private readonly commandConfirmation: CommandConfirmationService,
   ) {}
 
+  // Hujjat TO'LIQ tasdiqlanganda (confirmation=SUCCESS) model bo'yicha
+  // biznes-logika (Laravel DocumentFinalizeService::applyModelConfirmation).
+  private async applyModelSideEffect(
+    model: string,
+    docId: number,
+  ): Promise<void> {
+    try {
+      if (model === 'commands') {
+        await this.commandConfirmation.applyConfirmation(docId);
+      } else if (model === 'contracts') {
+        // Laravel ContractConfirmationService::confirmation — NOT_MANDATORY
+        // shartnoma tasdiqlanganda createWorker (worker_position + Worker rol +
+        // user org) + contract ACTIVE. FORMED bo'lsa buyruq tasdig'i hal qiladi.
+        await this.commandConfirmation.applyContractConfirmation(docId);
+      } else if (model === 'contract-additional') {
+        // Laravel: CONTRACT_ADDITIONAL (NOT_MANDATORY) → updateContract
+        // (xodim lavozimini o'zgartirish/yakunlash).
+        await this.commandConfirmation.applyContractAdditionalConfirmation(
+          docId,
+        );
+      }
+    } catch (e) {
+      // Side-effect xatosi tasdiqni bekor qilmaydi (Laravel report()).
+      this.logger.error(
+        `applyModelSideEffect(${model}, ${docId}) xato: ${String(e)}`,
+      );
+    }
+  }
+
   // GET /api/v1/confirmation/document/base64
-  async documentBase64(query: DocumentBase64QueryDto) {
-    const map = MODEL_TYPE_TABLE_MAP[query.model_type];
+  // Laravel DocumentQueryService::documentBase64 — confirmation_file (PDF) ni
+  // MinIO'dan olib, base64 string qaytaradi (interceptor `data`ga o'raydi).
+  async documentBase64(query: DocumentBase64QueryDto): Promise<string> {
+    const map = MODEL_TYPE_TABLE_MAP[query.model];
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
-      .select({ file: dTable.file })
+      .select({ confirmation_file: dTable.confirmation_file })
       .from(dTable)
-      .where(and(eq(dTable.id, query.model_id), notDeleted(dTable)))
+      .where(and(eq(dTable.id, query.document_id), notDeleted(dTable)))
       .limit(1);
-    if (!doc) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!doc?.confirmation_file) {
+      throw new BusinessException(
+        404,
+        this.i18n.t('messages.errors.document_file_not_found'),
+      );
     }
-    // Laravel: return file contents as base64. Here we return URL.
-    return {
-      model_type: query.model_type,
-      model_id: query.model_id,
-      file: await this.minio.fileUrl(doc.file),
-    };
+    const buf = await this.minio.getObject(doc.confirmation_file);
+    return buf.toString('base64');
   }
 
-  // POST /api/v1/confirmation/document/signature — record signature confirmation.
-  async signature(dto: DocumentSignatureDto): Promise<void> {
-    const map = MODEL_TYPE_TABLE_MAP[dto.model_type];
+  // POST /api/v1/confirmation/document/signature
+  // Laravel: DocumentController::confirmation → reject() / approve().
+  // E-IMZO raqamli imzoni tekshiradi (timestamp + verify), confirmation'ni
+  // SUCCESS qiladi, hammasi imzolansa hujjatni tasdiqlab side-effect chaqiradi.
+  async signature(dto: DocumentSignatureDto): Promise<{ message: string }> {
+    const map = MODEL_TYPE_TABLE_MAP[dto.model];
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
     const userId = this.ctx.user_or_fail.id;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const confTable = map.conf as any;
     const dTable = map.doc as any;
+
+    // 1) Confirmation + uning hujjati (Laravel resolveConfirmation/Document).
+    const [conf] = await this.db
+      .select({
+        id: confTable.id,
+        status: confTable.status,
+        worker_id: confTable.worker_id,
+        type: confTable.type, // 'w' (hodim) | 'd' (direktor) | 's' (imzolovchi)
+        doc_id: confTable[map.fk],
+      })
+      .from(confTable)
+      .where(eq(confTable.id, dto.confirmation_id))
+      .limit(1);
+    if (!conf) {
+      throw new BusinessException(
+        404,
+        this.i18n.t('messages.document.not_found'),
+      );
+    }
     const [doc] = await this.db
-      .select({ id: dTable.id })
+      .select({
+        id: dTable.id,
+        file: dTable.file,
+        confirmation_file: dTable.confirmation_file,
+      })
       .from(dTable)
-      .where(and(eq(dTable.id, dto.model_id), notDeleted(dTable)))
+      .where(eq(dTable.id, conf.doc_id))
       .limit(1);
     if (!doc) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+      throw new BusinessException(
+        404,
+        this.i18n.t('messages.document.not_found'),
+      );
     }
-    // History entry.
-    await this.db.insert(document_histories).values({
-      model_id: dto.model_id,
-      model_type: dto.model_type,
+
+    // 2) REJECTED — rad etish (Laravel reject()).
+    if (dto.status === 4) {
+      await this.db
+        .update(confTable)
+        .set({ status: 4, updated_at: sql`NOW()` })
+        .where(eq(confTable.id, conf.id));
+      await this.db
+        .update(dTable)
+        .set({ confirmation: 4, updated_at: sql`NOW()` })
+        .where(eq(dTable.id, doc.id));
+      await this.db.insert(document_histories).values({
+        model_id: doc.id,
+        model_type: map.fqcn,
+        user_id: userId,
+        status: 3, // DocumentHistoryStatusEnum::REJECTED
+        description: dto.comment ?? null,
+      });
+      return { message: this.i18n.t('messages.document.rejected_successful') };
+    }
+
+    // 3) Imzoni tekshirish (Laravel SignatureService::signature).
+    await this.verifySignature(dto, conf, map, userId);
+
+    // 4) Confirmation SUCCESS (Laravel approve transaction).
+    await this.db
+      .update(confTable)
+      .set({
+        status: 3,
+        confirmation_type: dto.confirmation_type ?? 1, // DIGITAL
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(confTable.id, conf.id));
+
+    // 5) Boshqa barcha confirmations SUCCESS bo'lsa — hujjat tasdiqlandi.
+    const [pendingRow] = await this.db
+      .select({ pending: count() })
+      .from(confTable)
+      .where(
+        and(
+          eq(confTable[map.fk], doc.id),
+          ne(confTable.id, conf.id),
+          ne(confTable.status, 3),
+        ),
+      );
+    const pending = Number(pendingRow?.pending ?? 0);
+
+    // Imzo rasmini DOCX'ga bosamiz — HAR imzolovchi o'z `${signature_*}` o'rnini
+    // to'ldiradi (Laravel oxirgi imzolovchinigina bosadi; bu yerda barcha
+    // imzolar ko'rinishi uchun har confirmation'da DOCX yangilanadi). PDF esa
+    // faqat oxirgi imzoda (pending=0) qayta generatsiya qilinadi — tejamkorlik.
+    await this.replaceDocumentSignature(dto, conf, doc, pending === 0);
+
+    if (pending === 0) {
+      await this.db
+        .update(dTable)
+        .set({ confirmation: 3, updated_at: sql`NOW()` })
+        .where(eq(dTable.id, doc.id));
+      await this.applyModelSideEffect(dto.model, doc.id);
+    }
+
+    return { message: this.i18n.t('messages.document.signed_successfully') };
+  }
+
+  // Laravel DocumentFinalizeService::replaceDocumentSignature — imzo rasmini
+  // (digital=QR kod hujjat URL'iga, biometrik=yuklangan rasm) DOCX'dagi
+  // `${signature_worker}`/`${signature_director}` o'rniga bosib, PDF'ni qayta
+  // generatsiya qiladi. Xato bo'lsa tasdiqни bekor qilmaydi (log).
+  private async replaceDocumentSignature(
+    dto: DocumentSignatureDto,
+    conf: { id: number; type: string | null },
+    doc: { file: string | null; confirmation_file: string | null },
+    regeneratePdf: boolean,
+  ): Promise<void> {
+    try {
+      if (!doc.file) return;
+      const fileName = doc.file.split('/').pop() ?? doc.file;
+
+      // Imzo rasmi.
+      let png: Buffer | null = null;
+      if ((dto.confirmation_type ?? 1) === 2) {
+        // Biometrik — yuklangan base64 rasm (data:image/...;base64,...).
+        if (dto.signature) {
+          const b64 = dto.signature.replace(/^data:image\/\w+;base64,/i, '');
+          png = Buffer.from(b64, 'base64');
+        }
+      } else {
+        // Digital — hujjat URL'iga QR kod (Laravel signatureToImageDigital).
+        const frontUrl = this.config.get<string>(
+          'APP_FRONT_URL',
+          'http://localhost',
+        );
+        const url = `${frontUrl}/public/${dto.model}/${fileName}`;
+        png = await QRCode.toBuffer(url, { width: 200, margin: 0 });
+      }
+      if (!png) return;
+
+      // Imzo kaliti: hodim ('w') + contracts/ad-contract/worker-application →
+      // signature_worker, aks holda signature_director (Laravel parity).
+      const key =
+        conf.type === 'w' &&
+        ['contracts', 'contract-additional', 'worker-application'].includes(
+          dto.model,
+        )
+          ? 'signature_worker'
+          : 'signature_director';
+
+      // DOCX'ni olib, rasmni joylab, qaytarib saqlaymiz.
+      const docxBuf = await this.minio.getObject(doc.file);
+      const stamped = injectDocxImage(docxBuf, key, png);
+      await this.minio.putObject(
+        doc.file,
+        stamped,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+
+      // PDF'ni qayta generatsiya qilamiz (faqat oxirgi imzoda — barcha imzolar
+      // DOCX'da bo'lganda).
+      if (regeneratePdf && doc.confirmation_file) {
+        const pdf = await this.convert.docxToPdf(stamped);
+        await this.minio.putObject(
+          doc.confirmation_file,
+          pdf,
+          'application/pdf',
+        );
+      }
+    } catch (e) {
+      this.logger.error(
+        `replaceDocumentSignature(conf=${conf.id}) xato: ${String(e)}`,
+      );
+    }
+  }
+
+  // Test PIN'lar — worker mavjudligini tekshirishni chetlab o'tadi (Laravel).
+  private static readonly TEST_PINS = ['50207007170030', '31604965320012'];
+  // Sertifikatdagi PIN OID (subjectInfo kaliti).
+  private static readonly PIN_OID = '1.2.860.3.16.1.2';
+
+  // Laravel SignatureService::signature — E-IMZO PKCS7 imzoni timestamp qilib
+  // verify qiladi, sertifikatdan PIN olib worker bilan solishtiradi, signature
+  // yozuvini saqlaydi. Muvaffaqiyatsizlikda BusinessException(400) tashlaydi.
+  private async verifySignature(
+    dto: DocumentSignatureDto,
+    conf: { worker_id: number | null },
+    map: (typeof MODEL_TYPE_TABLE_MAP)[string],
+    userId: number,
+  ): Promise<void> {
+    // Biometrik imzo — tekshiruvsiz (rasm signWithToken/boshqa joyda saqlanadi).
+    if (dto.confirmation_type === 2) {
+      return;
+    }
+
+    const server = this.config.get<string>(
+      'SIGNATURE_SERVER',
+      'http://localhost:8080/',
+    );
+    const pinInt = String(Number(dto.pin));
+
+    if (!DocumentService.TEST_PINS.includes(pinInt) && !conf.worker_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker.not_found'),
+      );
+    }
+
+    const code = dto.code ?? '';
+    const headers = {
+      'X-Real-IP': '192.168.82.99',
+      Host: 'e-imzo.dasuty.com',
+      'Content-Type': 'text/plain',
+    } as const;
+
+    // a) Imzoga timestamp qo'shish → pkcs7b64 (Laravel: frontend/timestamp/pkcs7).
+    // MUHIM: `backend/pkcs7/verify/attached` timestamp'li PKCS7'ni talab qiladi
+    // ("timestamp is required"), shuning uchun bu qadam MAJBURIY. Timestamp TSA
+    // (vaqt belgisi serveri) E-IMZO VPN orqali ulanadi — lokal test rejimida VPN
+    // o'chiq bo'lsa "TimeStampTokenProvider UNAVAILABLE" qaytadi (infra cheklovi).
+    const tsRes = await this.eimzoPost(
+      `${server}frontend/timestamp/pkcs7`,
+      code,
+      headers,
+    );
+    if (tsRes.status !== 1) {
+      throw new BusinessException(
+        400,
+        (tsRes.message as string) ?? this.i18n.t('messages.server_error'),
+      );
+    }
+    const resCode = tsRes.pkcs7b64 as string;
+
+    // b) Attached PKCS7'ni verify qilish → pkcs7Info.
+    const vRes = await this.eimzoPost(
+      `${server}backend/pkcs7/verify/attached`,
+      resCode,
+      headers,
+    );
+    if (vRes.status !== 1) {
+      throw new BusinessException(
+        400,
+        (vRes.message as string) ?? this.i18n.t('messages.server_error'),
+      );
+    }
+
+    // c) Sertifikatdan PIN olish.
+    const certPin = String(
+      (vRes.pkcs7Info as any)?.signers?.[0]?.certificate?.[0]?.subjectInfo?.[
+        DocumentService.PIN_OID
+      ] ?? '',
+    );
+
+    const [worker] = await this.db
+      .select({ id: workers.id })
+      .from(workers)
+      .where(eq(workers.pin, Number(certPin)))
+      .limit(1);
+
+    if (!worker || conf.worker_id !== worker.id) {
+      if (!DocumentService.TEST_PINS.includes(certPin)) {
+        throw new BusinessException(
+          400,
+          this.i18n.t('messages.worker.not_found'),
+        );
+      }
+    }
+
+    // d) Signature yozuvini saqlash.
+    await this.db.insert(signatures).values({
+      model_id: dto.confirmation_id,
+      model_type: map.confFqcn,
+      signature: resCode,
+      type: 1, // DIGITAL
+      status: true,
       user_id: userId,
-      status: 3, // SUCCESS
-      description: dto.signature ?? null,
     });
+  }
+
+  // SIGNATURE_SERVER'ga POST (text/plain) — JSON javob qaytaradi.
+  private async eimzoPost(
+    url: string,
+    body: string,
+    headers: Record<string, string>,
+  ): Promise<Record<string, unknown>> {
+    let res: Response;
+    try {
+      res = await fetch(url, { method: 'POST', headers, body });
+    } catch (e) {
+      throw new BusinessException(
+        400,
+        (e as Error)?.message ?? this.i18n.t('messages.server_error'),
+      );
+    }
+    if (!res.ok) {
+      throw new BusinessException(400, await res.text());
+    }
+    return (await res.json()) as Record<string, unknown>;
   }
 
   // POST /api/v1/confirmation/forward
@@ -192,7 +531,7 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const cTable = map.conf as any;
     const [conf] = await this.db
       .select({ id: cTable.id })
@@ -214,10 +553,9 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+
     const dTable = map.doc as any;
     const confTable = map.conf as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const [doc] = await this.db
       .select()
@@ -439,7 +777,14 @@ export class DocumentService {
 
   // Laravel Helper::documentSignedUrl — only-office temporarySignedRoute (30 min).
   private buildOnlyOfficeUrl(uuid: string, model: string): string {
-    const baseUrl = this.config.get<string>('APP_URL', 'http://localhost:8001');
+    // OnlyOffice DS bu URL'dan faylni yuklab oladi. Lokalda DS docker
+    // konteynerda — `localhost` unga ko'rinmaydi, shuning uchun
+    // OO_FILE_BASE_URL=http://host.docker.internal:8001 bo'lishi mumkin.
+    // Brauzerga ketadigan boshqa signed URL'lar (signature, application)
+    // APP_URL=localhost'da qoladi. HMAC imzo host'ni o'z ichiga olmaydi.
+    const baseUrl =
+      this.config.get<string>('OO_FILE_BASE_URL') ||
+      this.config.get<string>('APP_URL', 'http://localhost:8001');
     const appKey = this.config.get<string>('APP_KEY', 'dev-secret');
     const expires = Math.floor(Date.now() / 1000) + 60 * 30;
     const params = new URLSearchParams({ expires: String(expires), model });
@@ -473,10 +818,9 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(404, this.i18n.t('error.model_not_found'));
     }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+
     const confTable = map.conf as any;
     const dTable = map.doc as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // 1) Confirmation — model'ning {fk} (masalan command_id) ustunini olamiz.
     const [conf] = await this.db
@@ -568,10 +912,9 @@ export class DocumentService {
     if (!map) {
       throw new BusinessException(404, this.i18n.t('error.model_not_found'));
     }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+
     const confTable = map.conf as any;
     const dTable = map.doc as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // 2) Confirmation + worker.
     const [conf] = await this.db
@@ -668,6 +1011,8 @@ export class DocumentService {
         .update(dTable)
         .set({ confirmation: 3, updated_at: sql`NOW()` })
         .where(eq(dTable.id, conf.doc_id));
+      // Hujjat to'liq tasdiqlandi — model side-effect (Laravel finalize).
+      await this.applyModelSideEffect(record.model, conf.doc_id);
     }
 
     return { message: this.i18n.t('messages.document.signed_successfully') };
@@ -680,7 +1025,7 @@ export class DocumentService {
       throw new BusinessException(400, this.i18n.t('messages.invalid_type'));
     }
     const userId = this.ctx.user_or_fail.id;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
       .select({ id: dTable.id })
@@ -695,6 +1040,11 @@ export class DocumentService {
       .update(dTable)
       .set({ confirmation: dto.status, updated_at: sql`NOW()` })
       .where(eq(dTable.id, dto.model_id));
+
+    // SUCCESS (3) bo'lsa — model side-effect (Laravel finalize).
+    if (dto.status === 3) {
+      await this.applyModelSideEffect(dto.model_type, dto.model_id);
+    }
 
     await this.db.insert(document_histories).values({
       model_id: dto.model_id,
@@ -739,7 +1089,7 @@ export class DocumentService {
     // Hujjatni topish.
     const map = MODEL_TYPE_TABLE_MAP[query.model];
     if (!map) return { error: 1 };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const dTable = map.doc as any;
     const [doc] = await this.db
       .select()

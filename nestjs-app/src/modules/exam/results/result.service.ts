@@ -34,12 +34,14 @@ import {
   specialities,
   topics,
   universities,
+  worker_exam_confirmations,
   worker_exam_files,
   worker_exams,
   worker_positions,
   worker_universities,
   workers,
 } from '@/db/schema';
+import { getShortPosition } from '@/modules/hr/_shared/position-helper';
 import { pageOf } from '@/modules/exam/_shared/helpers';
 
 // Laravel TopicTypeEnum::get(int) — exam.exam_types.{one|two|three|four}.
@@ -200,7 +202,7 @@ export class ResultService {
     `);
 
     // pg driver bigint'larni string sifatida qaytaradi — Number()'ga keltiramiz.
-    const rawRows = rowsOf(rowsResult) as Array<Record<string, unknown>>;
+    const rawRows = rowsOf(rowsResult);
     const rows = rawRows.map((r) => ({
       we_id: Number(r.we_id),
       we_created: (r.we_created as string | null) ?? null,
@@ -217,10 +219,14 @@ export class ResultService {
       t_name: (r.t_name as string | null) ?? null,
       t_type: Number(r.t_type),
     }));
-    const total = Number((rowsOf(countResult)[0] as { total: number | string })?.total ?? 0);
+    const total = Number(
+      (rowsOf(countResult)[0] as { total: number | string })?.total ?? 0,
+    );
 
     // Batch-load exams (relation, Laravel with('exam')) — `ExamInfoResource` parity.
-    const examIdsToLoad = [...new Set(rows.map((r) => r.we_exam_id).filter(Boolean))];
+    const examIdsToLoad = [
+      ...new Set(rows.map((r) => r.we_exam_id).filter(Boolean)),
+    ];
     const examRows = examIdsToLoad.length
       ? await this.db
           .select({
@@ -276,14 +282,148 @@ export class ResultService {
     };
   }
 
-  // Bitta natijani confirmation'larga jo'natish.
-  async sendToConfirmations(_workerExamId: number, _body: unknown) {
-    return { sent: true };
+  // POST results/send-confirmations/:workerExamId — Laravel ExamResultService::
+  // sendToConfirmations. confirmations[] + director (worker_position id'lari) →
+  // WorkerExamConfirmation updateOrCreate (director='d', qolgani 's').
+  async sendToConfirmations(
+    workerExamId: number,
+    body: { confirmations?: number[]; director?: number },
+  ): Promise<void> {
+    const [we] = await this.db
+      .select({ id: worker_exams.id })
+      .from(worker_exams)
+      .where(eq(worker_exams.id, workerExamId))
+      .limit(1);
+    if (!we)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+
+    const directorId = Number(body?.director ?? 0);
+    const confIds = Array.isArray(body?.confirmations)
+      ? body.confirmations.map(Number)
+      : [];
+    const ids = [...new Set([...confIds, directorId].filter((x) => x > 0))];
+    if (!ids.length) return;
+
+    // worker_positions (ACTIVE) + dept/position/org (getShortPosition uchun).
+    const wps = await this.db
+      .select({
+        id: worker_positions.id,
+        worker_id: worker_positions.worker_id,
+        position_name: positions.name,
+        department_name: departments.name,
+        department_level: departments.level,
+        organization_full_name: organizations.full_name,
+      })
+      .from(worker_positions)
+      .leftJoin(positions, eq(positions.id, worker_positions.position_id))
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(
+        organizations,
+        eq(organizations.id, worker_positions.organization_id),
+      )
+      .where(
+        and(inArray(worker_positions.id, ids), eq(worker_positions.status, 2)),
+      );
+
+    for (const wp of wps) {
+      if (!wp.worker_id) continue;
+      const position = getShortPosition({
+        position_name: wp.position_name,
+        department_name: wp.department_name,
+        department_level: wp.department_level,
+        organization_full_name: wp.organization_full_name,
+      });
+      const type = wp.id === directorId ? 'd' : 's';
+      // updateOrCreate (worker_exam_id, worker_id).
+      const [exists] = await this.db
+        .select({ id: worker_exam_confirmations.id })
+        .from(worker_exam_confirmations)
+        .where(
+          and(
+            eq(worker_exam_confirmations.worker_exam_id, workerExamId),
+            eq(worker_exam_confirmations.worker_id, wp.worker_id),
+          ),
+        )
+        .limit(1);
+      if (exists) {
+        await this.db
+          .update(worker_exam_confirmations)
+          .set({
+            position,
+            type,
+            worker_position_id: wp.id,
+            updated_at: sql`NOW()`,
+          })
+          .where(eq(worker_exam_confirmations.id, exists.id));
+      } else {
+        const [{ nid }] = await this.db
+          .select({ nid: sql<number>`COALESCE(MAX(id), 0)::int + 1` })
+          .from(worker_exam_confirmations);
+        await this.db.insert(worker_exam_confirmations).values({
+          id: nid,
+          worker_exam_id: workerExamId,
+          worker_id: wp.worker_id,
+          worker_position_id: wp.id,
+          position,
+          type,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        });
+      }
+    }
   }
 
-  // Berilgan natijaning confirmation'lar tarixini ko'rsatish.
-  async showConfirmations(_workerExamId: number) {
-    return { confirmations: [] as Array<unknown> };
+  // GET results/send-confirmations/:workerExamId — Laravel showConfirmations.
+  // {id, worker: WorkerMinimal, worker_position: {id, department, position}}.
+  async showConfirmations(workerExamId: number) {
+    const rows = await this.db
+      .select({
+        id: worker_exam_confirmations.id,
+        type: worker_exam_confirmations.type,
+        position: worker_exam_confirmations.position,
+        status: worker_exam_confirmations.status,
+        w_id: workers.id,
+        w_last: workers.last_name,
+        w_first: workers.first_name,
+        w_middle: workers.middle_name,
+        w_photo: workers.photo,
+        wp_id: worker_positions.id,
+        dept_name: departments.name,
+        pos_name: positions.name,
+      })
+      .from(worker_exam_confirmations)
+      .leftJoin(workers, eq(workers.id, worker_exam_confirmations.worker_id))
+      .leftJoin(
+        worker_positions,
+        eq(worker_positions.id, worker_exam_confirmations.worker_position_id),
+      )
+      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      .leftJoin(positions, eq(positions.id, worker_positions.position_id))
+      .where(eq(worker_exam_confirmations.worker_exam_id, workerExamId));
+
+    return Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        type: r.type,
+        status: r.status,
+        worker: r.w_id
+          ? {
+              id: r.w_id,
+              photo: await this.minio.fileUrl(r.w_photo),
+              last_name: r.w_last,
+              first_name: r.w_first,
+              middle_name: r.w_middle,
+            }
+          : null,
+        worker_position: r.wp_id
+          ? {
+              id: r.wp_id,
+              position: r.position,
+              department: r.dept_name ? { name: r.dept_name } : null,
+            }
+          : null,
+      })),
+    );
   }
 
   // GET /api/v1/exam/worker-exams-download/:workerExamId?type=1
@@ -299,7 +439,10 @@ export class ResultService {
   //   yangi PDF generatsiya qiladi (LibreOffice + MinIO upload).
   // Hozircha simple case: mavjud yozuvni qidirib URL qaytaramiz. Generate
   // qismi (DOCX template) keyingi commit'da qo'shiladi.
-  async downloadResult(workerExamId: number, type: number): Promise<{ file: string | null }> {
+  async downloadResult(
+    workerExamId: number,
+    type: number,
+  ): Promise<{ file: string | null }> {
     const [we] = await this.db
       .select({
         id: worker_exams.id,
@@ -336,7 +479,10 @@ export class ResultService {
     }
 
     // Laravel ExamResultDocumentService::createOrGetDocument — yangi PDF.
-    const generatedPath = await this.generateExamResultDocument(workerExamId, type);
+    const generatedPath = await this.generateExamResultDocument(
+      workerExamId,
+      type,
+    );
     return { file: await this.minio.fileUrl(generatedPath) };
   }
 
@@ -422,7 +568,10 @@ export class ResultService {
 
     const [orgRow] = wp?.organization_id
       ? await this.db
-          .select({ name: organizations.name, full_name: organizations.full_name })
+          .select({
+            name: organizations.name,
+            full_name: organizations.full_name,
+          })
           .from(organizations)
           .where(eq(organizations.id, wp.organization_id))
           .limit(1)
@@ -444,8 +593,14 @@ export class ResultService {
             speciality_name: specialities.name,
           })
           .from(worker_universities)
-          .leftJoin(universities, eq(universities.id, worker_universities.university_id))
-          .leftJoin(specialities, eq(specialities.id, worker_universities.speciality_id))
+          .leftJoin(
+            universities,
+            eq(universities.id, worker_universities.university_id),
+          )
+          .leftJoin(
+            specialities,
+            eq(specialities.id, worker_universities.speciality_id),
+          )
           .where(
             and(
               eq(worker_universities.worker_id, w.id),
@@ -551,7 +706,7 @@ export class ResultService {
     const docxBuffer = zip.generate({
       type: 'nodebuffer',
       compression: 'DEFLATE',
-    }) as Buffer;
+    });
 
     // Saqlash: DOCX → MinIO.
     await this.minio.putObject(
@@ -585,14 +740,16 @@ export class ResultService {
   // Natijani UUID bo'yicha ko'rish (signed link). Laravel findOrFail → 404.
   async showByUuid(uuid: string) {
     const [row] = await this.findByUuid(uuid);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     return { result: row.result ?? 0, total: 0, correct: 0, wrong: 0 };
   }
 
   // Public — auth talab qilmaydigan UUID natija. Laravel findOrFail → 404.
   async publicByUuid(uuid: string) {
     const [row] = await this.findByUuid(uuid);
-    if (!row) throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (!row)
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     return { result: row.result ?? 0, total: 0, correct: 0, wrong: 0 };
   }
 
@@ -713,7 +870,8 @@ export class ResultService {
       const workerId = Number(r.we_worker_id);
       const testsCount = Number(r.e_tests_count ?? 0);
       const result = Number(r.we_result ?? 0);
-      const percent = testsCount > 0 ? `${Math.round((result / testsCount) * 100)}%` : 0;
+      const percent =
+        testsCount > 0 ? `${Math.round((result / testsCount) * 100)}%` : 0;
       const firstSeen = !seen.has(workerId);
       seen.add(workerId);
       return {
@@ -805,7 +963,8 @@ export class ResultService {
     `);
 
     const rows = rowsOf(rowsResult).map((r) => ({
-      worker: `${r.w_last_name ?? ''} ${r.w_first_name ?? ''} ${r.w_middle_name ?? ''}`.trim(),
+      worker:
+        `${r.w_last_name ?? ''} ${r.w_first_name ?? ''} ${r.w_middle_name ?? ''}`.trim(),
       organization: r.org_name ?? '',
       position: r.pos_name ?? '',
     }));
@@ -863,10 +1022,14 @@ export class ResultService {
         AND we.deleted_at IS NULL
       RETURNING we.id
     `);
-    const updatedIds = rowsOf(result).map((r) => Number((r as { id: number }).id));
+    const updatedIds = rowsOf(result).map((r) =>
+      Number((r as { id: number }).id),
+    );
     this.logger.log(
       `checkEnded: ${updatedIds.length} ta yozuv yangilandi${
-        updatedIds.length > 0 ? ` (ids: ${updatedIds.slice(0, 10).join(',')}${updatedIds.length > 10 ? '...' : ''})` : ''
+        updatedIds.length > 0
+          ? ` (ids: ${updatedIds.slice(0, 10).join(',')}${updatedIds.length > 10 ? '...' : ''})`
+          : ''
       }`,
     );
   }

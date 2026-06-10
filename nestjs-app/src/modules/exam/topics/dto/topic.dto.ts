@@ -1,7 +1,13 @@
 // Topic DTO'lar. Laravel: Exam/TopicController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class QueryTopicDto {
   @ApiPropertyOptional({ description: 'Page number (default: 1)' })
@@ -42,6 +48,16 @@ export class CreateTopicDto {
   @IsOptional()
   @IsInt()
   organization_id?: number;
+
+  // Laravel StoreTopicRequest: organizations required|array → topic_organizations sync.
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Organization ids (pivot)',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  organizations?: number[];
 }
 
 export class UpdateTopicDto extends CreateTopicDto {}

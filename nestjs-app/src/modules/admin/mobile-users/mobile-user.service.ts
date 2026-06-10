@@ -5,6 +5,8 @@ import { and, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
+import { MinioService } from '@/shared/minio/minio.service';
+import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import {
   liveness_session_photos,
   liveness_sessions,
@@ -24,7 +26,17 @@ interface WorkerBrief {
 
 @Injectable()
 export class AdminMobileUserService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly minio: MinioService,
+  ) {}
+
+  // Carbon toDateTimeString() — "Y-m-d H:i:s".
+  private toDateTimeString(v: string | null): string | null {
+    if (!v) return null;
+    const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(v);
+    return m ? `${m[1]} ${m[2]}` : v;
+  }
 
   /** GET /admin/mobile/users — Laravel: paginated UserMobileKey + user.worker. */
   async list(q: MobileUserListQueryDto) {
@@ -32,20 +44,17 @@ export class AdminMobileUserService {
     const perPage = Math.min(100, Math.max(1, Number(q?.per_page ?? 10)));
     const offset = (page - 1) * perPage;
 
-    // search worker fullName orqali — SQL subquery (parametr limitidan qutulish uchun)
+    // Laravel: whereHas('user.worker', searchByFullName) — term-split full-name.
+    // workers ALIASSIZ (buildWorkerSearchCond `workers.*` ishlatadi).
     const conds: SQL[] = [];
-    if (q.search) {
-      const pattern = `%${q.search}%`;
+    const workerCond = q.search ? buildWorkerSearchCond(q.search) : undefined;
+    if (workerCond) {
       conds.push(
         sql`EXISTS (
-          SELECT 1 FROM ${users} u
-          JOIN ${workers} w ON w.id = u.worker_id
-          WHERE u.id = ${user_mobile_keys.user_id}
-            AND (
-              w.last_name ILIKE ${pattern}
-              OR w.first_name ILIKE ${pattern}
-              OR w.middle_name ILIKE ${pattern}
-            )
+          SELECT 1 FROM ${users}
+          JOIN ${workers} ON ${workers.id} = ${users.worker_id}
+          WHERE ${users.id} = ${user_mobile_keys.user_id}
+            AND ${workerCond}
         )`,
       );
     }
@@ -65,7 +74,6 @@ export class AdminMobileUserService {
     const data = await this.enrichRows(rows);
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data,
     };
@@ -102,22 +110,28 @@ export class AdminMobileUserService {
       (photosBySession[p.liveness_session_id] ??= []).push(p);
     }
 
-    const sessionItems = sessions.map((item) => {
-      let sessionPhotos: (string | null)[] = [];
-      if (item.face_status) {
-        if (item.refImage) sessionPhotos.push(item.refImage);
-        if (item.liveImage) sessionPhotos.push(item.liveImage);
-      } else {
-        sessionPhotos = (photosBySession[item.id] ?? []).map((p) => p.photo);
-      }
-      return {
-        id: item.id,
-        status: item.status,
-        success: item.success,
-        created_at: item.created_at,
-        photos: sessionPhotos,
-      };
-    });
+    // Laravel: face_status bo'lsa [refImage, liveImage], aks holda photos — barchasi fileUrl.
+    const sessionItems = await Promise.all(
+      sessions.map(async (item) => {
+        let rawPhotos: (string | null)[] = [];
+        if (item.face_status) {
+          if (item.refImage) rawPhotos.push(item.refImage);
+          if (item.liveImage) rawPhotos.push(item.liveImage);
+        } else {
+          rawPhotos = (photosBySession[item.id] ?? []).map((p) => p.photo);
+        }
+        const photoUrls = await Promise.all(
+          rawPhotos.map((p) => this.minio.fileUrl(p)),
+        );
+        return {
+          id: item.id,
+          status: item.status,
+          success: item.success,
+          created_at: this.toDateTimeString(item.created_at),
+          photos: photoUrls,
+        };
+      }),
+    );
 
     return { device: enrichedDevice, sessions: sessionItems };
   }
@@ -132,6 +146,7 @@ export class AdminMobileUserService {
     const userRows = await this.db
       .select({
         id: users.id,
+        uuid: users.uuid,
         phone: users.phone,
         worker_id: users.worker_id,
       })
@@ -157,32 +172,37 @@ export class AdminMobileUserService {
     const userMap: Record<number, (typeof userRows)[number]> = {};
     for (const u of userRows) userMap[u.id] = u;
 
-    return rows.map((r) => {
-      const u = userMap[r.user_id];
-      const w = u?.worker_id != null ? workerMap[u.worker_id] : undefined;
-      return {
-        id: r.id,
-        device_model: r.device_model,
-        device_uuid: r.device_uuid,
-        platform: r.platform,
-        face: r.face,
-        created_at: r.created_at,
-        user: u
-          ? {
-              id: u.id,
-              phone: u.phone,
-              worker: w
-                ? {
-                    id: w.id,
-                    last_name: w.last_name,
-                    first_name: w.first_name,
-                    middle_name: w.middle_name,
-                    photo: w.photo,
-                  }
-                : null,
-            }
-          : null,
-      };
-    });
+    // Laravel MobileResource — {id, user(UserInfoResource), device_model,
+    // device_name (ustun yo'q → null), platform, face, created_at (Y-m-d H:i:s)}.
+    return Promise.all(
+      rows.map(async (r) => {
+        const u = userMap[r.user_id];
+        const w = u?.worker_id != null ? workerMap[u.worker_id] : undefined;
+        return {
+          id: r.id,
+          user: u
+            ? {
+                id: u.id,
+                uuid: u.uuid,
+                worker: w
+                  ? {
+                      id: w.id,
+                      photo: await this.minio.fileUrl(w.photo),
+                      last_name: w.last_name,
+                      first_name: w.first_name,
+                      middle_name: w.middle_name,
+                    }
+                  : null,
+                phone: u.phone,
+              }
+            : null,
+          device_model: r.device_model,
+          device_name: null,
+          platform: r.platform,
+          face: r.face,
+          created_at: this.toDateTimeString(r.created_at),
+        };
+      }),
+    );
   }
 }

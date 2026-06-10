@@ -1,15 +1,11 @@
-// Schedule service. Laravel: ScheduleController.
-// scopeSearch: name LIKE. with('work_days') eager load.
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { schedules } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
-import { notDeleted } from '@/common/database/soft-delete.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { ScheduleMapper } from '@/modules/structure/schedules/schedule.mapper';
 import {
@@ -31,31 +27,24 @@ export class ScheduleService {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
-
-    const where = and(
-      notDeleted(schedules),
-      filters.search ? ilike(schedules.name, `%${filters.search}%`) : undefined,
-    );
+    const { search } = filters;
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+    };
 
     return paginate({
       db: this.db,
-      countTable: schedules,
-      countWhere: where,
+      count: () =>
+        this.db.$count(sql`(${this.db.query.schedules.findMany({ where })})`),
       query: ({ limit, offset }) =>
         this.db.query.schedules.findMany({
-          where: {
-            deleted_at: { isNull: true },
-            ...(filters.search
-              ? { name: { ilike: `%${filters.search}%` } }
-              : {}),
-          },
+          where,
           with: {
-            // Laravel hasMany('work_days') — soft-delete bilan filter.
             work_days: {
               where: { deleted_at: { isNull: true } },
             },
           },
-          // Laravel ORDER BY ishlatmaydi — natural PG order parity uchun.
           limit,
           offset,
         }),
@@ -75,7 +64,8 @@ export class ScheduleService {
   }
 
   async update(id: number, dto: UpdateScheduleDto): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, schedules, id, this.i18n);
+
     await this.db
       .update(schedules)
       .set({
@@ -88,22 +78,7 @@ export class ScheduleService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-    await this.db
-      .update(schedules)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(schedules.id, id));
-  }
-
-  private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: schedules.id })
-      .from(schedules)
-      .where(and(eq(schedules.id, id), notDeleted(schedules)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return row;
+    await findByIdOrFail(this.db, schedules, id, this.i18n);
+    await softDeleteById(this.db, schedules, id);
   }
 }

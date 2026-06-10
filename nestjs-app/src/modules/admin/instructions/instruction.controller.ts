@@ -5,13 +5,19 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Post,
   Put,
   Query,
+  Req,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
@@ -51,13 +57,35 @@ export class InstructionController {
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
+  // PUT (JSON) — partial update.
   @Put('instructions/:appInstructionId')
-  @ApiOperation({ summary: 'Update instruction (partial)' })
+  @ApiOperation({ summary: 'Update instruction (JSON, partial)' })
   async update(
     @Param('appInstructionId', ParseIntPipe) id: number,
     @Body() dto: UpdateInstructionDto,
   ) {
     await this.service.update(id, dto);
+    return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
+  }
+
+  // POST(:id) — frontend FormData + `_method=PUT` (method-override multipart'ni o'qiy
+  // olmaydi). menu/sub_menu/title/text + photo fayllar.
+  @Post('instructions/:appInstructionId')
+  @HttpCode(200)
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiOperation({
+    summary: 'Update instruction (multipart FormData, _method=PUT)',
+  })
+  async updateMultipart(
+    @Param('appInstructionId', ParseIntPipe) id: number,
+    @Req() req: Request,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    await this.service.updateFromForm(
+      id,
+      (req.body ?? {}) as Record<string, unknown>,
+      files ?? [],
+    );
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

@@ -893,6 +893,330 @@ export class ReportService {
   private _x(): void {
     void count;
   }
+
+  // ── Modules\Structure\ReportController: show / update / updateDetail / createConfirmation ──
+
+  // ConfirmationStatusEnum::get(value) — null/noma'lum → "".
+  private confStatus(status: number | null | undefined): {
+    id: number | null | undefined;
+    name: string;
+  } {
+    const map: Record<number, string> = {
+      1: 'process',
+      2: 'read',
+      3: 'success',
+      4: 'rejected',
+      5: 'deleted',
+    };
+    const key = status != null ? map[status] : undefined;
+    return {
+      id: status ?? null,
+      name: key ? this.i18n.t(`messages.confirmation.status.${key}`) : '',
+    };
+  }
+
+  // HR\Transformers\Worker\WorkerInfoResource.
+  private async workerInfo(
+    w: {
+      id: number;
+      uuid: string | null;
+      photo: string | null;
+      last_name: string | null;
+      first_name: string | null;
+      middle_name: string | null;
+      birthday: string | null;
+      pin: number | null;
+    } | null,
+  ) {
+    if (!w) return null;
+    return {
+      id: w.id,
+      uuid: w.uuid,
+      photo: await this.minio.fileUrl(w.photo),
+      last_name: w.last_name,
+      first_name: w.first_name,
+      middle_name: w.middle_name,
+      birthday: w.birthday,
+      pin: w.pin,
+    };
+  }
+
+  /**
+   * GET /structure/reports/:uuid — Laravel ReportController::show.
+   * {id, year, month, details[], confirmations[], director}.
+   */
+  async findOne(uuid: string) {
+    const lang = this.ctx.lang;
+    const [report] = await this.db
+      .select({
+        id: reports.id,
+        year: reports.year,
+        month: reports.month,
+        director_id: reports.director_id,
+      })
+      .from(reports)
+      .where(eq(reports.uuid, uuid))
+      .limit(1);
+    // Laravel: Helper::response(false, not_found, 400).
+    if (!report) {
+      throw new BusinessException(400, this.i18n.t('messages.not_found'));
+    }
+
+    // details (ReportDetailsIndexResource: id, organization, data).
+    const detailRows = await this.db
+      .select({
+        id: report_details.id,
+        data: report_details.data,
+        org_id: organizations.id,
+        org_name: organizations.name,
+        org_name_ru: organizations.name_ru,
+        org_name_en: organizations.name_en,
+        org_group: organizations.group,
+      })
+      .from(report_details)
+      .leftJoin(
+        organizations,
+        eq(organizations.id, report_details.organization_id),
+      )
+      .where(
+        and(
+          eq(report_details.report_id, report.id),
+          notDeleted(report_details),
+        ),
+      );
+    const details = detailRows.map((d) => ({
+      id: d.id,
+      organization: d.org_id
+        ? {
+            id: d.org_id,
+            name:
+              lang === 'ru'
+                ? d.org_name_ru
+                : lang === 'en'
+                  ? d.org_name_en
+                  : d.org_name,
+            group: d.org_group,
+          }
+        : null,
+      data: d.data,
+    }));
+
+    // confirmations (ReportConfirmation hasMany + worker → ConfirmationWorkersResource).
+    const confRows = await this.db
+      .select({
+        id: report_confirmations.id,
+        type: report_confirmations.type,
+        order: report_confirmations.order,
+        position: report_confirmations.position,
+        status: report_confirmations.status,
+        w_id: workers.id,
+        w_uuid: workers.uuid,
+        w_photo: workers.photo,
+        w_last: workers.last_name,
+        w_first: workers.first_name,
+        w_middle: workers.middle_name,
+        w_birthday: workers.birthday,
+        w_pin: workers.pin,
+      })
+      .from(report_confirmations)
+      .leftJoin(workers, eq(workers.id, report_confirmations.worker_id))
+      .where(
+        and(
+          eq(report_confirmations.report_id, report.id),
+          notDeleted(report_confirmations),
+        ),
+      );
+    const confirmations = await Promise.all(
+      confRows.map(async (c) => ({
+        id: c.id,
+        status: this.confStatus(c.status),
+        worker: await this.workerInfo(
+          c.w_id
+            ? {
+                id: c.w_id,
+                uuid: c.w_uuid,
+                photo: c.w_photo,
+                last_name: c.w_last,
+                first_name: c.w_first,
+                middle_name: c.w_middle,
+                birthday: c.w_birthday,
+                pin: c.w_pin,
+              }
+            : null,
+        ),
+        type: c.type,
+        order: c.order,
+        position: c.position,
+      })),
+    );
+
+    // director (belongsTo ConfirmationWorker, director_id) — status/type/order yo'q → null.
+    let director: unknown = null;
+    if (report.director_id) {
+      const [d] = await this.db
+        .select({
+          id: confirmation_workers.id,
+          position: confirmation_workers.position,
+          w_id: workers.id,
+          w_uuid: workers.uuid,
+          w_photo: workers.photo,
+          w_last: workers.last_name,
+          w_first: workers.first_name,
+          w_middle: workers.middle_name,
+          w_birthday: workers.birthday,
+          w_pin: workers.pin,
+        })
+        .from(confirmation_workers)
+        .leftJoin(workers, eq(workers.id, confirmation_workers.worker_id))
+        .where(eq(confirmation_workers.id, report.director_id))
+        .limit(1);
+      if (d) {
+        director = {
+          id: d.id,
+          status: this.confStatus(null),
+          worker: await this.workerInfo(
+            d.w_id
+              ? {
+                  id: d.w_id,
+                  uuid: d.w_uuid,
+                  photo: d.w_photo,
+                  last_name: d.w_last,
+                  first_name: d.w_first,
+                  middle_name: d.w_middle,
+                  birthday: d.w_birthday,
+                  pin: d.w_pin,
+                }
+              : null,
+          ),
+          type: null,
+          order: null,
+          position: d.position,
+        };
+      }
+    }
+
+    return {
+      id: report.id,
+      year: report.year,
+      month: report.month,
+      details,
+      confirmations,
+      director,
+    };
+  }
+
+  /**
+   * PUT /structure/reports/:uuid — Laravel ReportService::update. director_id yangilanadi.
+   */
+  async update(uuid: string, dto: { director_id: number }): Promise<void> {
+    const [report] = await this.db
+      .select({ id: reports.id })
+      .from(reports)
+      .where(eq(reports.uuid, uuid))
+      .limit(1);
+    if (!report) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.document.not_found'),
+      );
+    }
+    await this.db
+      .update(reports)
+      .set({ director_id: dto.director_id, updated_at: sql`NOW()` })
+      .where(eq(reports.id, report.id));
+  }
+
+  /**
+   * PUT /structure/reports-detail/:detailId — Laravel ReportService::updateDetail.
+   * data yangilanadi (org tegishliligi tekshiriladi), so'ng hujjat qayta generatsiya.
+   */
+  async updateDetail(detailId: number, dto: { data: unknown }): Promise<void> {
+    const user = this.ctx.user_or_fail;
+    const [detail] = await this.db
+      .select({
+        id: report_details.id,
+        report_id: report_details.report_id,
+      })
+      .from(report_details)
+      .where(eq(report_details.id, detailId))
+      .limit(1);
+    if (!detail) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    const [report] = await this.db
+      .select({ id: reports.id, organization_id: reports.organization_id })
+      .from(reports)
+      .where(eq(reports.id, detail.report_id))
+      .limit(1);
+    if (!report || report.organization_id !== user.organization_id) {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.errors.organization_not_allowed_permission'),
+      );
+    }
+    await this.db
+      .update(report_details)
+      .set({ data: dto.data as never, updated_at: sql`NOW()` })
+      .where(eq(report_details.id, detailId));
+    await this.generateDocument(report.id);
+  }
+
+  /**
+   * POST /structure/report/create-confirmation — Laravel ReportService::createConfirmation.
+   * report_confirmations'da {report_id, worker_id} bo'yicha updateOrCreate (type='d').
+   */
+  async createConfirmation(dto: {
+    report: string;
+    confirmation_id: number;
+  }): Promise<void> {
+    const [report] = await this.db
+      .select({ id: reports.id })
+      .from(reports)
+      .where(eq(reports.uuid, dto.report))
+      .limit(1);
+    if (!report) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    const [cw] = await this.db
+      .select({
+        worker_id: confirmation_workers.worker_id,
+        position: confirmation_workers.position,
+      })
+      .from(confirmation_workers)
+      .where(eq(confirmation_workers.id, dto.confirmation_id))
+      .limit(1);
+    if (!cw) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+
+    const [existing] = await this.db
+      .select({ id: report_confirmations.id })
+      .from(report_confirmations)
+      .where(
+        and(
+          eq(report_confirmations.report_id, report.id),
+          eq(report_confirmations.worker_id, cw.worker_id),
+          notDeleted(report_confirmations),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      await this.db
+        .update(report_confirmations)
+        .set({ position: cw.position, type: 'd', updated_at: sql`NOW()` })
+        .where(eq(report_confirmations.id, existing.id));
+    } else {
+      await this.db.insert(report_confirmations).values({
+        report_id: report.id,
+        worker_id: cw.worker_id,
+        position: cw.position,
+        type: 'd',
+        created_at: sql`NOW()`,
+        updated_at: sql`NOW()`,
+      });
+    }
+  }
 }
 
 // PHP (int) — qiymatni butun songa aylantiradi (NaN → 0).

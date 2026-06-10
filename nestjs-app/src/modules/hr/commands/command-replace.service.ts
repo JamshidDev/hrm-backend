@@ -14,24 +14,33 @@ import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import PizZip from 'pizzip';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
   cities,
+  command_types,
   confirmation_workers,
   contracts,
+  department_positions,
   departments,
   organizations,
   positions as positionsTable,
+  vacations,
   worker_positions,
   workers,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
 import { I18nService } from 'nestjs-i18n';
 import type { CreateCommandDto } from '@/modules/hr/commands/dto/command.dto';
+import type {
+  CommandAdditional,
+  ManyWorkerItem,
+  VacationAdditionalItem,
+} from '@/modules/hr/commands/dto/command.types';
 
 const UZ_MONTHS = [
   'yanvar',
@@ -48,17 +57,64 @@ const UZ_MONTHS = [
   'dekabr',
 ];
 
+// VacationAdditionalEnum (uz) — Laravel messages.vacations.additional_types.
+// Hujjat har doim uz'da yasaladi (VacationAdditionalEnum::get default 'uz').
+const VACATION_ADDITIONAL_UZ: Record<number, string> = {
+  1: 'Bitta tashkilotda yoki tarmoqda ko‘p yillik ish staji uchun',
+  2: "12 yoshga to'lmagan 2 va undan ortiq farzandi borligi uchun",
+  3: '16 yoshga to‘lmagan nogironligi bo‘lgan farzandi borligi uchun',
+  4: 'Noqulay mehnat sharoitlaridagi ish uchun',
+  5: 'Noqulay tabiiy-iqlim sharoitlaridagi ish uchun',
+  6: 'Donorlarga beriladigan dam olish kuni',
+};
+
+// CommandReasonTypeEnum (uz) — Laravel CommandReasonTypeEnum::all().
+const COMMAND_REASON_UZ: Record<number, string> = {
+  1: 'pullik kompensatsiya bilan almashtirilsin',
+  2: 'mazkur ish yili davomida berilsin',
+  3: 'xodimning keyingi ish yiliga ko‘chirilsin',
+  4: "vaqtincha mehnatga layoqatsizlik ta'tilida",
+  5: "o'quv ta'tilida",
+  6: 'xomiladorlik va tug‘ish ta’tilida',
+  7: 'ellik olti',
+  8: 'tug‘ish qiyin kechgan yoxud ikki yoki undan ortiq bola tug‘ilgan taqdirda yetmish',
+};
+
 @Injectable()
 export class CommandReplaceService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
+    private readonly minio: MinioService,
   ) {}
 
-  // Hozircha qo'llab-quvvatlanadigan command type'lar (view rejimi).
-  // 31, 32 — handleDeleteType, qo'shimcha bloklarsiz (oddiy bekor qilish).
-  static readonly SUPPORTED_TYPES = [31, 32];
+  // Qo'llab-quvvatlanadigan command type'lar — delete/termination guruhi (31–39).
+  // Laravel dispatchDeleteTypeHandler. 31/32 oddiy; 33–39 qo'shimcha bloklar
+  // (pension/compensation/salary_withholding) bilan — CommandAdditionalTemplateHelper.
+  static readonly SUPPORTED_TYPES = [31, 32, 33, 34, 35, 36, 37, 38, 39];
+
+  // Create-group (Laravel dispatchCreateTypeHandler) — yangi lavozimga qabul.
+  static readonly CREATE_TYPES = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  // Update-group (Laravel dispatchUpdateTypeHandler) — lavozim/shartnoma o'zgarishi.
+  static readonly UPDATE_TYPES = [21, 25];
+
+  // Many-worker (Laravel ManyWorkerCommandTypeHandler) — ko'p xodimli buyruqlar.
+  static readonly MANY_WORKER_TYPES = [41, 55, 61, 62, 71, 72, 73];
+
+  // Single-worker vacation (Laravel SingleWorkerVacationCommandTypeHandler).
+  // 42 templatesiz — qo'llab-quvvatlanmaydi.
+  static readonly VACATION_TYPES = [
+    43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+  ];
+
+  // Termination (bekor qilish) turlari — qo'shimcha bloklar qo'llanadigan.
+  private static readonly TERMINATION_TYPES = [
+    31, 32, 33, 34, 35, 36, 37, 38, 39,
+  ];
+  // reasonCode qo'shiladigan turlar.
+  private static readonly REASON_CODE_TYPES = [34, 39];
 
   // Delete-group command (31, 32) uchun DOCX hosil qiladi.
   // Laravel handleDeleteType, view rejimi. `{type}.docx` shabloni ishlatiladi.
@@ -152,26 +208,45 @@ export class CommandReplaceService {
         wp.worker_first,
         wp.worker_middle,
       ),
-      finance: finance
-        ? `${this.ucfirst(finance.position ?? '')} ${this.shortName(
-            finance.last_name,
-            finance.first_name,
-            finance.middle_name,
-          )}`
-        : "Moliya bo'limi",
+      // `finance` — Laravel setFinanceValue: scalar EMAS. finance bo'lsa complex
+      // value (Arial 14, lavozim normal + ism BOLD), bo'lmasa "Moliya bo'limi".
+      // Scalar replace'dan keyin alohida ishlanadi (pastga qarang).
       // `signature_director` — Laravel view rejimida o'rnatmaydi (literal qoladi).
       // `photo` — banner rasm, alohida embedBanner() bilan qo'yiladi.
     };
 
-    // 7) Shablonni o'qib, to'ldirish — `{command_type}.docx`.
-    const templatePath = join(
-      process.cwd(),
-      'public',
-      'resumes',
-      'commands',
-      `${dto.command_type}.docx`,
-    );
-    const content = await readFile(templatePath);
+    // 6b) Qo'shimcha bloklar (33–39: pension/compensation/salary_withholding,
+    //     codes, reason, warning/med, base) — CommandAdditionalTemplateHelper.
+    const additional = this.buildDeleteAdditional(dto);
+    Object.assign(scalars, additional.scalars);
+
+    // 7) Render — template + scalar + cloneBlock + finance + banner.
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance, [
+      { name: 'pension_count', count: additional.blocks.pension_count },
+      { name: 'compensation', count: additional.blocks.compensation },
+      {
+        name: 'salary_withholding',
+        count: additional.blocks.salary_withholding,
+      },
+    ]);
+  }
+
+  // Umumiy render: resolveTemplate → normalize → cloneBlock → scalar → finance → banner.
+  // Delete (blocks bilan) va create (blocks'siz) ikkalasi ishlatadi.
+  private async renderTemplate(
+    orgId: number | null,
+    type: number,
+    scalars: Record<string, string>,
+    finance: {
+      position: string | null;
+      last_name: string | null;
+      first_name: string | null;
+      middle_name: string | null;
+    } | null,
+    blocks?: Array<{ name: string; count: number }>,
+    rowSets?: Array<{ anchor: string; rows: Array<Record<string, string>> }>,
+  ): Promise<Buffer> {
+    const content = await this.resolveTemplate(orgId, type);
     const zip = new PizZip(content);
     const xmlFile = zip.file('word/document.xml');
     if (!xmlFile) {
@@ -179,15 +254,841 @@ export class CommandReplaceService {
     }
     let xml = xmlFile.asText();
     xml = this.normalizePlaceholders(xml);
+
+    if (blocks) {
+      for (const b of blocks) {
+        xml = this.cloneBlock(xml, b.name, b.count);
+      }
+    }
+
+    // Ko'p ishchili (many-worker) jadval qatorlari — cloneRowAndSetValues.
+    if (rowSets) {
+      for (const rs of rowSets) {
+        xml = this.cloneRowAndSetValues(xml, rs.anchor, rs.rows);
+      }
+    }
+
     for (const [k, v] of Object.entries(scalars)) {
       xml = xml.split(`\${${k}}`).join(this.escapeXml(v));
     }
 
-    // Banner rasmni `${photo}` o'rniga joylash (Laravel setImageValue).
+    // finance — Laravel setFinanceValue parity (complex value).
+    if (finance) {
+      xml = this.setComplexValue(xml, 'finance', [
+        { text: `${this.ucfirst(finance.position ?? '')} ` },
+        {
+          text: this.shortName(
+            finance.last_name,
+            finance.first_name,
+            finance.middle_name,
+          ),
+          bold: true,
+        },
+      ]);
+    } else {
+      xml = xml.split('${finance}').join(this.escapeXml("Moliya bo'limi"));
+    }
+
     xml = await this.embedBanner(zip, xml, orgId);
+
+    // U+2011 (non-breaking hyphen) — LibreOffice PDF eksporti (WinAnsi subset
+    // shrift) uni render qila olmaydi → kvadrat □ chiqadi. Oddiy defis bilan
+    // almashtiramiz (vizual bir xil). Bu ham kod, ham template U+2011'ini tuzatadi.
+    xml = xml.split('\u2011').join('-');
+    // Word `<w:noBreakHyphen/>` elementi ham non-breaking hyphen (mas. template
+    // "hisob-kitob") \u2014 uni oddiy defis matniga aylantiramiz.
+    xml = xml.replace(/<w:noBreakHyphen\s*\/>/g, '<w:t>-</w:t>');
 
     zip.file('word/document.xml', xml);
     return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+  }
+
+  // Laravel number_format((int)$x, 2) — "1,500,000.00".
+  private numberFormat(v: number | string | null | undefined): string {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return Math.trunc(n).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  // Create-group command (1–8) DOCX — Laravel handleCreateType +
+  // applyWorkerPositionInfo. Tip 3: contract_to_date, tip 6: temporary_*.
+  async buildCreateTypeDocx(dto: CreateCommandDto): Promise<Buffer> {
+    if (!dto.worker_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_not_found'),
+      );
+    }
+    const [worker] = await this.db
+      .select({
+        last: workers.last_name,
+        first: workers.first_name,
+        middle: workers.middle_name,
+      })
+      .from(workers)
+      .where(and(eq(workers.id, dto.worker_id), notDeleted(workers)))
+      .limit(1);
+    if (!worker) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_not_found'),
+      );
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId = this.ctx.user?.organization_id ?? dto.organization_id ?? null;
+    const address = await this.resolveAddress(orgId);
+
+    // post_name — department_position_id (qisqa lavozim) yoki position_id (nom).
+    let postName = '';
+    if (dto.department_position_id) {
+      const [dp] = await this.db
+        .select({
+          department_id: department_positions.department_id,
+          position_id: department_positions.position_id,
+        })
+        .from(department_positions)
+        .where(eq(department_positions.id, dto.department_position_id))
+        .limit(1);
+      if (dp) {
+        postName = await this.buildShortPosition(
+          dp.department_id,
+          dp.position_id,
+        );
+      }
+    } else if (dto.position_id) {
+      const [pos] = await this.db
+        .select({ name: positionsTable.name })
+        .from(positionsTable)
+        .where(eq(positionsTable.id, dto.position_id))
+        .limit(1);
+      postName = pos?.name ?? '';
+    }
+
+    // probation — Laravel ProbationEnum uz: "{n} oylik" + " sinov muddati bilan".
+    const probation = dto.probation
+      ? `${dto.probation} oylik sinov muddati bilan`
+      : 'sinovsiz';
+    const group = dto.group ?? 1;
+    const rank = dto.rank ?? 7;
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+      post_name: postName.toLowerCase(),
+      probation,
+      position_date: this.dateTex(dto.position_date),
+      worker_full_name: this.fullName(worker.last, worker.first, worker.middle),
+      worker_short_name: this.shortName(
+        worker.last,
+        worker.first,
+        worker.middle,
+      ),
+      group: `${group}-guruh`,
+      rank: `${rank}-razryadi`,
+      salary: this.numberFormat(dto.salary),
+      rate: dto.rate != null ? String(dto.rate) : '',
+      contract_date: this.dateTex(dto.contract_date),
+      contract_number: dto.number ?? '',
+    };
+
+    // Tip 3 — contract_to_date.
+    if (dto.command_type === 3 && dto.contract_to_date) {
+      scalars.contract_to_date = this.dateTex(dto.contract_to_date);
+    }
+
+    // Tip 6 — vaqtinchalik o'rinbosar (WorkerPosition by temporary_worker_id).
+    if (dto.command_type === 6 && dto.temporary_worker_id) {
+      const [twp] = await this.db
+        .select({
+          last: workers.last_name,
+          first: workers.first_name,
+          middle: workers.middle_name,
+          department_id: worker_positions.department_id,
+          position_id: worker_positions.position_id,
+        })
+        .from(worker_positions)
+        .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+        .where(
+          and(
+            eq(worker_positions.id, dto.temporary_worker_id),
+            notDeleted(worker_positions),
+          ),
+        )
+        .limit(1);
+      if (twp) {
+        scalars.temporary_worker_name = this.shortName(
+          twp.last,
+          twp.first,
+          twp.middle,
+        );
+        scalars.temporary_post_name = (
+          await this.buildShortPosition(twp.department_id, twp.position_id)
+        ).toLowerCase();
+      }
+    }
+
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance);
+  }
+
+  // Update-group command (21, 25) DOCX — Laravel handleUpdateType.
+  // worker_position'dan worker+contract; applyWorkerPositionInfo (dto'dan);
+  // tip 21 post_name (dept_position). DIQQAT: contract_date RAW (dateTex EMAS).
+  // Tasdiqlovchilar delete bilan bir xil (worker_position'dan) → buildDeleteTypeConfirmations.
+  async buildUpdateTypeDocx(dto: CreateCommandDto): Promise<Buffer> {
+    if (!dto.worker_position_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+    const [wp] = await this.db
+      .select({
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        department_id: worker_positions.department_id,
+        position_id: worker_positions.position_id,
+        organization_id: worker_positions.organization_id,
+        contract_number: contracts.number,
+        contract_date: contracts.contract_date,
+        contract_to_date: contracts.contract_to_date,
+      })
+      .from(worker_positions)
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
+      .where(
+        and(
+          eq(worker_positions.id, dto.worker_position_id),
+          notDeleted(worker_positions),
+        ),
+      )
+      .limit(1);
+    if (!wp) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ??
+      dto.organization_id ??
+      wp.organization_id;
+    const address = await this.resolveAddress(orgId);
+
+    // post_name — faqat tip 21 (department_position_id, qisqa lavozim, kichik harf).
+    let postName = '';
+    if (dto.command_type === 21 && dto.department_position_id) {
+      const [dp] = await this.db
+        .select({
+          department_id: department_positions.department_id,
+          position_id: department_positions.position_id,
+        })
+        .from(department_positions)
+        .where(eq(department_positions.id, dto.department_position_id))
+        .limit(1);
+      if (dp) {
+        postName = (
+          await this.buildShortPosition(dp.department_id, dp.position_id)
+        ).toLowerCase();
+      }
+    }
+
+    const group = dto.group ?? 1;
+    const rank = dto.rank ?? 7;
+    // worker_position — getShortPosition (kichik harf EMAS, Laravel kabi).
+    const workerPositionShort = await this.buildShortPosition(
+      wp.department_id,
+      wp.position_id,
+    );
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+      // applyWorkerPositionInfo — dto'dan.
+      position_date: this.dateTex(dto.position_date),
+      worker_full_name: this.fullName(
+        wp.worker_last,
+        wp.worker_first,
+        wp.worker_middle,
+      ),
+      worker_short_name: this.shortName(
+        wp.worker_last,
+        wp.worker_first,
+        wp.worker_middle,
+      ),
+      group: `${group}-guruh`,
+      rank: `${rank}-razryadi`,
+      salary: this.numberFormat(dto.salary),
+      rate: dto.rate != null ? String(dto.rate) : '',
+      // contract_date — RAW (Laravel update raw qiymat, dateTex EMAS).
+      contract_date: wp.contract_date ?? '',
+      contract_number: wp.contract_number ?? '',
+      worker_position: workerPositionShort,
+      position_to_date: wp.contract_to_date ?? '',
+      post_name: postName,
+    };
+
+    return this.renderTemplate(orgId, dto.command_type, scalars, finance);
+  }
+
+  // Many-worker command (41,55,61,62,71,72,73) DOCX — ManyWorkerCommandTypeHandler.
+  // Har xodim uchun jadval qatori (cloneRowAndSetValues); tur bo'yicha row maydonlari.
+  async buildManyWorkerDocx(dto: CreateCommandDto): Promise<Buffer> {
+    const type = dto.command_type;
+    const items: ManyWorkerItem[] = Array.isArray(dto.worker_positions)
+      ? dto.worker_positions
+      : [];
+    const ids = items
+      .map((i) => Number(i.id))
+      .filter((n) => Number.isFinite(n));
+
+    const wps = ids.length
+      ? await this.db
+          .select({
+            id: worker_positions.id,
+            worker_id: worker_positions.worker_id,
+            organization_id: worker_positions.organization_id,
+            department_id: worker_positions.department_id,
+            position_id: worker_positions.position_id,
+            worker_last: workers.last_name,
+            worker_first: workers.first_name,
+            worker_middle: workers.middle_name,
+            contract_number: contracts.number,
+            contract_date: contracts.contract_date,
+          })
+          .from(worker_positions)
+          .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+          .leftJoin(contracts, eq(contracts.id, worker_positions.contract_id))
+          .where(
+            and(
+              inArray(worker_positions.id, ids),
+              notDeleted(worker_positions),
+            ),
+          )
+      : [];
+    const wpMap = new Map(wps.map((w) => [w.id, w]));
+
+    // Destination org/dept lookuplari (tip 61, 62).
+    const orgMap = new Map<number, string>();
+    const deptMap = new Map<number, string>();
+    if (type === 61 || type === 62) {
+      const orgIds = items
+        .map((i) => Number(i.work_place_id))
+        .filter((n) => Number.isFinite(n));
+      const deptIds = items
+        .map((i) => Number(i.department_id))
+        .filter((n) => Number.isFinite(n));
+      if (orgIds.length) {
+        const orgs = await this.db
+          .select({ id: organizations.id, full_name: organizations.full_name })
+          .from(organizations)
+          .where(inArray(organizations.id, orgIds));
+        orgs.forEach((o) => orgMap.set(o.id, o.full_name ?? ''));
+      }
+      if (deptIds.length) {
+        const depts = await this.db
+          .select({ id: departments.id, name: departments.name })
+          .from(departments)
+          .where(inArray(departments.id, deptIds));
+        depts.forEach((d) => deptMap.set(d.id, d.name ?? ''));
+      }
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ??
+      dto.organization_id ??
+      wps[0]?.organization_id ??
+      null;
+    const address = await this.resolveAddress(orgId);
+
+    const rows: Array<Record<string, string>> = [];
+    const shortNames: string[] = [];
+    for (const item of items) {
+      const wp = wpMap.get(Number(item.id));
+      if (!wp) continue;
+      const fullName = this.fullName(
+        wp.worker_last,
+        wp.worker_first,
+        wp.worker_middle,
+      );
+      const postName = (
+        await this.buildShortPosition(wp.department_id, wp.position_id)
+      ).toLowerCase();
+      shortNames.push(
+        this.shortName(wp.worker_last, wp.worker_first, wp.worker_middle),
+      );
+
+      if (type === 41) {
+        const addArr: VacationAdditionalItem[] = Array.isArray(item.additional)
+          ? item.additional
+          : [];
+        let va = addArr
+          .map(
+            (a) =>
+              `${(VACATION_ADDITIONAL_UZ[Number(a.id)] ?? '').toLowerCase()} ${
+                a.value ?? ''
+              } kun`,
+          )
+          .join(', ');
+        if (va) va = `(${va})`;
+        rows.push({
+          worker_full_name: fullName,
+          period_from: this.dateTex(item.period_from),
+          period_to: this.dateTex(item.period_to),
+          post_name: postName,
+          all_day: String(item.all_day ?? ''),
+          additional: va,
+          from: this.dateTex(item.from),
+          to: this.dateTex(item.to),
+          work_day: this.dateTex(item.work_day ?? item.to),
+        });
+      } else if (type === 55) {
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          vacation_dates: this.buildVacationTimes(item),
+          work_day: item.work_day
+            ? this.dateTex(item.work_day)
+            : this.dateTexPlusDay(item.to),
+        });
+      } else if (type === 61 || type === 62) {
+        let toOrg: string;
+        if ('work_place_id' in item) {
+          const wpName = orgMap.get(Number(item.work_place_id)) ?? '';
+          toOrg =
+            'department_id' in item
+              ? `${wpName} ${deptMap.get(Number(item.department_id)) ?? ''}`.trim()
+              : wpName;
+        } else {
+          toOrg = String(item.to_organization ?? '');
+        }
+        rows.push({
+          worker_full_name: fullName,
+          to_organization: `${toOrg}ga`,
+          reason: String(item.reason ?? ''),
+          post_name: postName,
+          contract_date: wp.contract_date ?? '',
+          contract_number: wp.contract_number ?? '',
+          from: this.dateTex(item.from),
+          to: this.dateTex(item.to),
+        });
+      } else if (type === 71) {
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          reason: String(item.reason ?? '').toLowerCase(),
+          gift: String(item.gift ?? ''),
+        });
+      } else if (type === 72) {
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          reason: String(item.reason ?? ''),
+          fine: String(item.fine ?? ''),
+        });
+      } else if (type === 73) {
+        const amount = item.amount ?? '';
+        const finText =
+          Number(item.type) === 1
+            ? `mehnatga haq to'lash eng kam miqdorining ${amount} barobari ko'rinishida `
+            : `uzluksiz ish stajiga bog'liq ravishda lavozim maoshinining ${amount}% miqdorida `;
+        rows.push({
+          worker_full_name: fullName,
+          post_name: postName,
+          reason: String(item.reason ?? '').toLowerCase(),
+          financial_assistance: finText,
+        });
+      }
+    }
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+    };
+
+    // Qo'shimcha scalar'lar: workers (61/62), base (71 dto.base / 73 additional.base).
+    if (type === 61 || type === 62) {
+      scalars.workers =
+        shortNames.length > 1
+          ? `${shortNames.join(', ')}lar`
+          : (shortNames[0] ?? '');
+    }
+    if (type === 71) {
+      scalars.base = dto.base ?? '';
+    }
+    if (type === 73) {
+      scalars.base = dto.command_additional?.base ?? '';
+    }
+
+    return this.renderTemplate(orgId, type, scalars, finance, undefined, [
+      { anchor: 'worker_full_name', rows },
+    ]);
+  }
+
+  // Tip 55 — ta'til vaqtlari matni (Laravel handleFiftyFiveType match logikasi).
+  private buildVacationTimes(item: ManyWorkerItem): string {
+    const from = item.from;
+    const to = item.to;
+    const fromText = this.dateTex(from);
+    const toText = this.dateTex(to);
+    const fromTime = item.from_time || null;
+    const toTime = item.to_time || null;
+    const diff = from !== to;
+    if (diff && fromTime && toTime)
+      return `${fromText} ${fromTime} dan ${toText} ${toTime} gacha`;
+    if (diff && fromTime) return `${fromText} ${fromTime} dan ${toText} gacha`;
+    if (diff && toTime) return `${fromText} dan ${toText} ${toTime} gacha`;
+    if (diff) return `${fromText} dan ${toText} gacha`;
+    if (fromTime && toTime)
+      return `${fromText} ${fromTime} dan ${toTime} gacha`;
+    if (fromTime) return `${fromText} ${fromTime} dan`;
+    if (toTime) return `${fromText} ${toTime} gacha`;
+    return `${fromText} kuni`;
+  }
+
+  // getDateTex(sana + 1 kun) — tip 55 work_day default.
+  private dateTexPlusDay(d: string | null | undefined): string {
+    if (!d) return '';
+    const dt = new Date(`${d}T00:00:00Z`);
+    if (isNaN(dt.getTime())) return '';
+    dt.setUTCDate(dt.getUTCDate() + 1);
+    return this.dateTex(dt.toISOString().slice(0, 10));
+  }
+
+  // Many-worker tasdiqlovchilari — Laravel appendCommandConfirmations: har
+  // worker_position uchun type='w' (position bilan) + imzolovchilar.
+  async buildManyWorkerConfirmations(dto: CreateCommandDto): Promise<
+    Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }>
+  > {
+    const rows: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
+    const items: ManyWorkerItem[] = Array.isArray(dto.worker_positions)
+      ? dto.worker_positions
+      : [];
+    const ids = items
+      .map((i) => Number(i.id))
+      .filter((n) => Number.isFinite(n));
+    if (ids.length) {
+      const wps = await this.db
+        .select({
+          id: worker_positions.id,
+          worker_id: worker_positions.worker_id,
+          department_id: worker_positions.department_id,
+          position_id: worker_positions.position_id,
+        })
+        .from(worker_positions)
+        .where(
+          and(inArray(worker_positions.id, ids), notDeleted(worker_positions)),
+        );
+      for (const wp of wps) {
+        if (wp.worker_id == null) continue;
+        const position = await this.buildShortPosition(
+          wp.department_id,
+          wp.position_id,
+        );
+        rows.push({ worker_id: wp.worker_id, position, type: 'w', order: 1 });
+      }
+    }
+    rows.push(...(await this.buildSignerConfirmations(dto)));
+    return rows;
+  }
+
+  // Single-worker vacation (43–54) DOCX — SingleWorkerVacationCommandTypeHandler.
+  // Tasdiqlovchilar buildDeleteTypeConfirmations bilan bir xil (worker_position'dan).
+  async buildVacationDocx(dto: CreateCommandDto): Promise<Buffer> {
+    const type = dto.command_type;
+    if (!dto.worker_position_id) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+    const [wp] = await this.db
+      .select({
+        worker_last: workers.last_name,
+        worker_first: workers.first_name,
+        worker_middle: workers.middle_name,
+        department_id: worker_positions.department_id,
+        position_id: worker_positions.position_id,
+        organization_id: worker_positions.organization_id,
+        contract_id: worker_positions.contract_id,
+      })
+      .from(worker_positions)
+      .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+      .where(
+        and(
+          eq(worker_positions.id, dto.worker_position_id),
+          notDeleted(worker_positions),
+        ),
+      )
+      .limit(1);
+    if (!wp) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.worker_position_not_found'),
+      );
+    }
+
+    const director = await this.loadConfirmationWorker(dto.director_id);
+    const finance = dto.finance_id
+      ? await this.loadConfirmationWorker(dto.finance_id)
+      : null;
+    const orgId =
+      this.ctx.user?.organization_id ??
+      dto.organization_id ??
+      wp.organization_id;
+    const address = await this.resolveAddress(orgId);
+
+    const postName = (
+      await this.buildShortPosition(wp.department_id, wp.position_id)
+    ).toLowerCase();
+    const workerFull = this.fullName(
+      wp.worker_last,
+      wp.worker_first,
+      wp.worker_middle,
+    );
+    const workerShort = this.shortName(
+      wp.worker_last,
+      wp.worker_first,
+      wp.worker_middle,
+    );
+
+    const scalars: Record<string, string> = {
+      command_number: dto.command_number ?? '',
+      command_date: this.dateTex(dto.command_date),
+      address,
+      director_position: director?.position ?? '',
+      director_short_name: director
+        ? this.shortName(
+            director.last_name,
+            director.first_name,
+            director.middle_name,
+          )
+        : '',
+      post_name: postName,
+      worker_full_name: workerFull,
+      worker_short_name: workerShort,
+    };
+    const blocks: Array<{ name: string; count: number }> = [];
+
+    // applyStartDates umumiy: to (data.to ?? work_day), from, work_day.
+    const startTo = this.dateTex(dto.to ?? dto.work_day);
+    const startFrom = this.dateTex(dto.from);
+    const startWorkDay = this.dateTex(dto.work_day);
+
+    if (type === 43 || type === 44) {
+      // last_vacation — kontraktning oxirgi ta'tili.
+      const lvRows = wp.contract_id
+        ? await this.db
+            .select({
+              period_from: vacations.period_from,
+              period_to: vacations.period_to,
+              all_day: vacations.all_day,
+              to: vacations.to,
+            })
+            .from(vacations)
+            .where(
+              and(
+                eq(vacations.contract_id, wp.contract_id),
+                notDeleted(vacations),
+              ),
+            )
+            .orderBy(desc(vacations.id))
+            .limit(1)
+        : [];
+      const lv = lvRows[0];
+      const newToDate = this.dateTex(dto.new_date);
+      scalars.period_from = this.dateTex(lv?.period_from ?? null);
+      scalars.period_to = this.dateTex(lv?.period_to ?? null);
+      scalars.all_day = String(lv?.all_day ?? (type === 44 ? 0 : ''));
+      scalars.to = this.dateTex(lv?.to ?? null);
+      scalars.new_date = newToDate;
+      scalars.work_day = newToDate;
+      scalars.reason = COMMAND_REASON_UZ[Number(dto.reason)] ?? '';
+      if (type === 44) scalars.rest_day = String(dto.rest_day ?? '');
+    } else if (type === 45 || type === 49) {
+      scalars.to = startTo;
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+    } else if (type === 48) {
+      scalars.all_day = String(dto.all_day ?? '');
+      scalars.to = startTo;
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.reason = COMMAND_REASON_UZ[Number(dto.reason)] ?? '';
+    } else if (type === 51 || type === 52 || type === 53 || type === 54) {
+      scalars.all_day = String(this.diffInDays(dto.to, dto.from));
+      scalars.to = startTo;
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.reason = String(dto.reason ?? '');
+    } else if (type === 47) {
+      scalars.from_date = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.reason = String(dto.vacation_reason_type ?? '').toLowerCase();
+      scalars.all_day = String(dto.vacation_reason_day ?? '');
+      scalars.base = dto.base
+        ? String(dto.base)
+        : `${workerShort}ning arizasi, bolalarning tug‘ilganlik haqida guvohnoma nusxalari`;
+    } else if (type === 46) {
+      scalars.period_from = this.dateTex(dto.period_from);
+      scalars.period_to = this.dateTex(dto.period_to);
+      scalars.all_day = String(dto.all_day ?? '');
+      scalars.from = startFrom;
+      scalars.work_day = startWorkDay;
+      scalars.half_one_day = String(dto.half_one_day ?? '');
+      if (dto.half_one_base !== undefined && dto.half_two_day) {
+        scalars.half_two_day = String(dto.half_two_day);
+      } else {
+        scalars.half_two_day = String(
+          Number(dto.all_day ?? 0) - Number(dto.half_one_day ?? 0),
+        );
+      }
+      if (dto.half_two_base) {
+        const nextDate = new Date(`${dto.half_two_date}T00:00:00Z`);
+        const month = this.getMonth(nextDate.getUTCMonth() + 1);
+        const activeYear = new Date(`${dto.from}T00:00:00Z`).getUTCFullYear();
+        const nextYear = nextDate.getUTCFullYear();
+        let text: string;
+        if (activeYear === nextYear) text = `joriy yilning ${month} oyiga`;
+        else if (activeYear + 1 === nextYear)
+          text = `keyingi yilning ${month} oyiga`;
+        else text = `${nextYear}-yilning ${month} oyiga`;
+        scalars.half_two_base = `xodimning xohishiga ko‘ra ${text} ko‘chirilsin`;
+      } else {
+        scalars.half_two_base =
+          'xodimning xohishiga ko‘ra pullik kompensatsiya bilan almashtirilsin';
+      }
+      const addArr: VacationAdditionalItem[] = Array.isArray(dto.additional)
+        ? dto.additional
+        : [];
+      let va = addArr
+        .map(
+          (a) =>
+            `${this.ucfirst(VACATION_ADDITIONAL_UZ[Number(a.id)] ?? '')}-${
+              a.value ?? ''
+            } kun`,
+        )
+        .join(', ');
+      if (va) va = `(${va})`;
+      scalars.additional = va;
+    } else if (type === 50) {
+      scalars.to = this.dateTex(dto.to);
+      const workDay = this.dateTex(dto.work_day);
+      if (Number(dto.vacation_finish_status) === 2) {
+        scalars.work_day = workDay;
+        scalars.child_age = String(dto.child_age ?? '');
+        scalars.codes = '9-, 405-moddalari';
+        blocks.push({ name: 'variant1', count: 0 });
+        blocks.push({ name: 'variant2', count: 1 });
+      } else {
+        scalars.vacation_new_date = workDay;
+        if (Number(dto.vacation_status) === 1) {
+          scalars.vacation_work_status = 'to‘liq';
+          scalars.vacation_salary_status = 'to‘lanadigan';
+        } else {
+          scalars.vacation_work_status = 'to‘liqsiz';
+          scalars.vacation_salary_status = 'saqlanmagan';
+        }
+        scalars.codes = '405-moddasi';
+        blocks.push({ name: 'variant2', count: 0 });
+        blocks.push({ name: 'variant1', count: 1 });
+      }
+    }
+
+    return this.renderTemplate(orgId, type, scalars, finance, blocks);
+  }
+
+  // Carbon diffInDays — ikki sana orasidagi kunlar (mutlaq).
+  private diffInDays(
+    a: string | null | undefined,
+    b: string | null | undefined,
+  ): number {
+    if (!a || !b) return 0;
+    const da = new Date(`${a}T00:00:00Z`).getTime();
+    const db = new Date(`${b}T00:00:00Z`).getTime();
+    if (isNaN(da) || isNaN(db)) return 0;
+    return Math.abs(Math.round((da - db) / 86400000));
+  }
+
+  // Create-group command (1–8) tasdiqlovchilari — Laravel appendWorkerConfirmation
+  // (hodim type='w' order=1) + imzolovchilar (type='s') + direktor (type='d').
+  async buildCreateTypeConfirmations(dto: CreateCommandDto): Promise<
+    Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }>
+  > {
+    const rows: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
+    if (dto.worker_id) {
+      rows.push({
+        worker_id: dto.worker_id,
+        position: null,
+        type: 'w',
+        order: 1,
+      });
+    }
+    rows.push(...(await this.buildSignerConfirmations(dto)));
+    return rows;
   }
 
   // Delete-group command (31, 32) uchun `command_confirmations` qatorlari.
@@ -239,7 +1140,27 @@ export class CommandReplaceService {
     }
 
     // 2) Imzolovchilar (type='s') + direktor (type='d').
-    // Laravel createConfirmations: confirmations[].id → ConfirmationWorker.
+    rows.push(...(await this.buildSignerConfirmations(dto)));
+
+    return rows;
+  }
+
+  // Imzolovchilar (type='s') + direktor (type='d') — Laravel createConfirmations.
+  // confirmations[].id → ConfirmationWorker. Create va delete ikkalasi ishlatadi.
+  private async buildSignerConfirmations(dto: CreateCommandDto): Promise<
+    Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }>
+  > {
+    const out: Array<{
+      worker_id: number;
+      position: string | null;
+      type: string;
+      order: number;
+    }> = [];
     const confItems = Array.isArray(dto.confirmations)
       ? (dto.confirmations as Array<{ id?: number; order?: number }>)
       : [];
@@ -253,30 +1174,29 @@ export class CommandReplaceService {
     if (Number.isFinite(directorId) && !ids.includes(directorId)) {
       ids.push(directorId);
     }
-    if (ids.length) {
-      const cws = await this.db
-        .select({
-          id: confirmation_workers.id,
-          worker_id: confirmation_workers.worker_id,
-          position: confirmation_workers.position,
-        })
-        .from(confirmation_workers)
-        .where(inArray(confirmation_workers.id, ids));
-      const cwMap = new Map(cws.map((cw) => [cw.id, cw]));
-      for (const id of ids) {
-        const cw = cwMap.get(id);
-        if (!cw || cw.worker_id == null) continue;
-        const order = csMap.get(id)?.order ?? csMap.size + 1;
-        rows.push({
-          worker_id: cw.worker_id,
-          position: cw.position,
-          type: id === directorId ? 'd' : 's',
-          order: Number(order),
-        });
-      }
-    }
+    if (!ids.length) return out;
 
-    return rows;
+    const cws = await this.db
+      .select({
+        id: confirmation_workers.id,
+        worker_id: confirmation_workers.worker_id,
+        position: confirmation_workers.position,
+      })
+      .from(confirmation_workers)
+      .where(inArray(confirmation_workers.id, ids));
+    const cwMap = new Map(cws.map((cw) => [cw.id, cw]));
+    for (const id of ids) {
+      const cw = cwMap.get(id);
+      if (!cw || cw.worker_id == null) continue;
+      const order = csMap.get(id)?.order ?? csMap.size + 1;
+      out.push({
+        worker_id: cw.worker_id,
+        position: cw.position,
+        type: id === directorId ? 'd' : 's',
+        order: Number(order),
+      });
+    }
+    return out;
   }
 
   // `${photo}` placeholder o'rniga banner rasmni inline image qilib joylaydi.
@@ -303,6 +1223,17 @@ export class CommandReplaceService {
       return xml.split('${photo}').join('');
     }
     const imgBuffer = await readFile(bannerPath);
+
+    // Banner o'lchamlari (EMU) — Laravel `ratio=true` ekvivalenti:
+    //   - kenglik sahifa kontent kengligiga sig'sin (margin'lar: ~6.69") — aks
+    //     holda LibreOffice rasmni qayta o'lchamlab aspect'ni buzadi (siqilib/
+    //     qirqilib chiqadi).
+    //   - balandlik = kenglik × (rasmH / rasmW) — rasm proporsiyasi saqlanadi.
+    // PNG IHDR: width = byte[16..19], height = byte[20..23] (big-endian).
+    const imgW = imgBuffer.length >= 24 ? imgBuffer.readUInt32BE(16) : 1962;
+    const imgH = imgBuffer.length >= 24 ? imgBuffer.readUInt32BE(20) : 261;
+    const cx = 6120000; // ≈6.69" — A4 kontent kengligi (margin ichida)
+    const cy = imgW > 0 ? Math.round((cx * imgH) / imgW) : 814000;
 
     // 1) Rasmni zip ichiga qo'shish.
     zip.file('word/media/banner.png', imgBuffer);
@@ -334,13 +1265,18 @@ export class CommandReplaceService {
       }
     }
 
-    // 4) `${photo}` run'ini drawing bilan almashtirish.
-    //    Textbox o'lchamlari: cx=6257160, cy=828360 EMU.
+    // 4) `${photo}` o'rniga drawing — FLOATING (anchored, wrapTopAndBottom).
+    //    Inline rasm LibreOffice'da qator balandligiga qirqilardi; floating rasm
+    //    matn oqimidan tashqari joylashadi → to'liq ko'rinadi.
     const drawing =
       `<w:drawing>` +
-      `<wp:inline distT="0" distB="0" distL="0" distR="0">` +
-      `<wp:extent cx="6257160" cy="828360"/>` +
+      `<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">` +
+      `<wp:simplePos x="0" y="0"/>` +
+      `<wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH>` +
+      `<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>` +
+      `<wp:extent cx="${cx}" cy="${cy}"/>` +
       `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+      `<wp:wrapTopAndBottom/>` +
       `<wp:docPr id="900" name="banner"/>` +
       `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
       `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
@@ -348,12 +1284,23 @@ export class CommandReplaceService {
       `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
       `<pic:nvPicPr><pic:cNvPr id="900" name="banner"/><pic:cNvPicPr/></pic:nvPicPr>` +
       `<pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
-      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6257160" cy="828360"/></a:xfrm>` +
+      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
       `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
-      `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
+      `</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>`;
 
-    // `<w:t...>${photo}</w:t>` ni topib, `<w:t>` ni drawing bilan almashtirish.
-    return xml.replace(/<w:t(?:\s+[^>]*)?>\$\{photo\}<\/w:t>/, drawing);
+    // `${photo}` joylashgan BUTUN paragrafni toza paragraf bilan almashtiramiz.
+    // Sabab: template paragrafida `<w:spacing line="286" lineRule="auto">` bor —
+    // LibreOffice inline rasmni shu line balandligiga qirqadi (banner pastdan
+    // kesiladi). Toza paragrafda (line cheklovisiz) rasm to'liq ko'rinadi.
+    // Template'da `${photo}` 2 marta: 1-chisi banner, 2-chisi olib tashlanadi.
+    const photoParaRe =
+      /<w:p\b[^>]*>(?:(?!<w:p\b)[\s\S])*?\$\{photo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g;
+    let placed = false;
+    return xml.replace(photoParaRe, () => {
+      if (placed) return '';
+      placed = true;
+      return `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r>${drawing}</w:r></w:p>`;
+    });
   }
 
   // ---- DB helpers ----
@@ -491,7 +1438,190 @@ export class CommandReplaceService {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
   }
 
-  // ---- DOCX template engine (scalar-only — resume.service.ts bilan bir xil) ----
+  // Laravel getDocumentPath parity: tashkilotga xos template (command_types.file
+  // → MinIO) bo'lsa o'sha, bo'lmasa default public/resumes/commands/{type}.docx.
+  private async resolveTemplate(
+    orgId: number | null,
+    type: number,
+  ): Promise<Buffer> {
+    if (orgId != null) {
+      const [ct] = await this.db
+        .select({ file: command_types.file })
+        .from(command_types)
+        .where(
+          and(
+            eq(command_types.organization_id, orgId),
+            eq(command_types.type, type),
+            notDeleted(command_types),
+          ),
+        )
+        .limit(1);
+      if (ct?.file) {
+        return this.minio.getObject(ct.file);
+      }
+    }
+    return readFile(
+      join(process.cwd(), 'public', 'resumes', 'commands', `${type}.docx`),
+    );
+  }
+
+  // ---- DOCX template engine ----
+
+  // PhpWord `setComplexValue` parity: `${placeholder}` ni o'z ichiga olgan butun
+  // `<w:r>` run'ini berilgan formatли run'lar bilan almashtiradi. Har bir run
+  // Arial 14pt (w:sz=28 yarim-punkt), kerak bo'lsa BOLD (w:b).
+  // Laravel: TextRun->addText(text, ['name'=>'Arial','size'=>14,'bold'=>...]).
+  private setComplexValue(
+    xml: string,
+    placeholder: string,
+    runs: Array<{ text: string; bold?: boolean }>,
+  ): string {
+    const runsXml = runs
+      .map((r) => {
+        const rPr =
+          `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>` +
+          (r.bold ? `<w:b/><w:bCs/>` : ``) +
+          `<w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>`;
+        return `<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(
+          r.text,
+        )}</w:t></w:r>`;
+      })
+      .join('');
+    // `${placeholder}` joylashgan <w:r>...</w:r> ni butunlay almashtiramiz
+    // (boshqa run'larga kirib ketmasdan).
+    const re = new RegExp(
+      `<w:r\\b[^>]*>(?:(?!<w:r\\b)[\\s\\S])*?\\$\\{${placeholder}\\}(?:(?!</w:r>)[\\s\\S])*?</w:r>`,
+    );
+    return xml.replace(re, runsXml);
+  }
+
+  // PhpWord `cloneBlock` parity: `${name}` ... `${/name}` orasidagi blokni
+  // `count` marta takrorlaydi yoki o'chiradi (count=0). Marker'lar joylashgan
+  // `<w:p>` paragraflar olib tashlanadi (PhpWord default xatti-harakati).
+  //   count=0 → blok butunlay o'chadi (marker'lar + ichidagi kontent)
+  //   count=1 → kontent bir marta qoladi, marker paragraflar o'chadi
+  // Marker topilmasa (masalan 31/32 templateda) — hech narsa qilmaydi.
+  private cloneBlock(xml: string, name: string, count: number): string {
+    const re = new RegExp(
+      `<w:p\\b[^>]*>(?:(?!<w:p\\b)[\\s\\S])*?\\$\\{${name}\\}(?:(?!</w:p>)[\\s\\S])*?</w:p>` +
+        `([\\s\\S]*?)` +
+        `<w:p\\b[^>]*>(?:(?!<w:p\\b)[\\s\\S])*?\\$\\{/${name}\\}(?:(?!</w:p>)[\\s\\S])*?</w:p>`,
+    );
+    return xml.replace(re, (_full, block: string) =>
+      count <= 0 ? '' : block.repeat(count),
+    );
+  }
+
+  // PhpWord `cloneRowAndSetValues` parity: `${anchor}` ni o'z ichiga olgan jadval
+  // qatorini (`<w:tr>`) har bir `rows[i]` uchun takrorlaydi va `${key}` larni
+  // to'ldiradi. rows bo'sh bo'lsa qator o'chadi.
+  private cloneRowAndSetValues(
+    xml: string,
+    anchor: string,
+    rows: Array<Record<string, string>>,
+  ): string {
+    const re = new RegExp(
+      `<w:tr\\b[^>]*>(?:(?!</w:tr>)[\\s\\S])*?\\$\\{${anchor}\\}(?:(?!</w:tr>)[\\s\\S])*?</w:tr>`,
+    );
+    const m = xml.match(re);
+    if (!m) return xml;
+    const rowTpl = m[0];
+    const filled = rows
+      .map((r) => {
+        let row = rowTpl;
+        for (const [k, v] of Object.entries(r)) {
+          row = row.split(`\${${k}}`).join(this.escapeXml(v));
+        }
+        return row;
+      })
+      .join('');
+    return xml.replace(re, () => filled);
+  }
+
+  // Oy raqami (1–12) → UZ nomi. Laravel Helper::getMonth.
+  private getMonth(month: unknown): string {
+    const n = Number(month);
+    return Number.isInteger(n) && n >= 1 && n <= 12 ? UZ_MONTHS[n - 1] : '';
+  }
+
+  // Laravel CommandAdditionalTemplateHelper::apply parity — delete/termination
+  // (33–39) uchun qo'shimcha scalar'lar + cloneBlock qarorlari.
+  // 31/32 da ham xavfsiz: ortiqcha scalar/blok templateda yo'q → no-op.
+  private buildDeleteAdditional(dto: CreateCommandDto): {
+    scalars: Record<string, string>;
+    blocks: {
+      pension_count: number;
+      compensation: number;
+      salary_withholding: number;
+    };
+  } {
+    const type = dto.command_type;
+    const add: CommandAdditional = dto.command_additional ?? {};
+    const scalars: Record<string, string> = {};
+    const blocks = { pension_count: 0, compensation: 0, salary_withholding: 0 };
+
+    if (CommandReplaceService.TERMINATION_TYPES.includes(type)) {
+      // codes — default 172-modda (NB-hyphen ‑, Laravel bilan bir xil).
+      scalars.codes = '172‑moddasiga';
+
+      // Pension bloki.
+      if (add.pension_count) {
+        scalars.year = String(add.pension_count.year ?? '');
+        scalars.count = `lavozim maoshining ${add.pension_count.count ?? ''} barobari miqdorida`;
+        blocks.pension_count = 1;
+      } else if (add.pension_coefficient) {
+        scalars.year = String(add.pension_coefficient.year ?? '');
+        scalars.count = `lavozim maoshining ${add.pension_coefficient.count ?? ''} foizi miqdorida`;
+        scalars.codes = '172,269‑moddalariga';
+        blocks.pension_count = 1;
+      }
+
+      // Salary withholding yoki compensation bloki (biri).
+      if (add.salary_withholding) {
+        const d = add.salary_withholding;
+        scalars.withholding_per1 = this.dateTex(d.period1);
+        scalars.withholding_per2 = this.dateTex(d.period2);
+        scalars.withholding_all_day = String(d.all_day ?? '');
+        scalars.withholding_rest_day = String(d.rest_day ?? '');
+        scalars.withholding_month = this.getMonth(d.month);
+        scalars.codes = '172,234‑moddalariga';
+        blocks.salary_withholding = 1;
+      } else if (add.compensation) {
+        const d = add.compensation;
+        scalars.compensation_per1 = this.dateTex(d.period1);
+        scalars.compensation_per2 = this.dateTex(d.period2);
+        scalars.compensation_all_day = String(d.rest_day ?? '');
+        scalars.codes = '172,234‑moddalariga';
+        blocks.compensation = 1;
+      }
+
+      // Ixtiyoriy sana/qiymatlar (kalit mavjud bo'lsa).
+      if ('warning_date' in add)
+        scalars.warning_date = add.warning_date
+          ? this.dateTex(add.warning_date)
+          : '';
+      if ('med_date' in add)
+        scalars.med_date = add.med_date ? this.dateTex(add.med_date) : '';
+      if ('warning_number' in add)
+        scalars.warning_number = String(add.warning_number ?? '');
+      if ('med_number' in add)
+        scalars.med_number = String(add.med_number ?? '');
+      if ('reason' in add)
+        scalars.reason = String(add.reason ?? '').toLowerCase();
+    }
+
+    if (CommandReplaceService.REASON_CODE_TYPES.includes(type)) {
+      scalars.reasonCode = add.reasonId
+        ? `161-moddasi 2-qismi ${add.reasonId}-bandiga asosan`
+        : '161-moddasi 2-qismiga asosan';
+    }
+
+    if (add && 'base' in add) {
+      scalars.base = String(add.base ?? '');
+    }
+
+    return { scalars, blocks };
+  }
 
   // `${var}` placeholder'lar Word'da bir nechta `<w:t>` run'larga bo'linadi —
   // ularni bitta `<w:t>` ichiga normalize qilamiz.
@@ -537,7 +1667,8 @@ export class CommandReplaceService {
       return ans;
     };
 
-    const phRe = /\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+    // `${name}` va blok-yopuvchi `${/name}` markerlari (cloneBlock uchun).
+    const phRe = /\$\{\/?([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
     const merges: Array<{ first: number; last: number; merged: string }> = [];
     let pm: RegExpExecArray | null;
     while ((pm = phRe.exec(fullText)) !== null) {

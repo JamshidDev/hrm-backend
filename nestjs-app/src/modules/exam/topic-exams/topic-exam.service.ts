@@ -10,6 +10,7 @@ import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { PermissionService } from '@/shared/permission/permission.service';
 import {
   departments,
   exam_categories,
@@ -58,6 +59,7 @@ export class TopicExamService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly i18n: I18nService,
+    private readonly perms: PermissionService,
   ) {}
 
   // Topic ichidagi imtihonlar ro'yxati. Laravel orderByDesc('id'), ExamResource.
@@ -253,11 +255,25 @@ export class TopicExamService {
   async create(topicId: number, dto: CreateExamDto) {
     // Laravel `Topic::findOrFail($topicId)` parity.
     const [topic] = await this.db
-      .select({ id: topics.id })
+      .select({ id: topics.id, type: topics.type })
       .from(topics)
       .where(and(eq(topics.id, topicId), notDeleted(topics)))
       .limit(1);
     if (!topic) throw new BusinessException(404, 'not_found');
+
+    // Laravel: topic.type 2/3 (MBM) bo'lsa 'mbm-topics' permission talab qilinadi.
+    if (topic.type === 2 || topic.type === 3) {
+      const allowed = await this.perms.hasPermission(
+        this.ctx.user_or_fail.id,
+        'mbm-topics',
+      );
+      if (!allowed) {
+        throw new BusinessException(
+          403,
+          this.i18n.t('messages.exam.permission_topic_type'),
+        );
+      }
+    }
 
     await this.db.transaction(async (tx) => {
       const id = await nextId(tx, exams);

@@ -12,6 +12,7 @@ import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { RedisService } from '@/shared/redis/redis.service';
 import { notifications, users, workers } from '@/db/schema';
 import type {
   NotificationListQueryDto,
@@ -40,6 +41,7 @@ export class ChatNotificationService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly redis: RedisService,
   ) {}
 
   /** GET /notifications/enums */
@@ -144,15 +146,22 @@ export class ChatNotificationService {
     if (!recipient) throw new BusinessException(404, 'recipient_not_found');
 
     const senderId = this.ctx.user?.id ?? null;
+    const notifId = randomUUID();
+    const payload = this.buildPayload(dto, senderId);
     await this.db.insert(notifications).values({
-      id: randomUUID(),
+      id: notifId,
       type: NOTIFICATION_LARAVEL_CLASS,
       notifiable_type: NOTIFIABLE_TYPE,
       notifiable_id: dto.userId,
-      data: this.buildPayload(dto, senderId),
+      data: payload,
       created_at: sql`NOW()`,
       updated_at: sql`NOW()`,
       sender_id: senderId,
+    });
+    // SocketChannel parity — real-time socket'ga publish (data.id = notification UUID).
+    await this.redis.publishNotification(dto.userId, {
+      ...payload,
+      id: notifId,
     });
     return { success: true, sent_to: 1 };
   }
@@ -216,6 +225,16 @@ export class ChatNotificationService {
     for (let i = 0; i < rows.length; i += CHUNK) {
       await this.db.insert(notifications).values(rows.slice(i, i + CHUNK));
     }
+
+    // SocketChannel parity — har recipientga real-time publish (data.id = row UUID).
+    await Promise.all(
+      rows.map((r) =>
+        this.redis.publishNotification(r.notifiable_id, {
+          ...payload,
+          id: r.id,
+        }),
+      ),
+    );
 
     return { success: true, sent_to: recipientIds.length };
   }

@@ -56,7 +56,15 @@ export class NationalityService {
   }
 
   async create(dto: CreateNationalityDto): Promise<void> {
+    // bigserial sequence migrate qilingan data bilan orqada — MAX(id)+1 (CLAUDE.md #13).
+    // Laravel store faqat `name` saqlaydi (name_ru/name_en e'tiborsiz).
+    const [{ nextId }] = await this.db
+      .select({
+        nextId: sql<number>`COALESCE(MAX(${nationalities.id}), 0) + 1`,
+      })
+      .from(nationalities);
     await this.db.insert(nationalities).values({
+      id: Number(nextId),
       name: dto.name,
     });
   }

@@ -7,9 +7,10 @@ import {
   DocumentPublicController,
 } from '@/modules/confirmation/documents/document.controller';
 import { DocumentService } from '@/modules/confirmation/documents/document.service';
+import { CommandModule } from '@/modules/hr/commands/command.module';
 
 @Module({
-  imports: [AuthModule, MinioModule],
+  imports: [AuthModule, MinioModule, CommandModule],
   controllers: [
     DocumentConfirmationController,
     DocumentController,

@@ -9,10 +9,8 @@
 //   - PUT    /reports-per-month            (updateReportMonthOrganizations — bulk)
 //   - DELETE /reports-per-month/{id}       (destroyReportMonthOrganizations)
 //
-// Skip (alohida sessiya — biznes mantiqi murakkab):
-//   - POST  /report/generate, /labels, /store, /excel, /create-confirmation
-//   - PUT   /reports/{id}, /reports-detail/{id}
-//   - GET   /reports-stat, /reports/{uuid} (show — Confirmation module kerak)
+// Endi qo'shildi: show (/reports/{uuid}), update (PUT /reports/{uuid}),
+// updateDetail (PUT /reports-detail/{id}), createConfirmation, store-alias.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -250,6 +248,33 @@ export class ReportItemDto {
 
   @ApiProperty({ example: 5 })
   details_count!: number;
+}
+
+// Laravel ReportUpdateRequest: director_id required|integer.
+export class ReportUpdateDto {
+  @ApiProperty({ example: 12 })
+  @Type(() => Number)
+  @IsInt()
+  director_id!: number;
+}
+
+// Laravel ReportDetailUpdateRequest: data required.
+export class ReportDetailUpdateDto {
+  @ApiProperty({ description: 'Detail data (json)' })
+  @IsObject()
+  data!: Record<string, unknown>;
+}
+
+// Laravel ReportCreateConfirmationRequest: confirmation_id required, report required|uuid.
+export class ReportCreateConfirmationDto {
+  @ApiProperty({ example: 5 })
+  @Type(() => Number)
+  @IsInt()
+  confirmation_id!: number;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @IsUUID()
+  report!: string;
 }
 
 export class ReportListResponseDto {

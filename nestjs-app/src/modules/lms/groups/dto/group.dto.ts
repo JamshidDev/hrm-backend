@@ -32,11 +32,25 @@ export class GroupListQueryDto {
   @IsInt()
   edu_plan_id?: number;
 
+  // GET /lms/worker-exams — Laravel request('worker_id').
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  worker_id?: number;
+
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   group_id?: number;
+
+  // GET /lms/group-workers — Laravel: when(protocol_id, whereDoesntHave('certificate')).
+  @ApiPropertyOptional({ example: 156 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  protocol_id?: number;
 }
 
 export class GenerateGroupsDto {

@@ -240,11 +240,33 @@ export class TopicService {
       organization_id: dto.organization_id ?? null,
       user_id: this.ctx.user_or_fail.id,
     });
+    // Laravel: $topic->organizations()->sync($organizations) — topic_organizations.
+    await this.syncTopicOrganizations(id, dto.organizations ?? []);
   }
 
-  // Mavjud topic'ni yangilash.
-  // Laravel: TopicService::update — `$topic->update($data)` faqat validated
-  // fieldlarni (name, type) yangilaydi, `organization_id`'ga tegmaydi.
+  // Laravel BelongsToMany sync — pivot'ni berilgan id'lar bilan to'liq almashtiradi.
+  private async syncTopicOrganizations(
+    topicId: number,
+    orgIds: number[],
+  ): Promise<void> {
+    await this.db
+      .delete(topic_organizations)
+      .where(eq(topic_organizations.topic_id, topicId));
+    const ids = [...new Set(orgIds.filter((x) => Number.isInteger(x)))];
+    if (ids.length) {
+      const base = await nextId(this.db, topic_organizations);
+      await this.db.insert(topic_organizations).values(
+        ids.map((organization_id, i) => ({
+          id: base + i,
+          topic_id: topicId,
+          organization_id,
+        })),
+      );
+    }
+  }
+
+  // Mavjud topic'ni yangilash. Laravel: $topic->update($data) +
+  // $topic->organizations()->sync($organizations).
   async update(id: number, dto: UpdateTopicDto) {
     const set: Record<string, unknown> = {
       name: dto.name,
@@ -255,6 +277,10 @@ export class TopicService {
       set.organization_id = dto.organization_id;
     }
     await this.db.update(topics).set(set).where(eq(topics.id, id));
+    // organizations yuborilgan bo'lsa pivot'ni sync qilamiz (Laravel required|array).
+    if (dto.organizations !== undefined) {
+      await this.syncTopicOrganizations(id, dto.organizations);
+    }
   }
 
   // Topic'ni soft-delete qilish (deleted_at = NOW()).

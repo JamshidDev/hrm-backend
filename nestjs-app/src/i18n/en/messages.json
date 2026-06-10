@@ -56,12 +56,13 @@
       "three": "UzLiDeP Party",
       "four": "Adolat Party",
       "five": "Milliy Tiklanish Party"
-    }
+    },
+    "not_found": "Employee not found"
   },
   "invalid_credentials": "Such user was not found in the system. Please verify the entered information...",
   "invalid_credentials_password": "Check if the username or password is correct.",
   "user_block": "Your profile has been temporarily restricted by the system administration.",
-  "token_is_expired": "The token has expired.",
+  "token_is_expired": "Token has expired",
   "not_found": "Data not found",
   "server_error": "A system error has occurred. Please try again later.",
   "successfully_stored": "Successfully added",
@@ -70,7 +71,11 @@
   "role_related": "The role has assigned permissions or users; cannot be deleted",
   "permission_related": "Permission successfully assigned to the role",
   "user_not_found": "User not found or does not exist",
+  "meet_not_found": "Meeting not found",
+  "meet_not_available": "Meeting is not available yet",
+  "meet_ended": "Meeting has ended",
   "worker_position_not_found": "Worker position not found or does not exist",
+  "worker_not_found": "Worker not found or does not exist",
   "worker_pin_exists": "Worker PIN already exists",
   "worker_phone_exists": "Worker PHONE already exists",
   "worker_has_contract": "This worker has an active employment contract!",
@@ -585,7 +590,11 @@
       "three": "To specified workers",
       "four": "For advanced training exams",
       "five": "To designated employees (Not working)"
-    }
+    },
+    "the_number_of_tests_is_not_equal": "The number of questions on the tests is not equal to the number of questions on the exam!",
+    "permission_topic_type": "You do not have permission to create or edit exams of this type!",
+    "access_from_another_device_is_prohibited": "Access to the exam from this device is prohibited.",
+    "this_exam_has_already_been_completed_or_expired": "This exam has either ended or is no longer available."
   },
   "chat": {
     "notifications": {
@@ -686,5 +695,8 @@
     "hospital": "Polyclinic employee",
     "turnstile_viewer": "Turnstile viewer",
     "turnstile_leader": "Turnstile Leader"
+  },
+  "zoom": {
+    "not_found": "Zoom meeting not found"
   }
 }

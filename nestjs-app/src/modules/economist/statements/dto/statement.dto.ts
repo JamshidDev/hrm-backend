@@ -278,6 +278,18 @@ export class ExportByPositionQueryDto extends YearOnlyQueryDto {
   @IsInt()
   @Min(1)
   organization_id?: number;
+
+  // Laravel filter($user) — rol/org-scope (organizations csv).
+  @ApiPropertyOptional({ example: '151,154' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  // Laravel ->when(positions, whereIn('position_id', csv)).
+  @ApiPropertyOptional({ example: '5,8' })
+  @IsOptional()
+  @IsString()
+  positions?: string;
 }
 
 /**

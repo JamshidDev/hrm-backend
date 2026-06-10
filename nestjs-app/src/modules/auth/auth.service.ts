@@ -82,13 +82,17 @@ export class AuthService {
       throw new BusinessException(400, this.i18n.t('messages.user_block'));
     }
 
-    // 30 kun ichida parol o'zgarmagan bo'lsa, foydalanuvchi yangilashi kerak.
+    // Laravel: !password_changed_at || abs(now()->diffInDays(password_changed_at)) > 30.
+    // diffInDays butun kunga yaxlitlaydi (floor) — boundary parity uchun shu yerda ham floor.
     let mustChange = true;
     if (user.password_changed_at) {
-      const daysSinceChange =
-        (Date.now() - new Date(user.password_changed_at).getTime()) /
-        (1000 * 60 * 60 * 24);
-      mustChange = Math.abs(daysSinceChange) > 30;
+      const daysSinceChange = Math.floor(
+        Math.abs(
+          (Date.now() - new Date(user.password_changed_at).getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
+      );
+      mustChange = daysSinceChange > 30;
     }
 
     const accessToken = await this.sanctum.createToken(user.id);

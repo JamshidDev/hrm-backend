@@ -178,7 +178,11 @@ export class StatementController {
     @Res() res: Response,
   ) {
     const y = q.year ?? new Date().getFullYear();
-    const buffer = await this.service.exportByPosition(y, q.organization_id);
+    const buffer = await this.service.exportByPosition(y, {
+      organizations: q.organizations,
+      organization_id: q.organization_id,
+      positions: q.positions,
+    });
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="statements-by-position-${y}.xlsx"`,

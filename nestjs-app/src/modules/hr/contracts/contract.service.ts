@@ -1,23 +1,15 @@
 // Contract service. Laravel: ContractController::index() (only).
 
 import { Injectable } from '@nestjs/common';
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
   command_confirmations,
   commands as commandsTable,
+  confirmation_workers,
+  contract_confirmations,
   contracts,
   departments,
   organizations,
@@ -32,6 +24,9 @@ import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
 import { ContractMapper } from '@/modules/hr/contracts/contract.mapper';
+import { ContractReplaceService } from '@/modules/hr/contracts/contract-replace.service';
+import { ConvertService } from '@/shared/convert/convert.service';
+import { RedisService } from '@/shared/redis/redis.service';
 import {
   ContractListResponseDto,
   CreateContractDto,
@@ -52,6 +47,9 @@ export class ContractService {
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
     private readonly scope: OrgScopeService,
+    private readonly replace: ContractReplaceService,
+    private readonly convert: ConvertService,
+    private readonly redis: RedisService,
   ) {}
 
   async findAll(filters: QueryContractDto): Promise<ContractListResponseDto> {
@@ -184,52 +182,163 @@ export class ContractService {
       }
     }
 
-    return await this.db.transaction(async (tx) => {
+    const uuid = randomUUID();
+    const docxKey = `contracts/${uuid}.docx`;
+    const pdfKey = `documents/contracts/${uuid}.pdf`;
+
+    // DOCX'ni OLDIN tayyorlaymiz — generatsiya xato bo'lsa contract yozilmaydi
+    // (Laravel ContractService::store → contractReplace transaction ichida).
+    const docxBuffer = await this.replace.buildContractDocx(dto);
+
+    // Director (ContractConfirmation type='d' uchun worker_id + position).
+    const [director] = await this.db
+      .select({
+        worker_id: confirmation_workers.worker_id,
+        position: confirmation_workers.position,
+      })
+      .from(confirmation_workers)
+      .where(eq(confirmation_workers.id, dto.director_id))
+      .limit(1);
+
+    const contractId = await this.db.transaction(async (tx) => {
       const [contract] = await tx
         .insert(contracts)
         .values({
-          uuid: randomUUID(),
+          uuid,
           organization_id: dto.organization_id,
           worker_id: dto.worker_id,
           user_id: userId,
           director_id: dto.director_id,
-          command_status: dto.command_status ? 1 : 2,
+          // ContractCommandStatusEnum: FORMED=2 (buyruq bilan), NOT_MANDATORY=3
+          // (to'g'ridan-to'g'ri shartnoma). Laravel ContractService::store parity.
+          command_status: dto.command_status ? 2 : 3,
           number: String(dto.number),
           contract_date: dto.contract_date ?? null,
           contract_to_date: dto.contract_to_date ?? null,
           table_number:
             dto.table_number != null ? Number(dto.table_number) : null,
           type: dto.type,
+          file: docxKey,
+          confirmation_file: pdfKey,
         })
         .returning({ id: contracts.id });
 
-      // Create related worker_position if department_position provided.
-      if (dto.department_position_id) {
-        await tx.insert(worker_positions).values({
-          uuid: randomUUID(),
-          organization_id: dto.organization_id,
-          department_id: dto.department_id ?? null,
-          department_position_id: dto.department_position_id,
-          position_id: dto.position_id ?? null,
+      // ESLATMA: worker_position bu yerda YARATILMAYDI. Laravel
+      // ContractService::store ham yaratmaydi — xodim lavozimi FAQAT hujjat
+      // tasdiqlanganda (ContractConfirmationService::confirmation → createWorker)
+      // yaratiladi. `json/contracts/{id}.json` snapshot side-effect uchun pastda
+      // saqlanadi.
+
+      // contract_confirmations — Laravel createConfirmation: hodim 'w' + direktor 'd'.
+      const confRows: Array<{
+        contract_id: number;
+        type: string;
+        worker_id: number;
+        position: string | null;
+      }> = [
+        {
           contract_id: contract.id,
+          type: 'w',
           worker_id: dto.worker_id,
-          type: dto.type,
-          position_date: dto.position_date ?? this.today(),
-          contract_position: true,
-          probation: dto.probation ? Number(dto.probation) : 0,
-          vacation_main_day: dto.vacation_main_day ?? 0,
-          additional_vacation_day: dto.additional_vacation_day ?? 0,
-          group: dto.group ? Number(dto.group) : 0,
-          rank: dto.rank ? String(dto.rank) : null,
-          rate: dto.rate != null ? Math.trunc(Number(dto.rate)) : 100,
-          salary: dto.salary != null ? Number(dto.salary) : null,
-          post_name: dto.post_name ?? null,
-          status: dto.position_status ?? POSITION_STATUS_ACTIVE,
+          position: null,
+        },
+      ];
+      if (director?.worker_id) {
+        confRows.push({
+          contract_id: contract.id,
+          type: 'd',
+          worker_id: director.worker_id,
+          position: director.position ?? null,
         });
       }
+      await tx.insert(contract_confirmations).values(confRows);
 
-      return { contract_id: contract.id };
+      return contract.id;
     });
+
+    // Tasdiqlash side-effect'i uchun `data` snapshot (Laravel
+    // ContractService::storeJson → json/contracts/{id}.json). Tasdiq tugaganda
+    // CommandConfirmationService.applyContractConfirmation shu data'ni o'qib
+    // createWorker chaqiradi (worker_position + Worker rol + user org).
+    await this.storeContractData(contractId, dto);
+
+    // DOCX'ni MinIO'ga yuklash (sinxron) + PDF (fon).
+    await this.minio.putObject(
+      docxKey,
+      docxBuffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    void this.generateContractPdf(contractId, userId, docxBuffer, pdfKey);
+
+    return { contract_id: contractId };
+  }
+
+  // json/contracts/{id}.json — confirm side-effect (createWorker) uchun.
+  // Laravel ContractService::storeJson({request, data}). `data` createWorker
+  // talab qiladigan barcha maydonlarni o'z ichiga oladi.
+  private async storeContractData(
+    contractId: number,
+    dto: CreateContractDto,
+  ): Promise<void> {
+    const data: Record<string, unknown> = {
+      contract_id: contractId,
+      worker_id: dto.worker_id,
+      organization_id: dto.organization_id,
+      department_position_id: dto.department_position_id ?? null,
+      department_id: dto.department_id ?? null,
+      position_id: dto.position_id ?? null,
+      type: dto.type,
+      probation: dto.probation ?? null,
+      vacation_main_day: dto.vacation_main_day ?? null,
+      additional_vacation_day: dto.additional_vacation_day ?? null,
+      group: dto.group ?? null,
+      rank: dto.rank ?? null,
+      rate: dto.rate ?? null,
+      salary: dto.salary ?? null,
+      post_name: dto.post_name ?? null,
+      // createWorker: position_date ?? command_date ?? today.
+      position_date: dto.position_date ?? null,
+      command_date: dto.contract_date ?? null,
+      contract_to_date: dto.contract_to_date ?? null,
+    };
+    await this.minio.putObject(
+      `json/contracts/${contractId}.json`,
+      Buffer.from(JSON.stringify({ data }), 'utf-8'),
+      'application/json',
+    );
+  }
+
+  // DOCX→PDF konvertatsiya + MinIO yuklash (fon — Laravel DocxToPdfJob).
+  // Laravel DocxToPdfJob: muvaffaqiyatda generate=3 + socket 'contracts.generated'
+  // xabari, xatoda generate=4.
+  private async generateContractPdf(
+    id: number,
+    userId: number,
+    docxBuffer: Buffer,
+    pdfKey: string,
+  ): Promise<void> {
+    try {
+      const pdfBuffer = await this.convert.docxToPdf(docxBuffer);
+      await this.minio.putObject(pdfKey, pdfBuffer, 'application/pdf');
+      await this.db
+        .update(contracts)
+        .set({ generate: 3 })
+        .where(eq(contracts.id, id));
+      await this.redis.publishNotification(userId, {
+        type: 'contracts.generated',
+        alert: 'info',
+        duration: 3000,
+        documentId: id,
+        title: this.i18n.t('messages.document.created'),
+        message: this.i18n.t('messages.document.created'),
+        action: null,
+      });
+    } catch {
+      await this.db
+        .update(contracts)
+        .set({ generate: 4 })
+        .where(eq(contracts.id, id));
+    }
   }
 
   // GET /api/v1/hr/contracts/{id}

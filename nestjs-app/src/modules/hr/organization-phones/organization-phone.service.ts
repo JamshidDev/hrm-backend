@@ -8,6 +8,7 @@ import type { DataSource } from '@/db/types';
 import { organization_phones } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
 import {
   CreateOrganizationPhoneDto,
@@ -21,6 +22,7 @@ export class OrganizationPhoneService {
     @InjectDb() private readonly db: DataSource,
     private readonly i18n: I18nService,
     private readonly ctx: RequestContext,
+    private readonly scope: OrgScopeService,
   ) {}
 
   // GET /api/v1/hr/organization-phones
@@ -29,12 +31,17 @@ export class OrganizationPhoneService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * perPage;
 
-    const where = and(
-      notDeleted(organization_phones),
-      filters.organization_id != null
-        ? eq(organization_phones.organization_id, filters.organization_id)
-        : undefined,
+    // Laravel OrganizationPhone::scopeFilter → QueryHelper::filterByOrganizations
+    // (rol/org-scope: childIds + organizations + organization_id).
+    const inScope = await this.scope.whereOrg(
+      organization_phones.organization_id,
+      {
+        organizations: (filters as { organizations?: string }).organizations,
+        organization_id: filters.organization_id,
+      },
     );
+
+    const where = and(notDeleted(organization_phones), inScope);
 
     const [rows, [{ total }]] = await Promise.all([
       this.db

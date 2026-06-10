@@ -56,12 +56,13 @@
       "three": "OʻzLiDeP partiyasi",
       "four": "Adolat partiyasi",
       "five": "Milliy tiklanish partiyasi"
-    }
+    },
+    "not_found": "Xodim topilmadi"
   },
   "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
   "invalid_credentials_password": "Foydalanuvchi nomi yoki parol to'g'riligini tekshiring",
   "user_block": "Sizning profilingiz tizim ma'muriyati tomonidan vaqtincha cheklab qo'yildi.",
-  "token_is_expired": "Token muddati tugagan.",
+  "token_is_expired": "Token muddati tugagan",
   "not_found": "Ma'lumot topilmadi",
   "server_error": "Tizimda xatolik yuzaga keldi. Birozdan so'ng qayta urinib ko'ring.",
   "successfully_stored": "Muvaffaqqiyatli qo'shildi",
@@ -70,7 +71,11 @@
   "role_related": "Rol foydalanuvchilarga yoki ruxsatlarga biriktirilgan; o'chirib bo'lmaydi",
   "permission_related": "Ruhsat rolega muvaffaqiyatli biriktirildi",
   "user_not_found": "Foydalanuvchi tizimda topilmadi yoki mavjud emas",
+  "meet_not_found": "Uchrashuv topilmadi",
+  "meet_not_available": "Uchrashuv hali mavjud emas",
+  "meet_ended": "Uchrashuv yakunlangan",
   "worker_position_not_found": "Xodimning lavozimi topilmadi yoki mavjud emas",
+  "worker_not_found": "Xodim topilmadi yoki mavjud emas",
   "worker_pin_exists": "Bunday JSHSHIR lik xodim allaqachon mavjud",
   "worker_phone_exists": "Bunday telefon raqamlik xodim allaqachon mavjud",
   "worker_has_contract": "Ushbu xodimda faol mehnat shartnomasi mavjud!",
@@ -585,7 +590,11 @@
       "three": "Belgilangan xodimlarga (Ishlab turgan)",
       "four": "Malaka oshirish imtihonlari uchun",
       "five": "Belgilangan xodimlarga (Ishlamayotgan)"
-    }
+    },
+    "the_number_of_tests_is_not_equal": "Testdagi savollar soni imtihondagi savollar soniga teng emas!",
+    "permission_topic_type": "Ushbu turdagi imtihonlarni yaratish, taxrirlash ruxsati mavjud emas!",
+    "access_from_another_device_is_prohibited": "Ushbu qurilmadan imtihonga kirish taqiqlangan",
+    "this_exam_has_already_been_completed_or_expired": "Bu imtihon allaqachon yakunlangan yoki mavjud emas"
   },
   "chat": {
     "notifications": {
@@ -686,5 +695,8 @@
     "hospital": "Poliklinika xodimi",
     "turnstile_viewer": "Turniket ko'ruvchi",
     "turnstile_leader": "Turniket Leader"
+  },
+  "zoom": {
+    "not_found": "Zoom uchrashuvi topilmadi"
   }
 }

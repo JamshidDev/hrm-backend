@@ -20,6 +20,18 @@ export class SearchEduPlanWorkersDto extends SearchPaginationQueryDto {
   @IsInt()
   @Exists('edu_plans', 'id')
   edu_plan_id!: number;
+
+  // Laravel WorkerPosition::filter — org-scope (organizations + organization_id).
+  @ApiPropertyOptional({ example: '199' })
+  @IsOptional()
+  @IsString()
+  organizations?: string;
+
+  @ApiPropertyOptional({ example: 222 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
 }
 
 export class AttachEduPlanWorkersDto {

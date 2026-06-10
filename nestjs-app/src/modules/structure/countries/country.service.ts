@@ -1,15 +1,11 @@
-// Country service. Laravel: Modules/Structure/Http/Controllers/CountryController.
-// SoftDeletes faol — `notDeleted(countries)` helper bilan.
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { countries } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
-import { notDeleted } from '@/common/database/soft-delete.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { CountryMapper } from '@/modules/structure/countries/country.mapper';
 import {
   QueryCountryDto,
@@ -28,25 +24,23 @@ export class CountryService {
   async findAll(filters: QueryCountryDto): Promise<CountryListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-
-    // Laravel scopeSearch — name LIKE.
-    const where = and(
-      notDeleted(countries),
-      filters.search ? ilike(countries.name, `%${filters.search}%`) : undefined,
-    );
+    const { search } = filters;
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+    };
 
     return paginate({
       db: this.db,
-      countTable: countries,
-      countWhere: where,
+      count: () =>
+        this.db.$count(sql`(${this.db.query.countries.findMany({ where })})`),
       query: ({ limit, offset }) =>
-        this.db
-          .select()
-          .from(countries)
-          .where(where)
-          .orderBy(countries.id)
-          .limit(limit)
-          .offset(offset),
+        this.db.query.countries.findMany({
+          where,
+          orderBy: { id: 'asc' },
+          limit,
+          offset,
+        }),
       page,
       perPage,
       mapper: CountryMapper.toItem,
@@ -54,12 +48,12 @@ export class CountryService {
   }
 
   async create(dto: CreateCountryDto): Promise<void> {
-    // Laravel: $data['id'] = max(id, withTrashed) + 1 — sequence stale uchun
-    // workaround. Laravel parallel ishlayapti — shu mantiq saqlanadi.
-    const nextId = await this.nextId();
+    const [{ maxId }] = await this.db
+      .select({ maxId: sql<number>`COALESCE(MAX(${countries.id}), 0)` })
+      .from(countries);
 
     await this.db.insert(countries).values({
-      id: nextId,
+      id: Number(maxId) + 1,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
       name_en: dto.name_en ?? null,
@@ -69,7 +63,7 @@ export class CountryService {
   }
 
   async update(id: number, dto: UpdateCountryDto): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, countries, id, this.i18n);
 
     await this.db
       .update(countries)
@@ -84,34 +78,7 @@ export class CountryService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-
-    // SoftDelete — deleted_at = NOW().
-    await this.db
-      .update(countries)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(countries.id, id));
-  }
-
-  // ---- Helper'lar ----
-
-  private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: countries.id })
-      .from(countries)
-      .where(and(eq(countries.id, id), notDeleted(countries)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return row;
-  }
-
-  // Laravel max(id)+1 — withTrashed bo'lganlarni ham qaytaradi.
-  private async nextId(): Promise<number> {
-    const [row] = await this.db
-      .select({ maxId: sql<number>`COALESCE(MAX(${countries.id}), 0)` })
-      .from(countries);
-    return Number(row?.maxId ?? 0) + 1;
+    await findByIdOrFail(this.db, countries, id, this.i18n);
+    await softDeleteById(this.db, countries, id);
   }
 }

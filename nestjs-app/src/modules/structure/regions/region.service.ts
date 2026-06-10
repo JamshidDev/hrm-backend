@@ -1,15 +1,11 @@
-// Region service. Laravel: Modules/Structure/Http/Controllers/RegionController.
-// scopeSearch: name LIKE + country_id filter. with('country') eager load.
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { regions } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
-import { notDeleted } from '@/common/database/soft-delete.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { RegionMapper } from '@/modules/structure/regions/region.mapper';
 import {
   QueryRegionDto,
@@ -28,30 +24,21 @@ export class RegionService {
   async findAll(filters: QueryRegionDto): Promise<RegionListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
+    const { search, country_id } = filters;
 
-    // Count uchun Builder API WHERE.
-    const where = and(
-      notDeleted(regions),
-      filters.search ? ilike(regions.name, `%${filters.search}%`) : undefined,
-      filters.country_id
-        ? eq(regions.country_id, filters.country_id)
-        : undefined,
-    );
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+      ...(country_id ? { country_id } : {}),
+    };
 
     return paginate({
       db: this.db,
-      countTable: regions,
-      countWhere: where,
-      // Relational API — country eager load.
+      count: () =>
+        this.db.$count(sql`(${this.db.query.regions.findMany({ where })})`),
       query: ({ limit, offset }) =>
         this.db.query.regions.findMany({
-          where: {
-            deleted_at: { isNull: true },
-            ...(filters.search
-              ? { name: { ilike: `%${filters.search}%` } }
-              : {}),
-            ...(filters.country_id ? { country_id: filters.country_id } : {}),
-          },
+          where,
           with: { country: true },
           orderBy: { id: 'asc' },
           limit,
@@ -64,10 +51,12 @@ export class RegionService {
   }
 
   async create(dto: CreateRegionDto): Promise<void> {
-    const nextId = await this.nextId();
+    const [{ maxId }] = await this.db
+      .select({ maxId: sql<number>`COALESCE(MAX(${regions.id}), 0)` })
+      .from(regions);
 
     await this.db.insert(regions).values({
-      id: nextId,
+      id: Number(maxId) + 1,
       country_id: dto.country_id,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
@@ -78,7 +67,7 @@ export class RegionService {
   }
 
   async update(id: number, dto: UpdateRegionDto): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, regions, id, this.i18n);
 
     await this.db
       .update(regions)
@@ -94,32 +83,7 @@ export class RegionService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-
-    await this.db
-      .update(regions)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(regions.id, id));
-  }
-
-  // ---- Helper'lar ----
-
-  private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: regions.id })
-      .from(regions)
-      .where(and(eq(regions.id, id), notDeleted(regions)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return row;
-  }
-
-  private async nextId(): Promise<number> {
-    const [row] = await this.db
-      .select({ maxId: sql<number>`COALESCE(MAX(${regions.id}), 0)` })
-      .from(regions);
-    return Number(row?.maxId ?? 0) + 1;
+    await findByIdOrFail(this.db, regions, id, this.i18n);
+    await softDeleteById(this.db, regions, id);
   }
 }

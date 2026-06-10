@@ -47,13 +47,12 @@ export class IntegrationLogFilterDto {
   @IsDateString()
   date_to?: string;
 
-  @ApiPropertyOptional({
-    example: 'sanctum',
-    enum: ['hmac', 'sanctum', 'jwt', 'oauth'],
-  })
+  // Laravel: when(api_type) → where('api_type', value) — validatsiya YO'Q (noma'lum
+  // qiymat 0 qaytaradi, 422 emas). Shuning uchun IsIn emas, oddiy string.
+  @ApiPropertyOptional({ example: 'sanctum' })
   @IsOptional()
-  @IsIn(['hmac', 'sanctum', 'jwt', 'oauth'])
-  api_type?: 'hmac' | 'sanctum' | 'jwt' | 'oauth';
+  @IsString()
+  api_type?: string;
 
   @ApiPropertyOptional({ example: 'App\\Models\\User' })
   @IsOptional()

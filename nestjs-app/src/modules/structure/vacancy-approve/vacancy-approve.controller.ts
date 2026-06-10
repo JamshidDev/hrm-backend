@@ -54,8 +54,8 @@ export class VacancyApproveController {
   @ApiOkResponse()
   async attach(@Body() dto: AttachVacancyApproveDto) {
     await this.service.attach(dto);
-    // Laravel: messages.successfully_attached — bizda ham qo'shamiz, fallback successfully_stored.
-    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
+    // Laravel: trans('messages.successfully_attached').
+    return buildSuccess(this.i18n.t('messages.successfully_attached'), []);
   }
 
   @Delete('organizations/:id')

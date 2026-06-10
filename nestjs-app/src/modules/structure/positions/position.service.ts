@@ -1,16 +1,11 @@
-// Position service. Laravel: PositionController.
-// scopeSearch: name LIKE. Order by name. Optional ?ids=1,2,3 filter.
-// File upload — doc/docx optional (Laravel: position-examples folder).
-
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { positions } from '@/db/schema';
-import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
-import { notDeleted } from '@/common/database/soft-delete.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { MinioService, type UploadedFile } from '@/shared/minio/minio.service';
 import { PositionMapper } from '@/modules/structure/positions/position.mapper';
 import {
@@ -31,34 +26,30 @@ export class PositionService {
   async findAll(filters: QueryPositionDto): Promise<PositionListResponseDto> {
     const perPage = filters.per_page ?? 10;
     const page = filters.page ?? 1;
-
-    // Laravel: ?ids=1,2,3 — comma-separated, whereIn.
+    const { search } = filters;
     const idList = filters.ids
       ? filters.ids
           .split(',')
           .map((s) => Number(s.trim()))
           .filter((n) => !Number.isNaN(n))
       : null;
-
-    const where = and(
-      notDeleted(positions),
-      filters.search ? ilike(positions.name, `%${filters.search}%`) : undefined,
-      idList && idList.length > 0 ? inArray(positions.id, idList) : undefined,
-    );
+    const where = {
+      deleted_at: { isNull: true as const },
+      ...(search ? { name: { ilike: `%${search}%` } } : {}),
+      ...(idList && idList.length > 0 ? { id: { in: idList } } : {}),
+    };
 
     return paginate({
       db: this.db,
-      countTable: positions,
-      countWhere: where,
+      count: () =>
+        this.db.$count(sql`(${this.db.query.positions.findMany({ where })})`),
       query: ({ limit, offset }) =>
-        this.db
-          .select()
-          .from(positions)
-          .where(where)
-          // Laravel: ->orderBy('name')
-          .orderBy(positions.name)
-          .limit(limit)
-          .offset(offset),
+        this.db.query.positions.findMany({
+          where,
+          orderBy: { name: 'asc' },
+          limit,
+          offset,
+        }),
       page,
       perPage,
       mapper: PositionMapper.toItem,
@@ -66,7 +57,9 @@ export class PositionService {
   }
 
   async create(dto: CreatePositionDto, file?: UploadedFile): Promise<void> {
-    const nextId = await this.nextId();
+    const [{ maxId }] = await this.db
+      .select({ maxId: sql<number>`COALESCE(MAX(${positions.id}), 0)` })
+      .from(positions);
     let filePath: string | null = null;
     if (file) {
       filePath = await this.minio.uploadFormFile(file, 'position-examples', [
@@ -76,7 +69,7 @@ export class PositionService {
     }
 
     await this.db.insert(positions).values({
-      id: nextId,
+      id: Number(maxId) + 1,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
       name_en: dto.name_en ?? null,
@@ -91,9 +84,8 @@ export class PositionService {
     dto: UpdatePositionDto,
     file?: UploadedFile,
   ): Promise<void> {
-    await this.findById(id);
+    await findByIdOrFail(this.db, positions, id, this.i18n);
 
-    // Laravel: $position->update($data) — faqat berilgan field'larni yangilaydi.
     const updates: Record<string, unknown> = { name: dto.name };
     if (dto.name_ru !== undefined) updates.name_ru = dto.name_ru;
     if (dto.name_en !== undefined) updates.name_en = dto.name_en;
@@ -113,31 +105,7 @@ export class PositionService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.findById(id);
-    await this.db
-      .update(positions)
-      .set({ deleted_at: sql`NOW()` })
-      .where(eq(positions.id, id));
-  }
-
-  // ---- Helper'lar ----
-
-  private async findById(id: number) {
-    const [row] = await this.db
-      .select({ id: positions.id })
-      .from(positions)
-      .where(and(eq(positions.id, id), notDeleted(positions)))
-      .limit(1);
-    if (!row) {
-      throw new BusinessException(404, this.i18n.t('messages.not_found'));
-    }
-    return row;
-  }
-
-  private async nextId(): Promise<number> {
-    const [row] = await this.db
-      .select({ maxId: sql<number>`COALESCE(MAX(${positions.id}), 0)` })
-      .from(positions);
-    return Number(row?.maxId ?? 0) + 1;
+    await findByIdOrFail(this.db, positions, id, this.i18n);
+    await softDeleteById(this.db, positions, id);
   }
 }

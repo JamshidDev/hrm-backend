@@ -56,16 +56,9 @@ export class ContractAdditionalController {
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
-  @Post(':id/confirmation')
-  @UseGuards(PermissionGuard)
-  @Permission('hr')
-  @ApiOperation({
-    summary: 'Mark contract-additional as SUCCESS (signature upload)',
-  })
-  async confirmation(@Param('id', ParseIntPipe) id: number) {
-    await this.service.confirmation(id);
-    return buildSuccess(this.i18n.t('messages.signature.success'), []);
-  }
+  // ESLATMA: ad-contract tasdiqlash ALOHIDA route'da emas — Laravel'dagi kabi
+  // yagona `POST /api/v1/confirmation/document/signature` (model=contract-additional)
+  // orqali bo'ladi. Tasdiq tugaganda applyContractAdditionalConfirmation ishlaydi.
 
   @Delete(':id')
   @UseGuards(PermissionGuard)

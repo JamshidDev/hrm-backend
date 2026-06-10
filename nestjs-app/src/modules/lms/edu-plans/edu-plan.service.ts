@@ -2,25 +2,35 @@
 // List: learning_center + specialization + subjects + workers_count + exams_count.
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, max, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import {
+  departments,
   edu_plan_exams,
   edu_plan_subjects,
   edu_plan_workers,
   edu_plans,
+  learning_center_users,
   learning_centers,
+  organizations,
+  positions,
   specializations,
   subjects as subjectsTable,
+  worker_phones,
+  worker_positions,
+  workers,
 } from '@/db/schema';
 import {
   lmsPaginate,
   readPaging,
 } from '@/modules/lms/_shared/lms-paginate.util';
 import { EduPlanMapper } from '@/modules/lms/edu-plans/edu-plan.mapper';
+import { getShortPosition } from '@/modules/hr/_shared/position-helper';
+import { MinioService } from '@/shared/minio/minio.service';
+import { RequestContext } from '@/common/context/request.context';
 import type {
   DetachEduPlanWorkersDto,
   EduPlanListQueryDto,
@@ -29,7 +39,11 @@ import type {
 
 @Injectable()
 export class LmsEduPlanService {
-  constructor(@InjectDb() private readonly db: DataSource) {}
+  constructor(
+    @InjectDb() private readonly db: DataSource,
+    private readonly minio: MinioService,
+    private readonly ctx: RequestContext,
+  ) {}
 
   private async nextId(): Promise<number> {
     const [{ m }] = await this.db
@@ -42,11 +56,42 @@ export class LmsEduPlanService {
   async list(q: EduPlanListQueryDto) {
     const { page, perPage } = readPaging(q);
     const conditions = [notDeleted(edu_plans)];
+
+    // Laravel EduPlan::scopeFilter — foydalanuvchi biriktirilgan learning
+    // center'lar (learning_center_users) bilan cheklash (role-scope).
+    const userId = this.ctx.user_or_fail.id;
+    conditions.push(
+      inArray(
+        edu_plans.learning_center_id,
+        this.db
+          .select({ id: learning_center_users.learning_center_id })
+          .from(learning_center_users)
+          .where(eq(learning_center_users.user_id, userId)),
+      ),
+    );
+
     if (q.learning_center_id) {
       conditions.push(eq(edu_plans.learning_center_id, q.learning_center_id));
     }
     if (q.specialization_id) {
       conditions.push(eq(edu_plans.specialization_id, q.specialization_id));
+    }
+    // Nom bo'yicha qidiruv — Laravel whereLike('name', %search%). `search` yoki
+    // `name` (frontend ba'zan `name` yuboradi).
+    const nameSearch = q.search ?? q.name;
+    if (nameSearch) {
+      conditions.push(ilike(edu_plans.name, `%${nameSearch}%`));
+    }
+    // Laravel: whereYear/whereMonth('start_date', ...).
+    if (q.year) {
+      conditions.push(
+        sql`EXTRACT(YEAR FROM ${edu_plans.start_date}) = ${q.year}`,
+      );
+    }
+    if (q.month) {
+      conditions.push(
+        sql`EXTRACT(MONTH FROM ${edu_plans.start_date}) = ${q.month}`,
+      );
     }
     const where = and(...conditions);
 
@@ -269,9 +314,15 @@ export class LmsEduPlanService {
       .values(ids.map((sid) => ({ edu_plan_id: eduPlanId, subject_id: sid })));
   }
 
-  /** GET /lms/edu-plans/:eduPlanId/attached-workers — paginatsiya. */
+  /**
+   * GET /lms/edu-plans/:eduPlanId/attached-workers — Laravel
+   * EduPlanController::attachedWorkersToEduPlan + AttachedWorkersResource.
+   * Shakl: {id, worker_position: {id, worker:{id,photo,last_name,first_name,
+   * middle_name}, phones:[...], post_short_name, organization:{id,name,group}}}.
+   */
   async attachedWorkers(eduPlanId: number, q: EduPlanListQueryDto) {
     const { page, perPage } = readPaging(q);
+    const lang = this.ctx.lang;
     const where = and(
       eq(edu_plan_workers.edu_plan_id, eduPlanId),
       notDeleted(edu_plan_workers),
@@ -285,19 +336,108 @@ export class LmsEduPlanService {
       perPage,
       query: ({ limit, offset }) =>
         this.db
-          .select()
+          .select({
+            id: edu_plan_workers.id,
+            wp_id: worker_positions.id,
+            wp_type: worker_positions.type,
+            position_name: positions.name,
+            department_name: departments.name,
+            department_level: departments.level,
+            worker_id: workers.id,
+            last_name: workers.last_name,
+            first_name: workers.first_name,
+            middle_name: workers.middle_name,
+            photo: workers.photo,
+            org_id: organizations.id,
+            org_name: organizations.name,
+            org_name_ru: organizations.name_ru,
+            org_name_en: organizations.name_en,
+            org_full_name: organizations.full_name,
+            org_group: organizations.group,
+          })
           .from(edu_plan_workers)
+          .leftJoin(
+            worker_positions,
+            eq(worker_positions.id, edu_plan_workers.worker_position_id),
+          )
+          .leftJoin(workers, eq(workers.id, worker_positions.worker_id))
+          .leftJoin(
+            organizations,
+            eq(organizations.id, worker_positions.organization_id),
+          )
+          .leftJoin(
+            departments,
+            eq(departments.id, worker_positions.department_id),
+          )
+          .leftJoin(positions, eq(positions.id, worker_positions.position_id))
           .where(where)
-          .orderBy(desc(edu_plan_workers.id))
+          // Laravel: orderByDesc('edu_plan_id').
+          .orderBy(desc(edu_plan_workers.edu_plan_id))
           .limit(limit)
           .offset(offset),
-      mapper: (r) => ({
-        id: r.id,
-        edu_plan_id: r.edu_plan_id,
-        worker_id: r.worker_id,
-        worker_position_id: r.worker_position_id,
-        group_id: r.group_id,
-      }),
+      mapper: () => ({}) as never,
+      mapList: async (rows) => {
+        // Telefon raqamlari — HasMany, batch (N+1 oldini olish).
+        const workerIds = [
+          ...new Set(
+            rows.map((r) => r.worker_id).filter((v): v is number => !!v),
+          ),
+        ];
+        const phoneRows = workerIds.length
+          ? await this.db
+              .select({
+                worker_id: worker_phones.worker_id,
+                phone: worker_phones.phone,
+              })
+              .from(worker_phones)
+              .where(inArray(worker_phones.worker_id, workerIds))
+          : [];
+        const phoneMap = new Map<number, string[]>();
+        for (const p of phoneRows) {
+          const arr = phoneMap.get(p.worker_id) ?? [];
+          if (p.phone != null) arr.push(String(p.phone));
+          phoneMap.set(p.worker_id, arr);
+        }
+
+        return Promise.all(
+          rows.map(async (r) => ({
+            id: r.id,
+            worker_position: r.wp_id
+              ? {
+                  id: r.wp_id,
+                  worker: r.worker_id
+                    ? {
+                        id: r.worker_id,
+                        photo: await this.minio.fileUrl(r.photo),
+                        last_name: r.last_name,
+                        first_name: r.first_name,
+                        middle_name: r.middle_name,
+                      }
+                    : null,
+                  phones: r.worker_id ? (phoneMap.get(r.worker_id) ?? []) : [],
+                  post_short_name: getShortPosition({
+                    position_name: r.position_name,
+                    department_name: r.department_name,
+                    department_level: r.department_level,
+                    organization_full_name: r.org_full_name,
+                  }),
+                  organization: r.org_id
+                    ? {
+                        id: r.org_id,
+                        name:
+                          lang === 'ru'
+                            ? (r.org_name_ru ?? r.org_name)
+                            : lang === 'en'
+                              ? (r.org_name_en ?? r.org_name)
+                              : r.org_name,
+                        group: r.org_group ?? false,
+                      }
+                    : null,
+                }
+              : null,
+          })),
+        );
+      },
     });
   }
 

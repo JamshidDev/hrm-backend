@@ -7,10 +7,16 @@ import {
 } from '@/modules/hr/commands/command.controller';
 import { CommandService } from '@/modules/hr/commands/command.service';
 import { CommandReplaceService } from '@/modules/hr/commands/command-replace.service';
+import { CommandConfirmationService } from '@/modules/hr/commands/command-confirmation.service';
 
 @Module({
   imports: [AuthModule, MinioModule],
   controllers: [CommandController, WorkerAdditionalController],
-  providers: [CommandService, CommandReplaceService],
+  providers: [
+    CommandService,
+    CommandReplaceService,
+    CommandConfirmationService,
+  ],
+  exports: [CommandConfirmationService],
 })
 export class CommandModule {}

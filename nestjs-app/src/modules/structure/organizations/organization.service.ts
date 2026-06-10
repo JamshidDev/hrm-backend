@@ -6,7 +6,8 @@
 //   - levels: enum list (i18n).
 //   - findOne: organization + children list.
 //
-// Write endpoints — basic insert/update (NestedSet rebalancing skipped — Laravel parallel tree'ni boshqaradi).
+// Write endpoints — create/update + rebuildNestedSet (_lft/_rgt to'liq qayta quriladi,
+// Laravel appendToNode/makeRoot ekvivalenti — 218 org uchun arzon).
 
 import { Injectable } from '@nestjs/common';
 import { and, eq, ilike, isNull, or, sql } from 'drizzle-orm';
@@ -238,7 +239,10 @@ export class OrganizationService {
       group: dto.group ?? false,
       code: dto.code,
       parent_id: dto.parent_id ?? null,
+      _lft: 0, // rebuild oxirgi bola sifatida joylashtiradi (appendToNode/makeRoot).
+      _rgt: 0,
     });
+    await this.rebuildNestedSet();
   }
 
   async update(id: number, dto: UpdateOrganizationDto): Promise<void> {
@@ -252,13 +256,83 @@ export class OrganizationService {
     if (dto.group !== undefined) updates.group = dto.group;
     if (dto.code !== undefined) updates.code = dto.code;
     if (dto.external !== undefined) updates.external = dto.external;
-    if (dto.parent_id !== undefined) updates.parent_id = dto.parent_id;
 
-    if (Object.keys(updates).length === 0) return;
+    // Laravel: har update'da repositioning — parent_id bo'lsa appendToNode($parent),
+    // aks holda makeRoot. _lft=0 → rebuild moved node'ni yangi aka-ukalar orasida oxirga qo'yadi.
+    const newParent =
+      dto.parent_id != null && dto.parent_id > 0 ? dto.parent_id : null;
+    updates.parent_id = newParent;
+    updates._lft = 0;
+    updates._rgt = 0;
+
     await this.db
       .update(organizations)
       .set(updates)
       .where(eq(organizations.id, id));
+
+    await this.rebuildNestedSet();
+  }
+
+  /**
+   * Butun NestedSet daraxtini parent_id munosabatlaridan qayta quradi (218 org — arzon).
+   * Laravel kalnoy `appendToNode`/`makeRoot` ekvivalenti: aka-uka tartibi `_lft` bo'yicha,
+   * `_lft=0` (yangi/ko'chirilgan) oxirga tushadi → "last child" semantikasi.
+   */
+  private async rebuildNestedSet(): Promise<void> {
+    const rows = await this.db
+      .select({
+        id: organizations.id,
+        parent_id: organizations.parent_id,
+        _lft: organizations._lft,
+      })
+      .from(organizations)
+      .where(notDeleted(organizations));
+
+    type Node = { id: number; parent_id: number | null; _lft: number };
+    const childrenOf = new Map<number | null, Node[]>();
+    for (const r of rows) {
+      const key = r.parent_id ?? null;
+      const arr = childrenOf.get(key) ?? [];
+      arr.push(r);
+      childrenOf.set(key, arr);
+    }
+    const sortSibs = (a: Node, b: Node) => {
+      const al = a._lft === 0 ? Number.POSITIVE_INFINITY : a._lft;
+      const bl = b._lft === 0 ? Number.POSITIVE_INFINITY : b._lft;
+      return al - bl || a.id - b.id;
+    };
+
+    const result: { id: number; lft: number; rgt: number }[] = [];
+    let counter = 1;
+    const stack: { node: Node; lft: number; visited: boolean }[] = [];
+    const roots = (childrenOf.get(null) ?? []).slice().sort(sortSibs);
+    // Iterativ DFS (chuqur daraxtda stack overflow oldini olish).
+    for (let i = roots.length - 1; i >= 0; i--)
+      stack.push({ node: roots[i], lft: 0, visited: false });
+    while (stack.length) {
+      const frame = stack[stack.length - 1];
+      if (!frame.visited) {
+        frame.visited = true;
+        frame.lft = counter++;
+        const kids = (childrenOf.get(frame.node.id) ?? [])
+          .slice()
+          .sort(sortSibs);
+        for (let i = kids.length - 1; i >= 0; i--)
+          stack.push({ node: kids[i], lft: 0, visited: false });
+      } else {
+        stack.pop();
+        result.push({ id: frame.node.id, lft: frame.lft, rgt: counter++ });
+      }
+    }
+
+    await this.db.transaction(async (tx) => {
+      for (const u of result) {
+        await tx
+          .update(organizations)
+          .set({ _lft: u.lft, _rgt: u.rgt })
+          .where(eq(organizations.id, u.id));
+      }
+    });
   }
 
   // Laravel forceDelete — soft delete EMAS, fizik o'chirish.
