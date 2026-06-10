@@ -4,7 +4,7 @@
 //   GET stations/:code/workers/:workerId, .../resume, stats.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -101,6 +101,34 @@ export class IntegrationStationService {
     return { ...station, name };
   }
 
+  // Laravel QueryHelper::escapeLike — addcslashes($value, '\%_').
+  // `\`, `%`, `_` belgilarini backslash bilan escape qiladi (tartib muhim).
+  private escapeLike(value: string): string {
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/%/g, '\\%')
+      .replace(/_/g, '\\_');
+  }
+
+  // Laravel StationService::index — whereHas('worker', ...) qidiruvi.
+  //   whereLike → Postgres ILIKE (case-insensitive) + `::text` cast.
+  //   Termlar (bo'shliq bo'yicha) AND'lanadi; har term uchun
+  //   (last_name OR first_name OR middle_name) guruhi. Escape uzunligi 14 bo'lsa
+  //   qo'shimcha `OR pin ILIKE search` (term guruhlari bilan yagona OR ichida).
+  private workerSearchExists(search: string): SQL {
+    const escaped = this.escapeLike(search);
+    const terms = escaped.trim().split(' ');
+    const termGroups = terms.map(
+      (term) =>
+        sql`(${workers.last_name}::text ilike ${`%${term}%`} OR ${workers.first_name}::text ilike ${`%${term}%`} OR ${workers.middle_name}::text ilike ${`%${term}%`})`,
+    );
+    let inner = sql.join(termGroups, sql` AND `);
+    if (escaped.length === 14) {
+      inner = sql`(${inner} OR ${workers.pin}::text ilike ${escaped})`;
+    }
+    return sql`EXISTS (SELECT 1 FROM ${workers} WHERE ${workers.id} = ${worker_positions.worker_id} AND ${inner} AND ${workers.deleted_at} IS NULL)`;
+  }
+
   // GET /integration/stations/:code/workers — Laravel StationService::index.
   async listWorkers(code: string, q: StationWorkersQueryDto) {
     const page = Math.max(1, Number(q.page) || 1);
@@ -131,7 +159,16 @@ export class IntegrationStationService {
         ? eq(worker_positions.department_id, station.model_id)
         : eq(worker_positions.organization_id, station.model_id);
 
-    const baseWhere = and(notDeleted(worker_positions), inScope, stationCond);
+    // Laravel: ->when($data['search'], whereHas('worker', ...)). director/deputy
+    // ham clone($baseQuery) bo'lgani uchun search hammasiga qo'llanadi.
+    const searchCond = q.search ? this.workerSearchExists(q.search) : undefined;
+
+    const baseWhere = and(
+      notDeleted(worker_positions),
+      inScope,
+      stationCond,
+      searchCond,
+    );
 
     const select = {
       id: worker_positions.id,
