@@ -101,7 +101,6 @@ export class ApproveAlService {
         })
         .from(turnstile_worker_approves)
         .where(where)
-        .orderBy(desc(turnstile_worker_approves.id))
         .limit(perPage)
         .offset(offset),
       this.db
