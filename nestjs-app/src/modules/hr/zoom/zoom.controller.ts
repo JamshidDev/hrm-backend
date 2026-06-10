@@ -23,7 +23,7 @@ export class HrZoomController {
   constructor(private readonly service: ZoomService) {}
 
   // Laravel: Helper::response(true, checkMeeting(meet_uuid, meet_id)).
-  @Post('Gzoom/check-meet')
+  @Post('zoom/check-meet')
   @Permission('hr')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check Zoom meeting availability' })
