@@ -5,6 +5,11 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bcrypt"
+    ]
+  },
   "scripts": {
     "build": "nest build",
     "db:pull": "drizzle-kit pull && node scripts/post-pull.mjs",
@@ -14,7 +19,7 @@
     "start": "pnpm kill:port && nest start",
     "start:dev": "pnpm kill:port && nest start --watch",
     "start:debug": "pnpm kill:port && nest start --debug --watch",
-    "start:prod": "pnpm kill:port && node dist/main",
+    "start:prod": "pnpm kill:port && node dist/src/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

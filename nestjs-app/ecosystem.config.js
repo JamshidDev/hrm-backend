@@ -13,8 +13,15 @@ module.exports = {
   apps: [
     {
       name: 'hrm-nestjs',
-      script: 'dist/main.js',
+      // Entry: tsconfig root'iga drizzle.config.ts kirgani uchun nest build
+      // `dist/src/main.js` chiqaradi (dist/main.js EMAS).
+      script: 'dist/src/main.js',
       cwd: __dirname,
+
+      // Serverda tizim node v18 (NestJS 11 uchun eski) — app nvm Node 20 bilan
+      // spawn qilinadi. Ishga tushirish:
+      //   NODE20_BIN=$(nvm which 20) pm2 start ecosystem.config.js --env production
+      interpreter: process.env.NODE20_BIN || 'node',
 
       // fork mode, 1 instance — nestjs-cls (per-request context) va in-memory
       // holatlar uchun xavfsiz. Socket.io redis-adapterи bor, lekin cluster'ga
