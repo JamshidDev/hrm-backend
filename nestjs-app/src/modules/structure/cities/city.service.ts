@@ -5,11 +5,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { cities } from '@/db/schema';
 import { paginate } from '@/common/pagination/paginate.util';
-import {
-  insertRecord,
-  findByIdOrFail,
-  softDeleteById,
-} from '@/common/database/crud.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { CityMapper } from '@/modules/structure/cities/city.mapper';
 import {
   QueryCityDto,
@@ -55,7 +51,12 @@ export class CityService {
   }
 
   async create(dto: CreateCityDto): Promise<void> {
-    await insertRecord(this.db, cities, {
+    const [{ maxId }] = await this.db
+      .select({ maxId: sql<number>`COALESCE(MAX(${cities.id}), 0)` })
+      .from(cities);
+
+    await this.db.insert(cities).values({
+      id: Number(maxId) + 1,
       region_id: dto.region_id,
       name: dto.name,
       name_ru: dto.name_ru ?? null,

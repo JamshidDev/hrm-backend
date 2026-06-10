@@ -5,11 +5,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { regions } from '@/db/schema';
 import { paginate } from '@/common/pagination/paginate.util';
-import {
-  insertRecord,
-  findByIdOrFail,
-  softDeleteById,
-} from '@/common/database/crud.helper';
+import { findByIdOrFail, softDeleteById } from '@/common/database/crud.helper';
 import { RegionMapper } from '@/modules/structure/regions/region.mapper';
 import {
   QueryRegionDto,
@@ -55,7 +51,12 @@ export class RegionService {
   }
 
   async create(dto: CreateRegionDto): Promise<void> {
-    await insertRecord(this.db, regions, {
+    const [{ maxId }] = await this.db
+      .select({ maxId: sql<number>`COALESCE(MAX(${regions.id}), 0)` })
+      .from(regions);
+
+    await this.db.insert(regions).values({
+      id: Number(maxId) + 1,
       country_id: dto.country_id,
       name: dto.name,
       name_ru: dto.name_ru ?? null,
