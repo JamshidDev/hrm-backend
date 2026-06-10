@@ -553,91 +553,123 @@ export class ScheduleStatsService {
   // ────────────────────────────────────────────────────────────────────────
   // stats-seven — Laravel: lateAndEarlyStatsGroupedByDays
   // ────────────────────────────────────────────────────────────────────────
-  // Hozircha placeholder — late/early aniqlash uchun `getLateWorkersGroupedByDays`
-  // va `getEarlyWorkersGroupedByDays` aniq SQL'ini Laravel'dan ko'chirish kerak.
-  // Default: 3 ta sana × {late, early} = count 0.
+  // Laravel: getLateWorkersGroupedByDays + getEarlyWorkersGroupedByDays.
+  // Har sana uchun LEFT JOIN LATERAL bilan kunning BIRINCHI (late) / OXIRGI
+  // (early) terminal_event'i olinadi.
+  //
+  // PERFORMANCE: LATERAL'da `event_date_and_time >= d1 AND < d2` (RANGE) ishlatiladi
+  // → terminal_events (partitsiyalangan, 20M+) partition-pruning + index. `::time`
+  // cast faqat lateral natijasiga (1 qator/jadval) qo'llanadi — arzon. (Eski
+  // placeholder `event_date_and_time::date = st.date` cast'i pruning'ni buzib
+  // butun jadvalni skanerlardi → prodda 18s.)
   async lateAndEarlyStatsGroupedByDays(q: StatsQuery) {
     const date = parseDate(q.date);
     const dates: string[] = [];
     for (let i = 0; i < 3; i++) dates.push(addDays(date, -i));
 
-    const allowedIds = await this.effectiveOrgIds(q);
-    if (allowedIds.length === 0) {
-      return {
-        late_and_early: {
-          late: dates.map((d) => ({ date: d, count: 0 })),
-          early: dates.map((d) => ({ date: d, count: 0 })),
-        },
-      };
+    // existSql org filter — Laravel prioriteti: organization_id > organizations >
+    // childIds (INTERSECT emas — biri ikkinchisini almashtiradi).
+    const childIds = await this.scope.ids();
+    const single =
+      q.organization_id != null ? Number(q.organization_id) : undefined;
+    const csv = parseCsvInts(q.organizations);
+    let orgFilter = sql``;
+    if (Number.isInteger(single) && single! > 0) {
+      orgFilter = sql` AND wp.organization_id = ${single}`;
+    } else if (csv.length > 0) {
+      orgFilter = sql` AND wp.organization_id IN (${sqlIdList(csv)})`;
+    } else if (childIds.length > 0) {
+      orgFilter = sql` AND wp.organization_id IN (${sqlIdList(childIds)})`;
     }
     const deptCsv = parseCsvInts(q.departments);
+    const deptFilter =
+      deptCsv.length > 0
+        ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
+        : sql``;
 
-    // Laravel: getLateWorkersGroupedByDays — terminal_events INNER JOIN
-    // turnstile_worker_schedules. Hozircha simplified — kunlik scheduled vs first-entry.
-    const dateList = sql.join(
-      dates.map((d) => sql`${d}::date`),
-      sql`, `,
-    );
+    // Laravel whiteList() — stats'dan chiqariladigan workerlar.
+    const WHITELIST = [62309, 16655, 25394, 19278, 587];
+    const existSql = sql`EXISTS (
+      SELECT 1 FROM worker_positions wp
+      WHERE wp.id = t.worker_position_id
+        AND wp.status = 2
+        AND wp.is_turnstile = true
+        AND wp.deleted_at IS NULL
+        AND wp.worker_id NOT IN (${sqlIdList(WHITELIST)})${deptFilter}${orgFilter}
+    )`;
 
-    const lateRes = await this.db.execute(sql`
-      WITH days AS (SELECT UNNEST(ARRAY[${dateList}]) AS day_value)
-      SELECT days.day_value::text AS date, COALESCE(sub.cnt, 0) AS count
-      FROM days
-      LEFT JOIN (
-        SELECT st.date AS day_value, COUNT(DISTINCT te.worker_id) AS cnt
-        FROM turnstile_worker_schedules st
-        JOIN terminal_events te
-          ON te.worker_id = st.worker_id
-         AND te.event_date_and_time::date = st.date
-         AND te.direction = TRUE
-        WHERE st.date IN (${dateList})
-          AND st.start_time IS NOT NULL
-          AND st.worker_position_id IN (
-            SELECT wp.id FROM worker_positions wp
-             WHERE wp.status = 2 AND wp.deleted_at IS NULL
-               AND wp.organization_id IN (${sqlIdList(allowedIds)})
-               ${deptCsv.length > 0 ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})` : sql``}
-          )
-          AND te.event_date_and_time::time > st.start_time
-        GROUP BY st.date
-      ) sub ON sub.day_value = days.day_value
-      ORDER BY days.day_value DESC
-    `);
+    const nextDay = (d: string) => addDays(d, 1);
 
-    const earlyRes = await this.db.execute(sql`
-      WITH days AS (SELECT UNNEST(ARRAY[${dateList}]) AS day_value)
-      SELECT days.day_value::text AS date, COALESCE(sub.cnt, 0) AS count
-      FROM days
-      LEFT JOIN (
-        SELECT st.date AS day_value, COUNT(DISTINCT te.worker_id) AS cnt
-        FROM turnstile_worker_schedules st
-        JOIN terminal_events te
-          ON te.worker_id = st.worker_id
-         AND te.event_date_and_time::date = st.date
-         AND te.direction = FALSE
-        WHERE st.date IN (${dateList})
-          AND st.end_time IS NOT NULL
-          AND st.worker_position_id IN (
-            SELECT wp.id FROM worker_positions wp
-             WHERE wp.status = 2 AND wp.deleted_at IS NULL
-               AND wp.organization_id IN (${sqlIdList(allowedIds)})
-               ${deptCsv.length > 0 ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})` : sql``}
-          )
-          AND te.event_date_and_time::time < st.end_time
-        GROUP BY st.date
-      ) sub ON sub.day_value = days.day_value
-      ORDER BY days.day_value DESC
-    `);
+    // late: kunning BIRINCHI event'i (ASC LIMIT 1), direction=TRUE (kirish),
+    // event vaqti > start_time. start_time <> '00:00'.
+    const latePart = (d1: string) => sql`
+      SELECT ${d1}::text AS date, COUNT(DISTINCT t.worker_id) AS cnt
+      FROM turnstile_worker_schedules t
+      LEFT JOIN LATERAL (
+        SELECT te.event_date_and_time, te.direction
+        FROM terminal_events te
+        WHERE te.worker_id = t.worker_id
+          AND te.event_date_and_time >= ${d1}
+          AND te.event_date_and_time <  ${nextDay(d1)}
+          AND te.deleted_at IS NULL
+        ORDER BY te.event_date_and_time
+        LIMIT 1
+      ) AS first_te ON TRUE AND first_te.direction = TRUE
+      WHERE t.date = ${d1}
+        AND t.work_status = 1
+        AND t.start_time <> '00:00'
+        AND t.deleted_at IS NULL
+        AND ${existSql}
+        AND first_te.event_date_and_time::time > t.start_time
+    `;
+
+    // early: kunning OXIRGI event'i (DESC LIMIT 1), direction=FALSE (chiqish),
+    // event vaqti < end_time. end_time IS NOT NULL.
+    const earlyPart = (d1: string) => sql`
+      SELECT ${d1}::text AS date, COUNT(DISTINCT t.worker_id) AS cnt
+      FROM turnstile_worker_schedules t
+      LEFT JOIN LATERAL (
+        SELECT te.event_date_and_time, te.direction
+        FROM terminal_events te
+        WHERE te.worker_id = t.worker_id
+          AND te.event_date_and_time >= ${d1}
+          AND te.event_date_and_time <  ${nextDay(d1)}
+          AND te.deleted_at IS NULL
+        ORDER BY te.event_date_and_time DESC
+        LIMIT 1
+      ) AS last_te ON TRUE AND last_te.direction = FALSE
+      WHERE t.date = ${d1}
+        AND t.work_status = 1
+        AND t.deleted_at IS NULL
+        AND t.end_time IS NOT NULL
+        AND ${existSql}
+        AND last_te.event_date_and_time::time < t.end_time
+    `;
+
+    const [lateRes, earlyRes] = await Promise.all([
+      this.db.execute(
+        sql`${sql.join(
+          dates.map((d) => latePart(d)),
+          sql` UNION ALL `,
+        )} ORDER BY date DESC`,
+      ),
+      this.db.execute(
+        sql`${sql.join(
+          dates.map((d) => earlyPart(d)),
+          sql` UNION ALL `,
+        )} ORDER BY date DESC`,
+      ),
+    ]);
 
     return {
       late_and_early: {
         late: rowsOf(lateRes).map((r: any) => ({
           date: r.date,
-          count: Number(r.count),
+          count: Number(r.cnt),
         })),
         early: rowsOf(earlyRes).map((r: any) => ({
           date: r.date,
-          count: Number(r.count),
+          count: Number(r.cnt),
         })),
       },
     };
