@@ -637,7 +637,15 @@
     "sync_type": {
       "one": "Система",
       "two": "Пользователь"
-    }
+    },
+    "last_name": "Фамилия",
+    "first_name": "Имя",
+    "middle_name": "Отчество",
+    "last_event": "Последнее событие",
+    "direction": "Тип события",
+    "organization_name": "Название организации",
+    "department_name": "Название отдела",
+    "position_name": "Должность"
   },
   "missing_photo": "Требуется выбор изображения.",
   "lms": {

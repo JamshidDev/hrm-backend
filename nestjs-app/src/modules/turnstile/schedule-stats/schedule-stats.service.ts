@@ -18,6 +18,8 @@ import { RequestContext } from '@/common/context/request.context';
 import { ExcelService } from '@/shared/excel/excel.service';
 import { ExportTaskRunner } from '@/shared/export-task/export-task-runner.service';
 import { MinioService } from '@/shared/minio/minio.service';
+import { buildSuccess } from '@/common/utils/response.util';
+import type { ApiSuccessResponse } from '@/common/types/api-response.type';
 import { h_c_p_devices, worker_positions, workers } from '@/db/schema';
 import { TURNSTILE_WHITELIST } from '@/modules/turnstile/_shared/helpers';
 
@@ -85,6 +87,8 @@ export interface PreviewQuery extends StatsQuery {
   direction?: string | number;
   start_time?: string;
   end_time?: string;
+  // Laravel: request('download', 'view'). 'view' → preview, aks holda export.
+  download?: string;
 }
 
 @Injectable()
@@ -691,14 +695,16 @@ export class ScheduleStatsService {
   // ────────────────────────────────────────────────────────────────────────
   async preview(q: PreviewQuery = {}): Promise<unknown> {
     const type = q.type ?? '';
-    // TODO: download mode — Laravel: ?download=excel + ExportTaskRunner.
-    //   Hozircha faqat view, download keyingi commit'da qo'shiladi.
+    // Laravel: $status = request('download', 'view'). download != 'view' bo'lsa
+    // export trigger (ExportTaskRunner fonда) + "successfully_exported" javobi.
+    const download = q.download && q.download !== 'view';
     switch (type) {
       case 'current_in':
         return this.lastEventWorkersPreview(q, true);
       case 'current_out':
         return this.lastEventWorkersPreview(q, false);
       case 'come':
+        if (download) return this.comeWorkersExport(q);
         return this.comeWorkersPreview(q);
       case 'not_come':
         return this.absentWorkersTodayPreview(q);
@@ -743,6 +749,153 @@ export class ScheduleStatsService {
     return this.currentLastEventPreview(q, {
       direction: null, // any direction (whereNotNull)
       authType: q.auth_type,
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // EXPORT: come — Laravel: DashboardPreviewController::comeWorkers (download
+  //   branch) → UserExportTask(type=TURNSTILE_COME=24) +
+  //   TurnstileComeWorkersExportToExcelJob. ExportTaskRunner fonда Excel yasaydi,
+  //   javob darhol "successfully_exported" (Laravel parity).
+  // ────────────────────────────────────────────────────────────────────────
+  async comeWorkersExport(q: PreviewQuery): Promise<ApiSuccessResponse<[]>> {
+    // Scope/lang request kontekstida oldindan hisoblanadi (build fonда ishlaydi).
+    const scopeIds = await this.effectiveOrgIds(q);
+    const lang = this.ctx.lang;
+    await this.exportRunner.run({
+      type: 24, // ExportTaskEnum.TURNSTILE_COME
+      folder: 'turnstile',
+      build: () => this.buildComeWorkersExcel(q, scopeIds, lang),
+    });
+    return buildSuccess(
+      this.translate('messages.successfully_exported', lang),
+      [],
+    );
+  }
+
+  // Laravel: TurnstileComeWorkersExportToExcelJob::handle.
+  //   filterQuery($user) → auth_type bo'lsa allEvents (LATERAL, distinct'siz) aks
+  //   holda lastEvent (LATERAL LIMIT 1, distinct) → whereNotNull('te.direction')
+  //   → auth_type filter → select 8 ustun → map → DynamicExportFromArray('turnstile').
+  private async buildComeWorkersExcel(
+    q: PreviewQuery,
+    scopeIds: number[],
+    lang: string,
+  ): Promise<Buffer> {
+    // Header'lar — DynamicExportFromArray('turnstile'): messages.turnstile.{key}.
+    const headerKeys = [
+      'last_name',
+      'first_name',
+      'middle_name',
+      'last_event',
+      'direction',
+      'organization_name',
+      'department_name',
+      'position_name',
+    ] as const;
+    const columns = headerKeys.map((key) => ({
+      header: this.translate(`messages.turnstile.${key}`, lang) || key,
+      key,
+      width: 24,
+    }));
+
+    // Scope bo'sh → bo'sh fayl (Laravel filter() bo'sh natija).
+    if (scopeIds.length === 0) {
+      return this.excel.build({
+        creator: 'HRM',
+        sheets: [{ name: 'turnstile', columns, rows: [] }],
+      });
+    }
+
+    const date = parseDate(q.date);
+    const startOfDay = `${date} 00:00:00`;
+    const endOfDay = `${addDays(date, 1)} 00:00:00`;
+    const deptCsv = parseCsvInts(q.departments);
+    const allEvents = !!q.auth_type;
+
+    const deptCond =
+      deptCsv.length > 0
+        ? sql` AND wp.department_id IN (${sqlIdList(deptCsv)})`
+        : sql``;
+    const searchCond = q.search
+      ? sql` AND CONCAT(workers.last_name, ' ', workers.first_name, ' ', workers.middle_name) ILIKE ${`%${q.search}%`}`
+      : sql``;
+    const authCond = (() => {
+      if (!q.auth_type) return sql``;
+      if (q.auth_type === 'MobileFaceEvent')
+        return sql` AND te.auth_type = 'MobileFaceEvent'`;
+      if (q.auth_type === 'ACSEventFaceVerifyPass')
+        return sql` AND te.auth_type != 'MobileFaceEvent'`;
+      return sql``;
+    })();
+
+    // allEvents → LATERAL'da LIMIT yo'q (kunning barcha hodisalari, distinct'siz);
+    // lastEvent → LATERAL LIMIT 1 (oxirgi hodisa).
+    const lateral = allEvents
+      ? sql`LEFT JOIN LATERAL (
+            SELECT te1.direction, te1.auth_type, te1.event_date_and_time AS last_event
+            FROM terminal_events te1
+            WHERE te1.worker_id = workers.id
+              AND te1.event_date_and_time >= ${startOfDay}
+              AND te1.event_date_and_time <  ${endOfDay}
+            ORDER BY te1.event_date_and_time DESC
+          ) AS te ON TRUE`
+      : sql`LEFT JOIN LATERAL (
+            SELECT te1.direction, te1.auth_type, te1.event_date_and_time AS last_event
+            FROM terminal_events te1
+            WHERE te1.worker_id = workers.id
+              AND te1.event_date_and_time >= ${startOfDay}
+              AND te1.event_date_and_time <  ${endOfDay}
+            ORDER BY te1.event_date_and_time DESC
+            LIMIT 1
+          ) AS te ON TRUE`;
+
+    const fromJoinWhere = sql`
+      FROM workers
+      INNER JOIN worker_positions wp
+              ON wp.worker_id = workers.id
+             AND wp.status = 2
+             AND wp.deleted_at IS NULL
+             AND wp.organization_id IN (${sqlIdList(scopeIds)})${deptCond}
+      LEFT JOIN organizations o ON o.id = wp.organization_id
+      LEFT JOIN departments d   ON d.id = wp.department_id
+      LEFT JOIN positions p     ON p.id = wp.position_id
+      ${lateral}
+      WHERE workers.deleted_at IS NULL${searchCond}
+        AND te.direction IS NOT NULL${authCond}
+    `;
+
+    // Laravel: lastEvent → ->distinct() (barcha select ustunlari bo'yicha);
+    // allEvents → distinct YO'Q.
+    const distinct = allEvents ? sql`` : sql`DISTINCT`;
+    const selectCols = sql`
+      workers.last_name, workers.first_name, workers.middle_name,
+      te.last_event, te.direction,
+      o.name AS organization_name,
+      d.name AS department_name,
+      p.name AS position_name
+    `;
+
+    const res = await this.db.execute(sql`
+      SELECT ${distinct} ${selectCols}
+      ${fromJoinWhere}
+    `);
+
+    const rows = rowsOf(res).map((r: any) => ({
+      last_name: r.last_name,
+      first_name: r.first_name,
+      middle_name: r.middle_name,
+      last_event: r.last_event,
+      // Laravel: hardcoded 'Kirish'/'Chiqish' (til'dan qat'i nazar).
+      direction: r.direction ? 'Kirish' : 'Chiqish',
+      organization_name: r.organization_name,
+      department_name: r.department_name,
+      position_name: r.position_name,
+    }));
+
+    return this.excel.build({
+      creator: 'HRM',
+      sheets: [{ name: 'turnstile', columns, rows }],
     });
   }
 

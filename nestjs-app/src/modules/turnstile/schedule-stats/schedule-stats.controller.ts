@@ -6,7 +6,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { RawResponse } from '@/common/decorators/raw-response.decorator';
-import { buildSuccess } from '@/common/utils/response.util';
+import { buildSuccess, isApiResponse } from '@/common/utils/response.util';
 import {
   ScheduleStatsService,
   StatsQuery,
@@ -72,6 +72,10 @@ export class ScheduleStatsController {
   @Get('stats-preview')
   @ApiOperation({ summary: 'Dashboard preview — dispatched by `type` param' })
   async statsPreview(@Query() q: Record<string, string>) {
-    return buildSuccess(true, await this.service.preview(q));
+    // Export branch (download != 'view') javobni o'zi "successfully_exported"
+    // ApiResponse shaklida qaytaradi — qayta o'ramaymiz (Laravel parity).
+    const result = await this.service.preview(q);
+    if (isApiResponse(result)) return result;
+    return buildSuccess(true, result);
   }
 }

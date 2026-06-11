@@ -635,7 +635,15 @@
     "sync_type": {
       "one": "System",
       "two": "User"
-    }
+    },
+    "last_name": "Last name",
+    "first_name": "First name",
+    "middle_name": "Middle name",
+    "last_event": "Last event",
+    "direction": "Event Type",
+    "organization_name": "Organization name",
+    "department_name": "Department name",
+    "position_name": "Position"
   },
   "missing_photo": "Image selection is required.",
   "lms": {

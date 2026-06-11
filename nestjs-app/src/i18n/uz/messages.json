@@ -635,7 +635,15 @@
     "sync_type": {
       "one": "Tizim",
       "two": "Foydalanuvchi"
-    }
+    },
+    "last_name": "Familiya",
+    "first_name": "Ism",
+    "middle_name": "Otasining ismi",
+    "last_event": "Oxirgi hodisa",
+    "direction": "Hodisa turi",
+    "organization_name": "Tashkilot nomi",
+    "department_name": "Bo'lim nomi",
+    "position_name": "Lavozimi"
   },
   "missing_photo": "Rasmni tanlash majburiy",
   "lms": {
