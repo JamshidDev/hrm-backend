@@ -63,6 +63,7 @@
     "not_found": "Xodim topilmadi"
   },
   "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
+  "not_found_role_or_worker": "Foydalanuvchiga tegishli ruxsatlar aniqlanmadi, iltimos tizim ma'muriyatiga bog'laning...",
   "invalid_credentials_password": "Foydalanuvchi nomi yoki parol to'g'riligini tekshiring",
   "user_block": "Sizning profilingiz tizim ma'muriyati tomonidan vaqtincha cheklab qo'yildi.",
   "token_is_expired": "Token muddati tugagan",

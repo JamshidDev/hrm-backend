@@ -71,15 +71,29 @@ export class UserService {
     userId: number,
     orgId: number | null,
   ): Promise<ProfileRoleDto | Record<string, never>> {
-    if (!orgId) return {};
+    // Laravel Helper::userRoleAndPermissions: joriy tashkilotga mos rolni qidiradi,
+    // topilmasa $roles->first() ga qaytadi (fallback). orgId yo'q bo'lsa ham
+    // foydalanuvchining birinchi roli olinadi.
+    let link =
+      orgId != null
+        ? await this.db.query.model_has_roles.findFirst({
+            where: {
+              model_type: 'App\\Models\\User',
+              model_id: userId,
+              organization_id: orgId,
+            },
+          })
+        : undefined;
 
-    const link = await this.db.query.model_has_roles.findFirst({
-      where: {
-        model_type: 'App\\Models\\User',
-        model_id: userId,
-        organization_id: orgId,
-      },
-    });
+    // Fallback — mos org-rol yo'q: foydalanuvchining birinchi roli.
+    if (!link) {
+      link = await this.db.query.model_has_roles.findFirst({
+        where: {
+          model_type: 'App\\Models\\User',
+          model_id: userId,
+        },
+      });
+    }
     if (!link) return {};
 
     const role = await this.db.query.roles.findFirst({

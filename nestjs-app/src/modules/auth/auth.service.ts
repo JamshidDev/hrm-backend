@@ -46,35 +46,40 @@ export class AuthService {
       rawHash.replace(/^\$2y\$/, '$2b$'),
     );
 
-    if (!user || !passwordValid || !user.worker_id) {
+    // Laravel: !$user || !$user->worker_id → invalid_credentials.
+    // (passwordValid bu tekshiruvdan ayrildi — alohida xabar qaytaradi.)
+    if (!user || !user.worker_id) {
       throw new BusinessException(
         401,
         this.i18n.t('messages.invalid_credentials'),
       );
     }
 
-    // Laravel Helper::userRoleAndPermissions — foydalanuvchining joriy
-    // tashkilotiga biriktirilgan kamida bitta roli bo'lishi shart
-    // (model_has_roles.organization_id = user.organization_id).
-    let hasOrgRole = false;
-    if (user.organization_id != null) {
-      const [orgRole] = await this.db
-        .select({ role_id: model_has_roles.role_id })
-        .from(model_has_roles)
-        .where(
-          and(
-            eq(model_has_roles.model_id, user.id),
-            eq(model_has_roles.model_type, USER_TYPE),
-            eq(model_has_roles.organization_id, user.organization_id),
-          ),
-        )
-        .limit(1);
-      hasOrgRole = orgRole != null;
-    }
-    if (!hasOrgRole) {
+    // Laravel: !$passwordValid → invalid_credentials_password (alohida xabar).
+    if (!passwordValid) {
       throw new BusinessException(
         401,
-        this.i18n.t('messages.invalid_credentials'),
+        this.i18n.t('messages.invalid_credentials_password'),
+      );
+    }
+
+    // Laravel Helper::userRoleAndPermissions — joriy tashkilotга mos rol qidiriladi,
+    // topilmasa $roles->first() qaytariladi (fallback). Shuning uchun bu tekshiruv
+    // FAQAT foydalanuvchida hech qanday rol bo'lmaganda muvaffaqiyatsiz bo'ladi.
+    const [anyRole] = await this.db
+      .select({ role_id: model_has_roles.role_id })
+      .from(model_has_roles)
+      .where(
+        and(
+          eq(model_has_roles.model_id, user.id),
+          eq(model_has_roles.model_type, USER_TYPE),
+        ),
+      )
+      .limit(1);
+    if (anyRole == null) {
+      throw new BusinessException(
+        401,
+        this.i18n.t('messages.not_found_role_or_worker'),
       );
     }
 
