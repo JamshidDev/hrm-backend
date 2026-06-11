@@ -702,5 +702,6 @@
   },
   "zoom": {
     "not_found": "Zoom-встреча не найдена"
-  }
+  },
+  "successfully_sorted": "Успешно отсортировано"
 }
