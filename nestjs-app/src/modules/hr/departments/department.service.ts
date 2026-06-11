@@ -550,8 +550,9 @@ export class DepartmentService {
         roots.push(node);
       } else {
         const parent = allNodes.get(f.parent_id);
+        // Laravel toTree(): parent_id bor lekin parent collection'da yo'q
+        // (org filtri ajdodni chiqarib tashlasa) → node DROP (root emas).
         if (parent) parent.children.push(node);
-        else roots.push(node);
       }
     }
     return roots;
