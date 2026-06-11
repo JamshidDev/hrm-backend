@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { useContainer, type ValidationError } from 'class-validator';
 import methodOverride from 'method-override';
 import type { Request } from 'express';
@@ -8,6 +7,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'node:path';
 import { AppModule } from '@/app.module';
 import { LaravelValidationException } from '@/common/exceptions/validation.exception';
+import { setupDocs } from '@/docs/docs.setup';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -78,43 +78,8 @@ async function bootstrap() {
     }),
   );
 
-  const config = new DocumentBuilder()
-    .setTitle('HRM Backend API')
-    .setVersion('1.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer' }, 'access-token')
-    .addGlobalParameters(
-      {
-        name: 'Accept-Language',
-        in: 'header',
-        required: false,
-        schema: { type: 'string', default: 'uz', enum: ['uz', 'ru', 'en'] },
-      },
-      {
-        name: 'X-Auth-Type',
-        in: 'header',
-        required: false,
-        schema: {
-          type: 'string',
-          default: 'sanctum',
-          enum: ['sanctum', 'mobile'],
-        },
-      },
-    )
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/documentation', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      // Default headers avtomatik yuboriladi (foydalanuvchi qo'lda kiritmasa ham).
-      requestInterceptor: (req: { headers: Record<string, string> }) => {
-        if (!req.headers['Accept-Language'])
-          req.headers['Accept-Language'] = 'uz';
-        if (!req.headers['X-Auth-Type']) req.headers['X-Auth-Type'] = 'sanctum';
-        return req;
-      },
-    },
-  });
+  // Per-modul API docs — /api/docs/<modul> (login + modul, bitta umumiy parol).
+  setupDocs(app);
 
   // Lifecycle hooks — onModuleDestroy, onApplicationShutdown chaqirilishi uchun.
   // Drizzle pool, Redis, BullMQ worker'lar shu orqali toza yopiladi.
@@ -125,7 +90,7 @@ async function bootstrap() {
 
   const logger = new Logger('Bootstrap');
   logger.log(`🚀 NestJS HRM running on http://localhost:${port}`);
-  logger.log(`📚 Swagger: http://localhost:${port}/api/documentation`);
+  logger.log(`📚 API docs (katalog): http://localhost:${port}/api/docs`);
 
   // ============================================================
   // Graceful shutdown — eski watch process'lar zombie/orphan bo'lib qolmasin.
