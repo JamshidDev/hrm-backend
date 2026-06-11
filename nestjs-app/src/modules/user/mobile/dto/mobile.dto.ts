@@ -10,6 +10,7 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
 } from 'class-validator';
 
 export class MobileVersionCheckDto {
@@ -25,15 +26,21 @@ export class MobileVersionCheckDto {
 }
 
 export class UpdatePasswordDto {
+  // Laravel UpdatePasswordRequest: old_password / new_password / new_password_confirmation.
   @ApiProperty({ example: 'oldpass' })
   @IsString()
   @IsNotEmpty()
-  current_password!: string;
+  old_password!: string;
 
   @ApiProperty({ example: 'NewPass123!' })
   @IsString()
-  @IsNotEmpty()
+  @MinLength(8)
   new_password!: string;
+
+  @ApiProperty({ example: 'NewPass123!' })
+  @IsString()
+  @MinLength(8)
+  new_password_confirmation!: string;
 }
 
 export class UpdateFcmDto {

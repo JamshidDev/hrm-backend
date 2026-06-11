@@ -3,7 +3,9 @@
 // Ko'pchilik endpointlar stub — real implementatsiya HR/Turnstile/Salary integratsiyalariga muhtoj.
 
 import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { and, eq, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -27,6 +29,7 @@ export class UserMobileService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
   ) {}
 
   /** GET /user/mobile/enums — application_types, education_types. */
@@ -59,10 +62,43 @@ export class UserMobileService {
     return { success: true, stub: true };
   }
 
-  /** POST /user/mobile/update-password — change password (stub — bcrypt verify). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async updatePassword(_dto: UpdatePasswordDto) {
-    return { success: true, stub: true };
+  /**
+   * POST /user/mobile/update-password — Laravel UserMobileService::changePassword.
+   * Eski parol noto'g'ri → invalid_credentials_password (401).
+   * To'g'ri bo'lsa: parolni bcrypt bilan yangilaydi + password_changed_at = now().
+   */
+  async updatePassword(dto: UpdatePasswordDto) {
+    const userId = this.ctx.user_or_fail.id;
+    const [u] = await this.db
+      .select({ password: users.password })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    // Laravel: Hash::check(old, current). PHP `$2y$` → Node bcrypt `$2b$`.
+    const rawHash = u?.password ?? '$2b$12$fakeHashToPreventTimingAttack';
+    const valid = await bcrypt.compare(
+      dto.old_password,
+      rawHash.replace(/^\$2y\$/, '$2b$'),
+    );
+    if (!valid) {
+      throw new BusinessException(
+        401,
+        this.i18n.t('messages.invalid_credentials_password'),
+      );
+    }
+
+    const hashed = await bcrypt.hash(dto.new_password, 12);
+    await this.db
+      .update(users)
+      .set({
+        password: hashed,
+        password_changed_at: sql`NOW()`,
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(users.id, userId));
+
+    return { success: true };
   }
 
   /** POST /user/mobile/update-fcm — FCM token saqlash. */
