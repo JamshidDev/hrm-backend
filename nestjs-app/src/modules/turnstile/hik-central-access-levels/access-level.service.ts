@@ -520,15 +520,13 @@ export class AccessLevelService {
   async organizationAccessLevels(organizationId: number) {
     if (!organizationId)
       return [] as Array<{ id: number; name: string | null }>;
-    const orgAcLevels = await this.db
-      .select({
-        hik_central_access_level_id:
-          organization_access_levels.hik_central_access_level_id,
-      })
+    // Laravel: HikCentralAccessLevel::whereIn('id', OrganizationAccessLevel::
+    //   where(org)->select(al_id))->get() — SUBQUERY (IN). Array-IN o'rniga
+    //   subquery ishlatamiz — natural (PG) order Laravel bilan aynan mos bo'lsin.
+    const orgAlSub = this.db
+      .select({ id: organization_access_levels.hik_central_access_level_id })
       .from(organization_access_levels)
       .where(eq(organization_access_levels.organization_id, organizationId));
-    if (!orgAcLevels.length) return [];
-    const ids = orgAcLevels.map((o) => o.hik_central_access_level_id);
     return this.db
       .select({
         id: hik_central_access_levels.id,
@@ -537,7 +535,7 @@ export class AccessLevelService {
       .from(hik_central_access_levels)
       .where(
         and(
-          inArray(hik_central_access_levels.id, ids),
+          inArray(hik_central_access_levels.id, orgAlSub),
           notDeleted(hik_central_access_levels),
         ),
       );
@@ -571,9 +569,9 @@ export class AccessLevelService {
       .where(
         eq(organization_access_levels.organization_id, dto.organization_id),
       );
-    if (dto.access_level_ids?.length) {
+    if (dto.access_levels?.length) {
       let baseId = await nextId(this.db, organization_access_levels);
-      const values = dto.access_level_ids.map((alId) => ({
+      const values = dto.access_levels.map((alId) => ({
         id: baseId++,
         organization_id: dto.organization_id,
         hik_central_access_level_id: alId,

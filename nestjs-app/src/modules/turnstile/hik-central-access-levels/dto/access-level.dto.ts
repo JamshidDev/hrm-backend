@@ -22,9 +22,11 @@ export class UpdateAccessLevelDto {
 }
 
 export class AttachAccessLevelToOrgDto {
+  // Laravel body: { organization_id, access_levels: [...] } — sync($data['access_levels']).
   @ApiProperty() @IsInt() organization_id!: number;
   @ApiPropertyOptional({ type: [Number] })
   @IsOptional()
   @IsArray()
-  access_level_ids?: number[];
+  @IsInt({ each: true })
+  access_levels?: number[];
 }
