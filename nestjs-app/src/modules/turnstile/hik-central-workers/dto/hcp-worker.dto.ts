@@ -1,6 +1,7 @@
 // HCP Worker DTOs. Laravel: HikCentralWorkerController.
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -41,6 +42,17 @@ export class QueryHcpWorkerDto {
   @IsString()
   departments?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() organization_id?: number;
+}
+
+// Laravel: HikCentralController::errorWorkers — validate('job_id' => 'required|integer').
+export class QueryExportedErrorsDto {
+  @ApiPropertyOptional() @IsOptional() page?: number;
+  @ApiPropertyOptional() @IsOptional() per_page?: number;
+  @ApiProperty({ description: 'Export job id (required)' })
+  @Type(() => Number)
+  @IsNotEmpty()
+  @IsInt()
+  job_id!: number;
 }
 
 export class AddHcpWorkerDto {

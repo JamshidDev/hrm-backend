@@ -22,6 +22,7 @@ import {
   organization_access_levels,
   organizations,
   positions,
+  users,
   worker_access_levels,
   worker_hik_centrals,
   worker_photos,
@@ -32,12 +33,27 @@ import { HikCentralClient } from '@/shared/hik-central/hik-central.client';
 import { nextId, pageOf } from '@/modules/turnstile/_shared/helpers';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { getShortPosition } from '@/modules/hr/_shared/position-helper';
+import {
+  toLaravelDateTime,
+  toLaravelTimestamp,
+} from '@/common/utils/datetime.util';
 import type {
   AddHcpWorkerDto,
+  QueryExportedErrorsDto,
   QueryHcpWorkerDto,
   SyncWorkersToHcpDto,
   UpdateFaceDto,
 } from '@/modules/turnstile/hik-central-workers/dto/hcp-worker.dto';
+
+// Laravel JsonResource(null) — single resource wrapping null → scalar `null`
+// (HCPPersonResource.photo evidensiyasi: soft-deleted relation → "photo": null).
+type WorkerMinimal = {
+  id: number;
+  photo: string | null;
+  last_name: string | null;
+  first_name: string | null;
+  middle_name: string | null;
+};
 
 @Injectable()
 export class HcpWorkerService {
@@ -308,7 +324,16 @@ export class HcpWorkerService {
       const wid = Number(h.worker_id);
       if (!hcpByWorker.has(wid)) hcpByWorker.set(wid, h);
     }
-    const hcpIds = [...hcpByWorker.values()].map((h) => Number(h.id));
+    // IN-list = Eloquent Relation::getKeys() — unique + SORTED ascending. status-ties
+    // non-deterministik → bir xil IN tartibi (sorted) + bayt-bayt bir xil SQL → bir xil
+    // PG plan/scan order → bir xil ties (Laravel bilan mos).
+    const hcpIds = [
+      ...new Set(
+        [...hcpByWorker.values()]
+          .map((h) => Number(h.id))
+          .filter((id) => Number.isFinite(id)),
+      ),
+    ].sort((a, b) => a - b);
 
     // worker_access_levels for hcpPerson (top 4 by status DESC).
     const walsByHcp = new Map<
@@ -323,36 +348,63 @@ export class HcpWorkerService {
     const alPhotoMap: Map<number, { id: number; photo: string | null }> =
       new Map();
     if (hcpIds.length) {
-      // Laravel: $q->orderByDesc('status')->limit(4) — per-hcpPerson top 4.
-      // Bizda window function bilan top-4-per-group olamiz.
-      const alSql = sql`
-        SELECT id, hik_central_access_level_id, status, worker_hik_central_id, access_level_name
-        FROM (
-          SELECT wal.id,
-                 wal.hik_central_access_level_id,
-                 wal.status,
-                 wal.worker_hik_central_id,
-                 hcal.name AS access_level_name,
-                 ROW_NUMBER() OVER (PARTITION BY wal.worker_hik_central_id ORDER BY wal.status DESC, wal.id ASC) AS rn
-          FROM worker_access_levels wal
-          LEFT JOIN hik_central_access_levels hcal ON hcal.id = wal.hik_central_access_level_id
-          WHERE wal.worker_hik_central_id IN (${sql.join(
-            hcpIds.map((n) => sql`${n}`),
-            sql`, `,
-          )})
-            AND wal.deleted_at IS NULL
-        ) t
-        WHERE rn <= 4
-        ORDER BY status DESC, id ASC
-      `;
+      // Laravel 12 native eager-limit: `hcpPerson.access_levels` eager-load'da
+      // `orderByDesc('status')->limit(4)` PER-PARENT limit'ni group-limit (window
+      // function) bilan bajaradi. Grammar::compileGroupLimit aynan shu SQL'ni yasaydi:
+      //   select * from (
+      //     select id, hik_central_access_level_id, worker_id, status, worker_hik_central_id,
+      //            row_number() over (partition by worker_hik_central_id order by status desc) as laravel_row
+      //     from worker_access_levels
+      //     where worker_hik_central_id in (...) and deleted_at is null
+      //   ) as laravel_table where laravel_row <= 4 order by laravel_row
+      // MUHIM: window ORDER BY'da SECONDARY key YO'Q (faqat `status desc`) — ties PG
+      // scan order bilan hal bo'ladi. NestJS shu strukturani aynan takrorlaydi (hcal
+      // join'siz — name keyin alohida yuklanadi) → bir xil PG plan → bir xil ties.
+      // NOTE: Laravel Grammar::compileGroupLimit yasagan SQL bilan BAYT-BAYT mos
+      // (table alias YO'Q, qualified partition, `order by "status" desc`, inline IN).
+      // Faqat shu holatda PG bir xil plan/scan order → bir xil non-deterministik ties.
+      const alSql = sql`select * from (select "id", "hik_central_access_level_id", "worker_id", "status", "worker_hik_central_id", row_number() over (partition by "worker_access_levels"."worker_hik_central_id" order by "status" desc) as "laravel_row" from "worker_access_levels" where "worker_access_levels"."worker_hik_central_id" in (${sql.join(
+        hcpIds.map((n) => sql.raw(String(n))),
+        sql.raw(', '),
+      )}) and "worker_access_levels"."deleted_at" is null) as "laravel_table" where "laravel_row" <= 4 order by "laravel_row"`;
       const alRes = await this.db.execute(alSql);
-      const alRows = rowsOf(alRes) as Array<{
+      const alRowsRaw = rowsOf(alRes) as Array<{
         id: number | string;
         hik_central_access_level_id: number | string;
         status: number;
         worker_hik_central_id: number | string;
-        access_level_name: string | null;
       }>;
+
+      // access_level.name (HikCentralAccessLevel, soft-delete'ni hisobga olib) — batch.
+      const acIds = [
+        ...new Set(
+          alRowsRaw
+            .map((a) => Number(a.hik_central_access_level_id))
+            .filter((n) => Number.isFinite(n)),
+        ),
+      ];
+      const nameMap = new Map<number, string | null>();
+      if (acIds.length) {
+        const nameRows = await this.db
+          .select({
+            id: hik_central_access_levels.id,
+            name: hik_central_access_levels.name,
+          })
+          .from(hik_central_access_levels)
+          .where(
+            and(
+              inArray(hik_central_access_levels.id, acIds),
+              sql`${hik_central_access_levels.deleted_at} IS NULL`,
+            ),
+          );
+        for (const r of nameRows) nameMap.set(Number(r.id), r.name);
+      }
+
+      const alRows = alRowsRaw.map((a) => ({
+        ...a,
+        access_level_name:
+          nameMap.get(Number(a.hik_central_access_level_id)) ?? null,
+      }));
       for (const a of alRows) {
         const hid = Number(a.worker_hik_central_id);
         const arr = walsByHcp.get(hid) ?? [];
@@ -371,10 +423,17 @@ export class HcpWorkerService {
         .filter((id): id is number => id != null)
         .map(Number);
       if (photoIds.length) {
+        // belongsTo(WorkerPhoto) — SoftDeletes global scope: soft-delete'langan
+        // photo → relation null → resource null. notDeleted MAJBURIY.
         const wpRows = await this.db
           .select({ id: worker_photos.id, photo: worker_photos.photo })
           .from(worker_photos)
-          .where(inArray(worker_photos.id, [...new Set(photoIds)]));
+          .where(
+            and(
+              inArray(worker_photos.id, [...new Set(photoIds)]),
+              notDeleted(worker_photos),
+            ),
+          );
         const wpUrls = await Promise.all(
           wpRows.map((wp) => this.minio.fileUrl(wp.photo)),
         );
@@ -1376,13 +1435,33 @@ export class HcpWorkerService {
     return { job_id: id, dispatched: true };
   }
 
-  // Laravel: HikCentralController::jobs — paginated export jobs.
+  // Laravel: HikCentralController::jobs.
+  //   ExportWorkerToHikCentralJob::query()
+  //     ->when(search) whereLike('name', %search%)
+  //     ->orderByDesc('id')->withCount('error_workers')->paginate()
+  // HikCentralJobResource: { id, name, exported_count, status, workers_count,
+  //   errors, error_workers_count, created_at(ISO8601) }.
   async jobs(q: QueryHcpWorkerDto) {
     const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(export_worker_to_hik_central_jobs);
+    const search = q.search?.trim();
+    const searchCond = search
+      ? sql`${export_worker_to_hik_central_jobs.name} ILIKE ${`%${search}%`}`
+      : undefined;
+    const where = and(
+      notDeleted(export_worker_to_hik_central_jobs),
+      searchCond,
+    );
     const [rows, [{ total }]] = await Promise.all([
       this.db
-        .select()
+        .select({
+          id: export_worker_to_hik_central_jobs.id,
+          name: export_worker_to_hik_central_jobs.name,
+          exported_count: export_worker_to_hik_central_jobs.exported_count,
+          status: export_worker_to_hik_central_jobs.status,
+          workers_count: export_worker_to_hik_central_jobs.workers_count,
+          errors: export_worker_to_hik_central_jobs.errors,
+          created_at: export_worker_to_hik_central_jobs.created_at,
+        })
         .from(export_worker_to_hik_central_jobs)
         .where(where)
         .orderBy(desc(export_worker_to_hik_central_jobs.id))
@@ -1393,17 +1472,53 @@ export class HcpWorkerService {
         .from(export_worker_to_hik_central_jobs)
         .where(where),
     ]);
+
+    // error_workers_count — withCount('error_workers') (soft-delete global scope) batch.
+    const jobIds = rows.map((r) => Number(r.id));
+    const errCountMap = new Map<number, number>();
+    if (jobIds.length) {
+      const errRows = await this.db
+        .select({
+          job_id: export_worker_errors.export_worker_to_hik_central_job_id,
+          c: count(),
+        })
+        .from(export_worker_errors)
+        .where(
+          and(
+            inArray(
+              export_worker_errors.export_worker_to_hik_central_job_id,
+              jobIds,
+            ),
+            notDeleted(export_worker_errors),
+          ),
+        )
+        .groupBy(export_worker_errors.export_worker_to_hik_central_job_id);
+      for (const e of errRows) errCountMap.set(Number(e.job_id), Number(e.c));
+    }
+
     return {
       current_page: page,
       total: Number(total),
-      data: rows,
+      data: rows.map((r) => ({
+        id: Number(r.id),
+        name: r.name,
+        exported_count: r.exported_count,
+        status: r.status,
+        workers_count: r.workers_count,
+        errors: r.errors,
+        error_workers_count: errCountMap.get(Number(r.id)) ?? 0,
+        created_at: toLaravelTimestamp(r.created_at),
+      })),
     };
   }
 
-  // Laravel: HikCentralController::errorWorkers — requires job_id.
-  async errorWorkers(q: QueryHcpWorkerDto) {
+  // Laravel: HikCentralController::errorWorkers — validate job_id required|integer.
+  //   ExportWorkerError::where(job_id)->with('worker:id,last_name,first_name,middle_name,photo')
+  //     ->orderByDesc('id')->paginate()
+  // ErrorJobWorkerResource: { id, worker: WorkerMinimalResource, comment }.
+  // (job_id required'ni DTO 422 (LaravelValidationException) bilan ushlaydi.)
+  async errorWorkers(q: QueryExportedErrorsDto) {
     const { page, perPage, offset } = pageOf(q);
-    if (!q.job_id) throw new BusinessException(422, 'job_id is required');
     const where = and(
       eq(
         export_worker_errors.export_worker_to_hik_central_job_id,
@@ -1413,7 +1528,11 @@ export class HcpWorkerService {
     );
     const [rows, [{ total }]] = await Promise.all([
       this.db
-        .select()
+        .select({
+          id: export_worker_errors.id,
+          worker_id: export_worker_errors.worker_id,
+          comment: export_worker_errors.comment,
+        })
         .from(export_worker_errors)
         .where(where)
         .orderBy(desc(export_worker_errors.id))
@@ -1424,10 +1543,28 @@ export class HcpWorkerService {
         .from(export_worker_errors)
         .where(where),
     ]);
-    return this.attachWorker(rows, page, perPage, Number(total));
+
+    const workerMap = await this.loadWorkerMinimals(
+      rows.map((r) => Number(r.worker_id)),
+    );
+    return {
+      current_page: page,
+      total: Number(total),
+      data: rows.map((r) => ({
+        id: Number(r.id),
+        worker: workerMap.get(Number(r.worker_id)) ?? null,
+        comment: r.comment,
+      })),
+    };
   }
 
-  // Laravel: TurnstileController::addedLogs — workers added to HCP audit log.
+  // Laravel: TurnstileController::addedLogs.
+  //   HcpAddedWorkerLog::query()->filter($user, all)
+  //     ->when(search) whereHas('worker', searchByFullName)
+  //     ->with(['user.worker', 'worker', 'worker_photo'])
+  //     ->orderByDesc('id')->paginate()
+  // AddedWorkerLogResource: { id, user: UserWorkerResource, worker: WorkerMinimalResource,
+  //   photo: fileUrl(worker_photo.photo), status, created_at(ISO8601) }.
   async addedLogs(q: QueryHcpWorkerDto) {
     const { page, perPage, offset } = pageOf(q);
     // Laravel HcpAddedWorkerLog::query()->filter($user) — rol/org-scope.
@@ -1435,10 +1572,22 @@ export class HcpWorkerService {
       hcp_added_worker_logs.organization_id,
       { organizations: q.organizations, organization_id: q.organization_id },
     );
-    const where = and(notDeleted(hcp_added_worker_logs), inScope);
+    // search → whereHas('worker', searchByFullName).
+    const searchCond = buildWorkerSearchCond(q.search);
+    const searchExists = searchCond
+      ? sql`EXISTS (SELECT 1 FROM workers WHERE workers.id = ${hcp_added_worker_logs.worker_id} AND ${searchCond})`
+      : undefined;
+    const where = and(notDeleted(hcp_added_worker_logs), inScope, searchExists);
     const [rows, [{ total }]] = await Promise.all([
       this.db
-        .select()
+        .select({
+          id: hcp_added_worker_logs.id,
+          user_id: hcp_added_worker_logs.user_id,
+          worker_id: hcp_added_worker_logs.worker_id,
+          worker_photo_id: hcp_added_worker_logs.worker_photo_id,
+          status: hcp_added_worker_logs.status,
+          created_at: hcp_added_worker_logs.created_at,
+        })
         .from(hcp_added_worker_logs)
         .where(where)
         .orderBy(desc(hcp_added_worker_logs.id))
@@ -1449,58 +1598,115 @@ export class HcpWorkerService {
         .from(hcp_added_worker_logs)
         .where(where),
     ]);
+
+    if (rows.length === 0) {
+      return { current_page: page, total: Number(total), data: [] };
+    }
+
+    // user.worker — users by user_id, then their worker_id.
+    const userIds = [
+      ...new Set(rows.map((r) => Number(r.user_id)).filter(Boolean)),
+    ];
+    const userRows = userIds.length
+      ? await this.db
+          .select({ id: users.id, worker_id: users.worker_id })
+          .from(users)
+          .where(inArray(users.id, userIds))
+      : [];
+    const userMap = new Map(userRows.map((u) => [Number(u.id), u] as const));
+
+    // Worker minimals for both log.worker_id and user.worker_id.
+    const workerMap = await this.loadWorkerMinimals([
+      ...rows.map((r) => Number(r.worker_id)),
+      ...userRows.map((u) => Number(u.worker_id)),
+    ]);
+
+    // worker_photo.photo → fileUrl.
+    const photoIds = [
+      ...new Set(rows.map((r) => Number(r.worker_photo_id)).filter(Boolean)),
+    ];
+    const photoRows = photoIds.length
+      ? await this.db
+          .select({ id: worker_photos.id, photo: worker_photos.photo })
+          .from(worker_photos)
+          .where(inArray(worker_photos.id, photoIds))
+      : [];
+    const photoUrls = await Promise.all(
+      photoRows.map((p) => this.minio.fileUrl(p.photo)),
+    );
+    const photoMap = new Map(
+      photoRows.map((p, i) => [Number(p.id), photoUrls[i]] as const),
+    );
+
     return {
       current_page: page,
       total: Number(total),
-      data: rows,
+      data: rows.map((r) => {
+        const u = userMap.get(Number(r.user_id));
+        return {
+          id: Number(r.id),
+          user: u
+            ? {
+                id: Number(u.id),
+                worker: workerMap.get(Number(u.worker_id)) ?? null,
+              }
+            : { id: null, worker: null },
+          worker: workerMap.get(Number(r.worker_id)) ?? null,
+          photo: r.worker_photo_id
+            ? (photoMap.get(Number(r.worker_photo_id)) ?? null)
+            : null,
+          status: r.status,
+          created_at: toLaravelTimestamp(r.created_at),
+        };
+      }),
     };
   }
 
   // Laravel: TurnstileController::invalidWorkersByHcp.
-  // Returns `{ time, data: paginate-result }` where source is Cache('hcp_invalid_workers').
-  // No cache here — empty.
+  //   $invalidCache = Cache::get('hcp_invalid_workers');
+  //   if (!$invalidCache) return response(true, ['time' => now()->toDateTimeString(), 'data' => []]);
+  //   ...else paginate-result.
+  // NestJS'da Redis cache yo'q → bo'sh: { time: "Y-m-d H:i:s", data: [] }.
   async invalidWorkersByHcp() {
     return {
-      time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      data: {
-        current_page: 1,
-        per_page: 10,
-        total: 0,
-        data: [] as Array<unknown>,
-      },
+      // Laravel now()->toDateTimeString() — app TZ = UTC.
+      time: toLaravelDateTime(new Date()),
+      data: [] as Array<unknown>,
     };
   }
 
   // ---------- helpers ----------
-  private async attachWorker<T extends { worker_id: number }>(
-    rows: T[],
-    page: number,
-    perPage: number,
-    total: number,
-  ) {
-    const workerIds = [
-      ...new Set(rows.map((r) => r.worker_id).filter(Boolean)),
-    ];
-    const wRows = workerIds.length
-      ? await this.db
-          .select({
-            id: workers.id,
-            last_name: workers.last_name,
-            first_name: workers.first_name,
-            middle_name: workers.middle_name,
-            photo: workers.photo,
-          })
-          .from(workers)
-          .where(inArray(workers.id, workerIds))
-      : [];
-    const wMap = new Map<number, (typeof wRows)[number]>(
-      wRows.map((w) => [w.id, w] as const),
+  // Laravel WorkerMinimalResource batch loader (soft-delete'ni hisobga oladi —
+  // belongsTo('worker') global SoftDeletes scope bilan mos).
+  private async loadWorkerMinimals(
+    ids: number[],
+  ): Promise<Map<number, WorkerMinimal>> {
+    const uniq = [...new Set(ids.filter((n) => Number.isFinite(n) && n > 0))];
+    if (!uniq.length) return new Map();
+    const rows = await this.db
+      .select({
+        id: workers.id,
+        last_name: workers.last_name,
+        first_name: workers.first_name,
+        middle_name: workers.middle_name,
+        photo: workers.photo,
+      })
+      .from(workers)
+      .where(and(inArray(workers.id, uniq), notDeleted(workers)));
+    const urls = await Promise.all(
+      rows.map((r) => this.minio.fileUrl(r.photo)),
     );
-    return {
-      current_page: page,
-      total,
-      data: rows.map((r) => ({ ...r, worker: wMap.get(r.worker_id) ?? null })),
-    };
+    const map = new Map<number, WorkerMinimal>();
+    rows.forEach((r, i) =>
+      map.set(Number(r.id), {
+        id: Number(r.id),
+        photo: urls[i],
+        last_name: r.last_name,
+        first_name: r.first_name,
+        middle_name: r.middle_name,
+      }),
+    );
+    return map;
   }
 }
 

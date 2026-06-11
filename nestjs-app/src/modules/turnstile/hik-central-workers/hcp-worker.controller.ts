@@ -19,6 +19,7 @@ import { buildSuccess } from '@/common/utils/response.util';
 import { HcpWorkerService } from '@/modules/turnstile/hik-central-workers/hcp-worker.service';
 import {
   AddHcpWorkerDto,
+  QueryExportedErrorsDto,
   QueryHcpWorkerDto,
   SyncWorkersToHcpDto,
   UpdateFaceDto,
@@ -96,7 +97,7 @@ export class HcpWorkerController {
   }
 
   @Get('workers/exported-errors') async exportedErrors(
-    @Query() q: QueryHcpWorkerDto,
+    @Query() q: QueryExportedErrorsDto,
   ) {
     return buildSuccess(true, await this.service.errorWorkers(q));
   }
