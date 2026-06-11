@@ -1,7 +1,21 @@
 // Department service. Laravel: DepartmentController + DepartmentService.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, ilike, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -154,15 +168,69 @@ export class DepartmentService {
     };
   }
 
-  // GET /departments-tree — Laravel: where('organization_id', (int)(organization_id ?? organizations)).
-  // Param berilmasa → (int)null = 0 → hech narsa topilmaydi → bo'sh tree.
-  async tree(
-    organizationId?: number,
-    organizations?: string,
-  ): Promise<DepartmentTreeNodeDto[]> {
+  // GET /departments-tree — Laravel DepartmentService::tree:
+  //   $organizationId = (int)(request('organization_id') ?? request('organizations'));
+  //   $nodes = Department::query()
+  //       ->when(request('id'), where id)
+  //       ->when(request('ids'), whereIn id csv)
+  //       ->search()                         // when search → whereLike name
+  //       ->where('organization_id', $organizationId)
+  //       ->filterByOrganization($user);     // childIds (role) + org
+  //   return (new QueryHelper)->adminDepartments($nodes)->get()->toTree();
+  //
+  // `adminDepartments` — har matched node uchun OR bilan butun nested-set
+  // shoxobchasini (ajdod + avlod) qo'shadi, shunda toTree root'dan to'liq daraxt
+  // quradi. `toTree()` to'plam tartibini saqlaydi — bu yerda tabiiy (id) tartib.
+  async tree(filters: QueryDepartmentDto): Promise<DepartmentTreeNodeDto[]> {
     const lang = this.ctx.lang;
-    // Laravel: (int)(request('organization_id') ?? request('organizations')).
-    const orgId = Number(organizationId ?? organizations ?? 0) || 0;
+    // PHP (int) cast: (int)"94,95" = 94, (int)null = 0.
+    const raw = filters.organization_id ?? filters.organizations;
+    const orgId = parseInt(String(raw ?? '0'), 10) || 0;
+
+    // Laravel filterByOrganization → QueryHelper::filterDepartmentByOrganization:
+    // whereIn('organization_id', childIds) (role-based).
+    const scopeIds = await this.scope.ids();
+
+    const idsList = filters.ids
+      ? filters.ids
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isInteger(n))
+      : null;
+
+    const baseWhere = and(
+      notDeleted(departments),
+      eq(departments.organization_id, orgId),
+      scopeIds.length
+        ? inArray(departments.organization_id, scopeIds)
+        : sql`FALSE`,
+      filters.search
+        ? ilike(departments.name, `%${filters.search}%`)
+        : undefined,
+      filters.id != null ? eq(departments.id, filters.id) : undefined,
+      idsList && idsList.length ? inArray(departments.id, idsList) : undefined,
+    );
+
+    // Matched nodes (adminDepartments uchun manba).
+    const matched = await this.db
+      .select({
+        _lft: departments._lft,
+        _rgt: departments._rgt,
+      })
+      .from(departments)
+      .where(baseWhere);
+
+    if (matched.length === 0) return [];
+
+    // adminDepartments: har node uchun (avlod+o'zi) OR (ajdod).
+    //   _lft BETWEEN n._lft AND n._rgt           — node + descendants
+    //   _lft BETWEEN 1 AND n._lft-1 AND _rgt>n._rgt — ancestors
+    const expansions = matched.map((n) =>
+      or(
+        and(gte(departments._lft, n._lft), lte(departments._lft, n._rgt)),
+        and(lt(departments._lft, n._lft), gt(departments._rgt, n._rgt)),
+      ),
+    );
 
     const flat = await this.db
       .select({
@@ -174,10 +242,10 @@ export class DepartmentService {
         _lft: departments._lft,
       })
       .from(departments)
-      .where(
-        and(notDeleted(departments), eq(departments.organization_id, orgId)),
-      )
-      .orderBy(asc(departments._lft));
+      .where(and(notDeleted(departments), or(...expansions)))
+      // toTree() to'plam tartibini saqlaydi — Laravel'da ORDER BY yo'q,
+      // PostgreSQL tabiiy (id) tartibida qaytaradi.
+      .orderBy(asc(departments.id));
 
     return this.buildTree(flat, lang);
   }

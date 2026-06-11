@@ -34,6 +34,19 @@ export class QueryDepartmentDto extends SearchPaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   organization_id?: number;
+
+  // departments-tree: Laravel `when(request('id'))` — bitta department.
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  id?: number;
+
+  // departments-tree: Laravel `when(request('ids'))` — vergulli ro'yxat.
+  @ApiPropertyOptional({ example: '1,2,3' })
+  @IsOptional()
+  @IsString()
+  ids?: string;
 }
 
 // Laravel DepartmentStoreRequest: { name, name_ru?, name_en?, comment?, level,

@@ -138,10 +138,7 @@ export class DepartmentController {
   @ApiOkResponse({ type: [DepartmentTreeNodeDto] })
   async tree(@Query() query: QueryDepartmentDto) {
     // Laravel: Helper::response(true, DepartmentTreeResource::collection($tree)).
-    const data = await this.service.tree(
-      query.organization_id,
-      query.organizations,
-    );
+    const data = await this.service.tree(query);
     return buildSuccess(true, data);
   }
 }
