@@ -24,6 +24,8 @@ import {
   or,
   type SQL,
 } from 'drizzle-orm';
+import { Logger } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -34,6 +36,7 @@ import {
   positions as positionsTable,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import { PermissionService } from '@/shared/permission/permission.service';
 import { MinioService } from '@/shared/minio/minio.service';
@@ -66,11 +69,14 @@ export interface OrgListItem {
 
 @Injectable()
 export class StructureTreeService {
+  private readonly logger = new Logger(StructureTreeService.name);
+
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly permissions: PermissionService,
     private readonly minio: MinioService,
+    private readonly i18n: I18nService,
   ) {}
 
   // Laravel: StructureController::getAllStructure() — barcha orglar tree.
@@ -163,6 +169,22 @@ export class StructureTreeService {
    * matching parent zanjirini ham qaytarish — getAll() bilan o'xshash full tree.
    */
   async index(
+    search?: string,
+    organizationId?: number,
+  ): Promise<OrgTreeNode[]> {
+    // Laravel: butun index() try/catch ichida — xatoda Helper::setLog + server_error 500.
+    try {
+      return await this.indexImpl(search, organizationId);
+    } catch (e) {
+      this.logger.error(
+        'StructureController@index',
+        e instanceof Error ? e.stack : String(e),
+      );
+      throw new BusinessException(500, this.i18n.t('messages.server_error'));
+    }
+  }
+
+  private async indexImpl(
     search?: string,
     organizationId?: number,
   ): Promise<OrgTreeNode[]> {
