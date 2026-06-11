@@ -287,12 +287,17 @@ export class WorkerRelativeService {
       .where(eq(worker_relatives.id, id));
   }
 
-  async sort(orders: Array<{ id: number; sort: number }>): Promise<void> {
+  // Laravel WorkerRelativeService::sort — har item uchun
+  //   WorkerRelative::where('id', worker_relative_id)->update(['sort' => position]).
+  async sort(
+    orders: Array<{ worker_relative_id: number; position: number }>,
+  ): Promise<void> {
     for (const o of orders) {
+      if (o?.worker_relative_id == null || o?.position == null) continue;
       await this.db
         .update(worker_relatives)
-        .set({ sort: o.sort })
-        .where(eq(worker_relatives.id, o.id));
+        .set({ sort: o.position })
+        .where(eq(worker_relatives.id, o.worker_relative_id));
     }
   }
 

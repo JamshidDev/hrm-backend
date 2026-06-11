@@ -3,11 +3,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsInt,
   IsOptional,
   IsString,
   IsUUID,
+  ValidateNested,
 } from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
@@ -147,10 +149,32 @@ export class UpdateWorkerRelativeDto {
   marital_status?: number | null;
 }
 
+// Laravel WorkerRelativeController::sortable → service->sort($request->orders):
+//   foreach ($orders as $item)
+//     WorkerRelative::where('id', $item['worker_relative_id'])
+//        ->update(['sort' => $item['position']]);
+export class WorkerRelativeOrderDto {
+  @ApiProperty({ example: 340 })
+  @Type(() => Number)
+  @IsInt()
+  worker_relative_id!: number;
+
+  @ApiProperty({ example: 0 })
+  @Type(() => Number)
+  @IsInt()
+  position!: number;
+}
+
 export class SortableWorkerRelativeDto {
-  @ApiPropertyOptional({ example: [{ id: 1, sort: 1 }] })
+  @ApiPropertyOptional({
+    type: [WorkerRelativeOrderDto],
+    example: [{ position: 0, worker_relative_id: 340 }],
+  })
   @IsOptional()
-  orders?: Array<{ id: number; sort: number }>;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WorkerRelativeOrderDto)
+  orders?: WorkerRelativeOrderDto[];
 }
 
 // ---------- Response ----------
