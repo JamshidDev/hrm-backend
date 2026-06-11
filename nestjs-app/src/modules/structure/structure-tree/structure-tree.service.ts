@@ -470,9 +470,11 @@ export class StructureTreeService {
 
     // First pass — create nodes (children empty).
     for (const f of flat) {
+      // Laravel OrganizationChildResource: ru→name_ru, en→name_en, default→name.
+      // Fallback YO'Q — name_ru/name_en null bo'lsa null qaytadi.
       let name = f.name;
-      if (lang === 'ru') name = f.name_ru ?? f.name;
-      else if (lang === 'en') name = f.name_en ?? f.name;
+      if (lang === 'ru') name = f.name_ru;
+      else if (lang === 'en') name = f.name_en;
 
       const node: OrgTreeNode = {
         id: f.id,
