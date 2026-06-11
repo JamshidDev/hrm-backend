@@ -25,6 +25,7 @@ export const VALIDATION_RULES: Record<ValLang, Record<string, string>> = {
     min_string:
       ':attribute dagi belgilar soni :min tadan kam bo‘lmasligi kerak.',
     max_string: ':attribute ning belgilar soni :max tadan oshmasligi kerak.',
+    same: ':attribute ning qiymati :other bilan bir xil bo‘lishi kerak.',
   },
   ru: {
     required: 'Поле :attribute обязательно.',
@@ -45,6 +46,7 @@ export const VALIDATION_RULES: Record<ValLang, Record<string, string>> = {
       'Количество символов в поле :attribute должно быть не меньше :min.',
     max_string:
       'Количество символов в значении поля :attribute не может превышать :max.',
+    same: 'Значения полей :attribute и :other должны совпадать.',
   },
   en: {
     required: 'The :attribute field is required.',
@@ -63,6 +65,7 @@ export const VALIDATION_RULES: Record<ValLang, Record<string, string>> = {
     min_string: 'The :attribute field must be at least :min characters.',
     max_string:
       'The :attribute field must not be greater than :max characters.',
+    same: 'The :attribute field must match :other.',
   },
 };
 

@@ -92,7 +92,8 @@
   "role_successfully_assigned": "messages.role_successfully_assigned",
   "errors": {
     "organization_not_allowed_permission": "Вы не имеете права доступа изменять эту информацию.s!",
-    "has_application_not_checked": "На данном этапе некоторые заявки еще не рассмотрены, пожалуйста, введите подробные сведения о заявке."
+    "has_application_not_checked": "На данном этапе некоторые заявки еще не рассмотрены, пожалуйста, введите подробные сведения о заявке.",
+    "too_many_attempts_try_again_later": "Слишком много попыток. Попробуйте позже."
   },
   "permission_denied": "У вас нет разрешения на выполнение этого действия",
   "education": {

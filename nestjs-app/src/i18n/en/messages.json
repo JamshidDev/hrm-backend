@@ -92,7 +92,8 @@
   "role_successfully_assigned": "messages.role_successfully_assigned",
   "errors": {
     "organization_not_allowed_permission": "You do not have permission the right to change this information.!",
-    "has_application_not_checked": "There is an application that is not yet resolved at this stage, please enter the application details."
+    "has_application_not_checked": "There is an application that is not yet resolved at this stage, please enter the application details.",
+    "too_many_attempts_try_again_later": "Too many attempts. Try again later."
   },
   "permission_denied": "You don't have permission to perform this action",
   "education": {

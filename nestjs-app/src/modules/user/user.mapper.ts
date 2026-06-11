@@ -24,7 +24,8 @@ export interface ProfileBuilderInput {
   workerPhotoUrl: string | null;
   organization: { id: number; name: string | null } | null;
   role: ProfileRoleDto | Record<string, never>;
-  telegramAccountCount: number;
+  // Laravel loadCount('telegram') bo'lsa raqam; aks holda (changePassword) null.
+  telegramAccount: number | null;
 }
 
 export const UserMapper = {
@@ -46,7 +47,7 @@ export const UserMapper = {
         ? { id: input.organization.id, name: input.organization.name }
         : null,
       role: input.role,
-      telegram_account: input.telegramAccountCount,
+      telegram_account: input.telegramAccount,
     };
   },
 

@@ -12,6 +12,10 @@ export const CLS_KEYS = {
   USER: 'user',
   LANG: 'lang',
   DEVICE_ID: 'deviceId',
+  // Laravel X-Device-UUID header — UserMobileKey qidiruvi uchun.
+  DEVICE_UUID: 'deviceUuid',
+  // Laravel X-AUTH-TYPE header — UserResource mobile maydonlari (face/fcm/notifications) shartli.
+  AUTH_TYPE: 'authType',
   IP: 'ip',
   USER_AGENT: 'userAgent',
   // Laravel QueryHelper::childIds — request davomida bir marta hisoblanadi, cache.

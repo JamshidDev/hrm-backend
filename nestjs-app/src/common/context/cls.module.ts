@@ -33,6 +33,14 @@ import {
             CLS_KEYS.DEVICE_ID,
             (req.headers['x-device-id'] as string) ?? null,
           );
+          cls.set(
+            CLS_KEYS.DEVICE_UUID,
+            (req.headers['x-device-uuid'] as string) ?? null,
+          );
+          cls.set(
+            CLS_KEYS.AUTH_TYPE,
+            (req.headers['x-auth-type'] as string) ?? null,
+          );
           // Laravel `$request->ip()` parity:
           //   - IPv6 localhost `::1` → IPv4 `127.0.0.1`
           //   - IPv4-mapped IPv6 `::ffff:1.2.3.4` → `1.2.3.4`

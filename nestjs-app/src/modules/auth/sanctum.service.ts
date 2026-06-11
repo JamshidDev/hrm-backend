@@ -2,7 +2,7 @@
 // Token format: "{id}|{plainText}". DB'da plainText'ning sha256 hash'i saqlanadi.
 
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { createHash, randomBytes } from 'crypto';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -103,5 +103,20 @@ export class SanctumService {
     await this.db
       .delete(personal_access_tokens)
       .where(eq(personal_access_tokens.id, tokenId));
+  }
+
+  // Laravel $user->tokens()->delete() — user'ning BARCHA tokenlari.
+  async deleteUserTokens(userId: number): Promise<void> {
+    await this.db
+      .delete(personal_access_tokens)
+      .where(
+        and(
+          eq(
+            personal_access_tokens.tokenable_type,
+            SanctumService.TOKENABLE_TYPE_USER,
+          ),
+          eq(personal_access_tokens.tokenable_id, userId),
+        ),
+      );
   }
 }

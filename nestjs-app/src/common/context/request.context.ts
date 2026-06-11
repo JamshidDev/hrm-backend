@@ -53,6 +53,16 @@ export class RequestContext {
     return this.cls.get(CLS_KEYS.DEVICE_ID) ?? null;
   }
 
+  // Laravel X-Device-UUID — UserMobileKey qidiruvi.
+  get device_uuid(): string | null {
+    return this.cls.get(CLS_KEYS.DEVICE_UUID) ?? null;
+  }
+
+  // Laravel X-AUTH-TYPE — UserResource mobile maydonlari shartli (face/fcm/notifications).
+  get auth_type(): string | null {
+    return this.cls.get(CLS_KEYS.AUTH_TYPE) ?? null;
+  }
+
   get ip(): string | null {
     return this.cls.get(CLS_KEYS.IP) ?? null;
   }

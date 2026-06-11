@@ -89,7 +89,9 @@ export class ProfileResponseDto {
 
   @ApiProperty({
     example: 1,
-    description: 'Number of active Telegram accounts linked to the user',
+    nullable: true,
+    description:
+      'Number of active Telegram accounts (null — agar loadCount qilinmagan, Laravel changePassword kabi)',
   })
-  telegram_account!: number;
+  telegram_account!: number | null;
 }

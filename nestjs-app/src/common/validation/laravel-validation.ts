@@ -40,6 +40,8 @@ const CONSTRAINT_TO_RULE: Record<string, string> = {
   max: 'max_numeric',
   arrayMinSize: 'min_string',
   arrayMaxSize: 'max_string',
+  // same:other (custom @Match dekoratori — ValidatorConstraint name 'Match')
+  Match: 'same',
 };
 
 // `required` aniqlovchi konstreyntlar — bular fail bo'lsa Laravel faqat `required`
@@ -66,6 +68,7 @@ const RULE_PRIORITY = [
   'max_numeric',
   'min_string',
   'max_string',
+  'same',
 ];
 
 function priorityOf(rule: string): number {
@@ -90,13 +93,20 @@ function extractBound(message: string): string | undefined {
 function applyTemplate(
   tpl: string,
   attr: string,
-  ctx: { min?: string; max?: string; date?: string },
+  ctx: { min?: string; max?: string; date?: string; other?: string },
 ): string {
   return tpl
     .replace(/:attribute/g, attr)
     .replace(/:min/g, ctx.min ?? '')
     .replace(/:max/g, ctx.max ?? '')
-    .replace(/:date/g, ctx.date ?? '');
+    .replace(/:date/g, ctx.date ?? '')
+    .replace(/:other/g, ctx.other ?? '');
+}
+
+// @Match defaultMessage formati: "<prop> must match <other>" → <other> ni ajratadi.
+function extractOther(message: string): string | undefined {
+  const m = message.match(/ must match (\S+)$/);
+  return m?.[1];
 }
 
 // Bir field (+ uning children) uchun xabarlarni yig'adi.
@@ -128,11 +138,13 @@ function collectField(
             rule.startsWith('min') || rule.startsWith('max')
               ? extractBound(constraints[k])
               : undefined;
-          const ctx = rule.startsWith('min')
-            ? { min: bound }
-            : rule.startsWith('max')
-              ? { max: bound }
-              : {};
+          let ctx: { min?: string; max?: string; other?: string } = {};
+          if (rule.startsWith('min')) ctx = { min: bound };
+          else if (rule.startsWith('max')) ctx = { max: bound };
+          else if (rule === 'same') {
+            const otherField = extractOther(constraints[k]);
+            ctx = { other: otherField ? humanize(otherField, lang) : '' };
+          }
           byRule.set(rule, applyTemplate(rules[rule], attr, ctx));
         } else {
           // Mos rule yo'q — class-validator xom xabari (fallback).

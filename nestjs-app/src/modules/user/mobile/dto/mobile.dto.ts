@@ -12,6 +12,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { Match } from '@/common/validators/match.validator';
 
 export class MobileVersionCheckDto {
   @ApiProperty({ example: '1.2.3' })
@@ -40,6 +41,8 @@ export class UpdatePasswordDto {
   @ApiProperty({ example: 'NewPass123!' })
   @IsString()
   @MinLength(8)
+  // Laravel: 'same:new_password'.
+  @Match('new_password')
   new_password_confirmation!: string;
 }
 

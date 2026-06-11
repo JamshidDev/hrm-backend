@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { UserMobileService } from '@/modules/user/mobile/mobile.service';
@@ -31,7 +32,10 @@ import {
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/user/mobile')
 export class UserMobileController {
-  constructor(private readonly service: UserMobileService) {}
+  constructor(
+    private readonly service: UserMobileService,
+    private readonly i18n: I18nService,
+  ) {}
 
   @Post('version')
   @HttpCode(200)
@@ -48,9 +52,13 @@ export class UserMobileController {
 
   @Post('update-password')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Change password (stub)' })
+  @ApiOperation({ summary: 'Change password' })
   async updatePassword(@Body() dto: UpdatePasswordDto) {
-    return buildSuccess(true, await this.service.updatePassword(dto));
+    // Laravel: Helper::response(trans('messages.successfully_updated'), UserResource).
+    return buildSuccess(
+      this.i18n.t('messages.successfully_updated'),
+      await this.service.updatePassword(dto),
+    );
   }
 
   @Get('my-schedules')

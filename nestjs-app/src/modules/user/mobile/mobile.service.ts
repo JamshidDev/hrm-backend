@@ -10,6 +10,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
+import { UserResourceService } from '@/modules/user/_shared/user-resource.service';
 import { users, user_mobile_keys, workers } from '@/db/schema';
 import type {
   CheckLocationDto,
@@ -30,6 +31,7 @@ export class UserMobileService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
+    private readonly userResource: UserResourceService,
   ) {}
 
   /** GET /user/mobile/enums — application_types, education_types. */
@@ -98,7 +100,13 @@ export class UserMobileService {
       })
       .where(eq(users.id, userId));
 
-    return { success: true };
+    // Laravel changePassword: `return new UserResource($user)` — loadCount yo'q,
+    // shuning uchun telegram_account null (profile'dan farqli).
+    return this.userResource.build(userId, {
+      mobile: this.ctx.auth_type === 'mobile',
+      deviceUuid: this.ctx.device_uuid,
+      telegramCount: false,
+    });
   }
 
   /** POST /user/mobile/update-fcm — FCM token saqlash. */

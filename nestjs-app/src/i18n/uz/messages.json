@@ -92,7 +92,8 @@
   "role_successfully_assigned": "messages.role_successfully_assigned",
   "errors": {
     "organization_not_allowed_permission": "Sizda, ushbu ma'lumotnini o'zgartirishi huquqi mavjud emas!",
-    "has_application_not_checked": "Ushbu bosqichda xali tugatilmagan Ariza mavjud, iltimos barja arizalar ma'lumotlarini kiriting"
+    "has_application_not_checked": "Ushbu bosqichda xali tugatilmagan Ariza mavjud, iltimos barja arizalar ma'lumotlarini kiriting",
+    "too_many_attempts_try_again_later": "Juda ko'p urinishlar. Keyinroq qayta urinib ko'ring."
   },
   "permission_denied": "Sizda bu amalni bajarish uchun ruxsat yo'q",
   "education": {
