@@ -39,6 +39,8 @@ import { notDeleted } from '@/common/database/soft-delete.helper';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { MinioService } from '@/shared/minio/minio.service';
 import { injectDocxImage } from '@/modules/confirmation/documents/docx-image.util';
+import { transliterateLatin } from '@/modules/hr/worker-exports/transliterate.util';
+import { getFullPosition } from '@/modules/hr/_shared/position-helper';
 
 const POSITION_STATUS_ACTIVE = 2;
 
@@ -265,8 +267,9 @@ export class ResumeService {
     const specialityParts: string[] = [];
     for (const u of universities) {
       if (u.university_name) {
+        // Laravel: year . '-' . 'yil,' . university->name (vergulдан keyin bo'sh joy yo'q).
         universityParts.push(
-          `${this.year(u.to_date)}-yil, ${u.university_name}`,
+          `${this.year(u.to_date)}-yil,${u.university_name}`,
         );
         specialityParts.push(u.speciality_name ?? '');
       }
@@ -279,18 +282,22 @@ export class ResumeService {
     const careers: Array<Record<string, string>> = [];
     for (const c of oldCareers) {
       careers.push({
-        career_date: `${this.year(c.from_date)}-${this.year(c.to_date)} yy`,
-        career_name: c.post_name ?? '',
+        career_date: transliterateLatin(
+          `${this.year(c.from_date)}-${this.year(c.to_date)} yy`,
+        ),
+        career_name: transliterateLatin(c.post_name ?? ''),
       });
     }
     for (let i = 0; i < allPositions.length; i++) {
       const p = allPositions[i];
-      const postName = this.fullPosition(
-        p.org_full_name,
-        p.dept_name,
-        p.dept_level,
-        p.pos_name,
-      );
+      // Laravel PositionHelper::getFullPosition — replace() bilan ortiqcha
+      // takror so'zlarni ("bo‘limi bo‘lim" → "bo‘limi") yig'adi.
+      const postName = getFullPosition({
+        position_name: p.pos_name,
+        department_name: p.dept_name,
+        department_level: p.dept_level,
+        organization_full_name: p.org_full_name,
+      });
       const from = this.year(p.position_date);
       let to: string;
       if (p.status === POSITION_STATUS_ACTIVE) to = 'h.v';
@@ -298,7 +305,10 @@ export class ResumeService {
         const next = allPositions[i + 1];
         to = next ? `${this.year(next.position_date)} yy` : from;
       }
-      careers.push({ career_date: `${from}-${to}`, career_name: postName });
+      careers.push({
+        career_date: transliterateLatin(`${from}-${to}`),
+        career_name: transliterateLatin(postName),
+      });
     }
 
     const relativesData: Array<Record<string, string>> = relatives.map((r) => {
@@ -307,11 +317,13 @@ export class ResumeService {
         ? `${this.year(r.birthday)}-yil, ${r.birth_place ?? ''}`
         : (r.birth_place ?? '');
       return {
-        relative: this.relativeLabel(r.relative),
-        relative_full_name: fn,
-        relative_birth_info: birthPlace,
-        relative_post_name: r.post_name ?? '',
-        relative_address: (r.address ?? '').replace(/[<>]/g, ' '),
+        relative: transliterateLatin(this.relativeLabel(r.relative)),
+        relative_full_name: transliterateLatin(fn),
+        relative_birth_info: transliterateLatin(birthPlace),
+        relative_post_name: transliterateLatin(r.post_name ?? ''),
+        relative_address: transliterateLatin(
+          (r.address ?? '').replace(/[<>]/g, ' '),
+        ),
       };
     });
 
@@ -320,12 +332,12 @@ export class ResumeService {
       birthday,
       birth_address: birthAddress,
       position_date: this.positionDateLong(wp.position_date),
-      full_position_name: this.fullPosition(
-        wp.org_full_name,
-        wp.dept_name,
-        wp.dept_level,
-        wp.pos_name,
-      ),
+      full_position_name: getFullPosition({
+        position_name: wp.pos_name,
+        department_name: wp.dept_name,
+        department_level: wp.dept_level,
+        organization_full_name: wp.org_full_name,
+      }),
       nationality: nationalityRow[0]?.name ?? '',
       party: party[0]?.party != null ? this.partyLabel(party[0].party) : "Yo'q",
       education: this.educationLabel(w.education),
@@ -344,6 +356,14 @@ export class ResumeService {
       military: '',
       deputy: '',
     };
+
+    // Laravel WorkerResumeHelper: `birthday`'dan tashqari barcha matn scalar'lar
+    // TranslateHelper::translate(..., 'latin') orqali o'tadi (cyrillic→latin +
+    // apostrof normalizatsiya). `birthday` faqat d.m.Y format — translate'siz.
+    for (const k of Object.keys(scalars)) {
+      if (k === 'birthday') continue;
+      scalars[k] = transliterateLatin(scalars[k]);
+    }
 
     // ---- Render DOCX ----
     const templatePath = join(
@@ -596,18 +616,6 @@ export class ResumeService {
     if (!d) return '';
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
     return m ? `${m[3]}.${m[2]}.${m[1]}` : d;
-  }
-
-  private fullPosition(
-    orgFullName: string | null,
-    deptName: string | null,
-    deptLevel: number | null,
-    posName: string | null,
-  ): string {
-    if (!posName) return '';
-    let position = posName;
-    if (deptLevel !== 1 && deptName) position = `${deptName} ${position}`;
-    return `${orgFullName ?? ''} ${position}`.trim();
   }
 
   private slug(s: string): string {
