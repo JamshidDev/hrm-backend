@@ -56,8 +56,11 @@ export class QueryExportedErrorsDto {
 }
 
 export class AddHcpWorkerDto {
-  @ApiProperty() @IsInt() worker_id!: number;
+  // Laravel: worker_id required|integer, access_level_ids required|array.
+  // @IsNotEmpty — bo'sh bo'lsa 'required' xabari (integer/array emas).
+  @ApiProperty() @IsNotEmpty() @IsInt() worker_id!: number;
   @ApiProperty({ type: [Number] })
+  @IsNotEmpty()
   @IsArray()
   @IsInt({ each: true })
   access_level_ids!: number[];
