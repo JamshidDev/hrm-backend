@@ -9,9 +9,11 @@ import {
   asc,
   count,
   eq,
+  gte,
   ilike,
   inArray,
   isNull,
+  lte,
   or,
   sql,
   type SQL,
@@ -1812,92 +1814,102 @@ export class WorkerPositionService {
 
   // POST /api/v1/hr/worker-positions/{uuid}/edit/attach-role.
   async attachRole(uuid: string, dto: AttachDetachRoleDto): Promise<void> {
-    const [wp] = await this.db
-      .select({
-        id: worker_positions.id,
-        worker_id: worker_positions.worker_id,
-      })
-      .from(worker_positions)
-      .where(eq(worker_positions.uuid, uuid))
+    // Laravel resolveProfile: target org auth-user'ning org subtree'sida (getAllChildrenIds).
+    await this.assertOrgInSubtree(dto.organization_id);
+
+    // Laravel resolveProfile: Worker::whereUuid($uuid)->firstOrFail() — {uuid} WORKER
+    // uuid (worker_position emas), keyin User::where('worker_id', worker->id)->firstOrFail().
+    const [worker] = await this.db
+      .select({ id: workers.id })
+      .from(workers)
+      .where(eq(workers.uuid, uuid))
       .limit(1);
-    if (!wp || !wp.worker_id) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.worker_position_not_found'),
-      );
+    if (!worker) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
 
     const [user] = await this.db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(eq(usersTable.worker_id, wp.worker_id))
+      .where(eq(usersTable.worker_id, worker.id))
       .limit(1);
     if (!user) {
-      throw new BusinessException(400, this.i18n.t('messages.user_not_found'));
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
 
-    let roleId = dto.role_id;
-    if (!roleId && dto.role) {
-      const [r] = await this.db
-        .select({ id: roles.id })
+    // Role'ni name bilan ham yechamiz (Admin guard nomga muhtoj).
+    let role: { id: number; name: string } | undefined;
+    if (dto.role_id) {
+      [role] = await this.db
+        .select({ id: roles.id, name: roles.name })
+        .from(roles)
+        .where(eq(roles.id, dto.role_id))
+        .limit(1);
+    } else if (dto.role) {
+      [role] = await this.db
+        .select({ id: roles.id, name: roles.name })
         .from(roles)
         .where(eq(roles.name, dto.role))
         .limit(1);
-      if (!r) {
-        throw new BusinessException(404, this.i18n.t('messages.not_found'));
-      }
-      roleId = r.id;
     }
-    if (!roleId) {
-      throw new BusinessException(422, this.i18n.t('messages.not_found'));
+    if (!role) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
 
-    // Check if already attached.
-    const [existing] = await this.db
-      .select({ role_id: model_has_roles.role_id })
-      .from(model_has_roles)
+    // Laravel: Admin rolini biriktirib bo'lmaydi.
+    if (role.name === 'Admin') {
+      throw new BusinessException(
+        403,
+        this.i18n.t('messages.errors.organization_not_allowed_permission'),
+      );
+    }
+
+    // Laravel: shu org uchun mavjud rolni o'chirib, yangisini biriktiradi (org'ga 1 role).
+    await this.db
+      .delete(model_has_roles)
       .where(
         and(
-          eq(model_has_roles.role_id, roleId),
           eq(model_has_roles.model_id, user.id),
           eq(model_has_roles.organization_id, dto.organization_id),
         ),
-      )
-      .limit(1);
+      );
+    await this.db.insert(model_has_roles).values({
+      role_id: role.id,
+      model_id: user.id,
+      model_type: 'App\\Models\\User',
+      organization_id: dto.organization_id,
+    });
 
-    if (!existing) {
-      await this.db.insert(model_has_roles).values({
-        role_id: roleId,
-        model_id: user.id,
-        model_type: 'App\\Models\\User',
-        organization_id: dto.organization_id,
-      });
-    }
+    // Laravel: profile->update(organization_id = orgId).
+    await this.db
+      .update(usersTable)
+      .set({ organization_id: dto.organization_id })
+      .where(eq(usersTable.id, user.id));
   }
 
   // PUT /api/v1/hr/worker-positions/{uuid}/edit/detach-role.
   async detachRole(uuid: string, dto: AttachDetachRoleDto): Promise<void> {
-    const [wp] = await this.db
-      .select({
-        id: worker_positions.id,
-        worker_id: worker_positions.worker_id,
-      })
-      .from(worker_positions)
-      .where(eq(worker_positions.uuid, uuid))
+    // Laravel resolveProfile: target org auth-user'ning org subtree'sida.
+    await this.assertOrgInSubtree(dto.organization_id);
+
+    // Laravel resolveProfile: Worker::whereUuid($uuid)->firstOrFail() → User::where(worker_id).
+    const [worker] = await this.db
+      .select({ id: workers.id })
+      .from(workers)
+      .where(eq(workers.uuid, uuid))
       .limit(1);
-    if (!wp || !wp.worker_id) {
-      throw new BusinessException(
-        400,
-        this.i18n.t('messages.worker_position_not_found'),
-      );
+    if (!worker) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
     }
 
     const [user] = await this.db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(eq(usersTable.worker_id, wp.worker_id))
+      .where(eq(usersTable.worker_id, worker.id))
       .limit(1);
-    if (!user) return;
+    if (!user) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
 
     // Detach by organization_id only (Laravel signature: roleService->detach(uuid, organization_id)).
     await this.db
@@ -1908,6 +1920,38 @@ export class WorkerPositionService {
           eq(model_has_roles.organization_id, dto.organization_id),
         ),
       );
+  }
+
+  // Laravel resolveProfile: Organization::getAllChildrenIds(auth.org) — target org
+  // auth-user'ning tashkilot subtree'sida (descendants + self, NestedSet _lft/_rgt)
+  // bo'lishi shart, aks holda permission denied.
+  private async assertOrgInSubtree(targetOrgId: number): Promise<void> {
+    const authOrgId = this.ctx.user_or_fail.organization_id;
+    const denied = () =>
+      new BusinessException(
+        403,
+        this.i18n.t('messages.errors.organization_not_allowed_permission'),
+      );
+    if (authOrgId == null) throw denied();
+    if (Number(authOrgId) === Number(targetOrgId)) return;
+    const [auth] = await this.db
+      .select({ lft: organizations._lft, rgt: organizations._rgt })
+      .from(organizations)
+      .where(eq(organizations.id, Number(authOrgId)))
+      .limit(1);
+    if (!auth) throw denied();
+    const [hit] = await this.db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(
+        and(
+          eq(organizations.id, Number(targetOrgId)),
+          gte(organizations._lft, auth.lft),
+          lte(organizations._rgt, auth.rgt),
+        ),
+      )
+      .limit(1);
+    if (!hit) throw denied();
   }
 
   private pickLang(
