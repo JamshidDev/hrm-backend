@@ -9,6 +9,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { MinioService } from '@/shared/minio/minio.service';
+import { StructureTreeService } from '@/modules/structure/structure-tree/structure-tree.service';
 import { getFullPosition } from '@/modules/hr/_shared/position-helper';
 import {
   departments,
@@ -39,6 +40,7 @@ export class IntegrationMainService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly minio: MinioService,
+    private readonly structureTree: StructureTreeService,
   ) {}
 
   /** GET /integration/enums — frontend dropdownlar. */
@@ -78,26 +80,12 @@ export class IntegrationMainService {
     };
   }
 
-  /** GET /integration/structure — organizations paginated. */
-  async structure(q: IntegrationPageQueryDto) {
-    const { page, perPage, offset } = pageOf(q);
-    const where = notDeleted(organizations);
-    const [rows, [{ total }]] = await Promise.all([
-      this.db
-        .select()
-        .from(organizations)
-        .where(where)
-        .orderBy(organizations.id)
-        .limit(perPage)
-        .offset(offset),
-      this.db.select({ total: count() }).from(organizations).where(where),
-    ]);
-    return {
-      current_page: page,
-      per_page: perPage,
-      total: Number(total),
-      data: rows,
-    };
+  /**
+   * GET /integration/structure — Laravel StructureController::index (rol-asosli org TREE).
+   * /api/v1/structure bilan bir xil → StructureTreeService.index'ni qayta ishlatadi.
+   */
+  async structure(q: IntegrationPageQueryDto & { organization_id?: number }) {
+    return this.structureTree.index(q.search, q.organization_id);
   }
 
   /**

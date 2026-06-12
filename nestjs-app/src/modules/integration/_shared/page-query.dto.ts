@@ -33,6 +33,20 @@ export class IntegrationPageQueryDto {
   search?: string;
 }
 
+/** GET /integration/structure — search + organization_id (rol-asosli org tree). */
+export class IntegrationStructureQueryDto {
+  @ApiPropertyOptional({ example: 'UTY' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  organization_id?: number;
+}
+
 /** Dashboard / turnstile event endpointlari uchun — `date` majburiy (Laravel parity). */
 export class IntegrationDateQueryDto {
   @ApiProperty({ example: '2026-05-18', description: 'YYYY-MM-DD format' })

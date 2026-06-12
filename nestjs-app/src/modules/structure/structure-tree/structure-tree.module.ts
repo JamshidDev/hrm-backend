@@ -7,5 +7,6 @@ import { StructureTreeService } from '@/modules/structure/structure-tree/structu
   imports: [AuthModule],
   controllers: [StructureTreeController],
   providers: [StructureTreeService],
+  exports: [StructureTreeService],
 })
 export class StructureTreeModule {}

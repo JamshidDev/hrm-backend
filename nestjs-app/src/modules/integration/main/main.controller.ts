@@ -15,6 +15,7 @@ import { IntegrationMainService } from '@/modules/integration/main/main.service'
 import {
   IntegrationDateQueryDto,
   IntegrationPageQueryDto,
+  IntegrationStructureQueryDto,
 } from '@/modules/integration/_shared/page-query.dto';
 
 @ApiTags('Integration')
@@ -39,8 +40,8 @@ export class IntegrationMainController {
   }
 
   @Get('structure')
-  @ApiOperation({ summary: 'List organizations (structure)' })
-  async structure(@Query() q: IntegrationPageQueryDto) {
+  @ApiOperation({ summary: 'Structure (role-based org tree)' })
+  async structure(@Query() q: IntegrationStructureQueryDto) {
     return buildSuccess(true, await this.service.structure(q));
   }
 

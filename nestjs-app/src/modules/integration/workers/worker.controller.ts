@@ -14,8 +14,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationWorkerService } from '@/modules/integration/workers/worker.service';
-import { IntegrationPageQueryDto } from '@/modules/integration/_shared/page-query.dto';
 import {
+  IntegrationWorkersQueryDto,
   TurnstileEventsDayQueryDto,
   TurnstileEventsMonthQueryDto,
   WorkerByPinQueryDto,
@@ -31,7 +31,7 @@ export class IntegrationWorkerController {
 
   @Get('workers')
   @ApiOperation({ summary: 'List workers (paginated + search)' })
-  async list(@Query() q: IntegrationPageQueryDto) {
+  async list(@Query() q: IntegrationWorkersQueryDto) {
     return buildSuccess(true, await this.service.list(q));
   }
 
