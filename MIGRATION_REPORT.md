@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** Global #1 (422 uuid i18n) + #3 (charset) HAL QILINDI. hr moduli GET-list batch (24 dan 6 FIXED, 1 DEFER: vacancy).
-- **Keyingi qadam:** `hr/vacancy` chuqur diff (applications_count 1≠0 + city.id 197≠2 — count/join logikasi). So'ng qolgan hr GET (dashboard/*, report/*, edu-plans...) → turnstile/lms modullari → CRUD → 78 implement.
+- **Oxirgi tugatilgan:** hr/vacancy + report/{departments,department-positions,worker-positions} FIXED (chuqur: org_id IS NULL, orderBy, status/contract enum, rate accessor /100, ACTIVE filter, per_page).
+- **Keyingi qadam:** Qolgan hr GET DIFFER: `dashboard`, `dashboard-three`, `edu-plans`, `get-department`, `get-positions`, `report/optimization` (422), `report/structure`. So'ng turnstile/lms modullari → CRUD → 78 implement.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -121,7 +121,9 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | — | GET | admin/access-for-admin | ⚠️ DEFER | 422 validation-message i18n: NestJS inglizcha ("must be a UUID"), Laravel lokal ("...maydoni to'ldirilishi shart") — TIZIMLI (barcha 422) |
 
 | 50-65 | GET | hr/* GET-list (24 tekshirildi) | ✅/🔧 | **6 FIXED:** check-worker (pin required+min/max), search-workers (org_id required), organization-phones (per_page), applications (worker.uuid ortiqcha), contract-additional (worker COALESCE-fallback + soft-delete), confirmation-workers (orderBy) · 17 MATCH · **1 DEFER:** vacancy |
-| — | GET | hr/vacancy | ⚠️ DEFER | applications_count (1≠0) + city.id (197≠2) — count/join logikasi, chuqur tekshirish kerak |
+| 66 | GET | hr/vacancy | ✅ FIXED | orderBy(desc id) olib tashlandi → natural order |
+| 67-69 | GET | hr/report/{departments,department-positions,worker-positions} | ✅ FIXED | org_id optional+IS NULL, orderBy, Confirm/Changed/ContractType enum, rate accessor /100, worker_rate ACTIVE filter, per_page |
+| — | GET | hr/{dashboard,dashboard-three,edu-plans,get-department,get-positions,report/optimization,report/structure} | ⚠️ TODO | DIFFER — keyingi continue-ct |
 
 **GLOBAL HAL QILINDI:** #3 charset (main.ts res.setHeader patch) · #1 422 uuid+minLength i18n (laravel-validation).
 
