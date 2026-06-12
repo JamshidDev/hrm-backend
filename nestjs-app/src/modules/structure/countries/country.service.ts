@@ -34,10 +34,10 @@ export class CountryService {
       db: this.db,
       count: () =>
         this.db.$count(sql`(${this.db.query.countries.findMany({ where })})`),
+      // Laravel: Country::query()->search()->paginate() — orderBy YO'Q (natural order).
       query: ({ limit, offset }) =>
         this.db.query.countries.findMany({
           where,
-          orderBy: { id: 'asc' },
           limit,
           offset,
         }),

@@ -19,26 +19,39 @@ Oxirgi yangilanish: 2026-06-12
 *Audit usuli: `php artisan route:list --json` (Laravel 1008 api/v1) ↔ NestJS swagger JSON (20 modul, 871 route). Path param'lar `{}` ga normallashtirildi. Laravel `Route::resource` ning `create`/`edit` (HTML form) route'lari hisobga olinmadi.*
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
-- **Bosqich:** 1-BOSQICH (AUDIT) tugadi → foydalanuvchi tasdig'i kutilmoqda.
-- **Oxirgi tugatilgan:** `GET /user/mobile/work-info` (9/9 MATCH, commit qilindi).
-- **Keyingi qadam:** Foydalanuvchi tasdiqlagach → 0-BOSQICH (28 role uchun test-user + scripts/tokens.sh + scripts/api-diff.sh), so'ng 2-BOSQICH (78 endpoint bittalab).
+- **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
+- **Oxirgi tugatilgan:** `GET /api/v1/structure/countries` — ✅ FIXED (orderBy olib tashlandi).
+- **Keyingi qadam:** Strukturali ravishda `structure/*` modulidan davom (cities, regions, positions, languages...) har birini `bash scripts/api-diff.sh GET <path> Admin` bilan tekshirib, DIFFER bo'lsa tuzatib, e2e test yozib commit. So'ng qolgan modullar va 78 implement.
+- **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
+- **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
 ## Role'lar (DB `roles` jadvali — 28 ta, guard=sanctum)
 HR, Worker, Admin, Finance, Economist, Jurist, HrLeader, EconomistLeader, OrganizationLeader, Hospital, TurnstileLeader, LmsLearningCenter, LmsTeacher, TurnstileViewer, SuperLms, TestLeader, TurnstileManagement, EMM, TimesheetHR, NBT, ToshkentMtuIntegration, HrViewLeader, EconomistManagement, IKT, WorkersView, LeaderManagement, (bo'sh #29), Test role #30
 
 RolesEnum (`Modules/Structure/.../RolesEnum.php`): Worker, HR, Finance, Jurist, Economist, HrLeader, EconomistLeader, Hospital, TurnstileViewer, TurnstileLeader, ...
 
-## Test userlar (0-BOSQICH — yaratiladi)
-| Role | Email | Token | Bog'liq data | Holat |
-|------|-------|-------|--------------|-------|
-| (har role uchun {role}@test.uz — keyingi bosqichda) | | | | ⏳ TODO |
+## Test userlar (0-BOSQICH — 22/28 tayyor)
+Login **phone** bilan (email emas). Test uchun har role'ning vakil real-user'i tanlandi + sanctum token mint qilindi (`scripts/tokens.sh`). DB ifloslantirilmadi.
 
-> Hozircha parity test mavjud real userlar bilan qilingan: 99, 161, 8454, 34764 (mobile), 1231294 (admin).
+| Role | User | | Role | User | | Role | User |
+|------|------|-|------|------|-|------|------|
+| HR | 26 | | Hospital | 50433 | | HrViewLeader | 279 |
+| Worker | 1* | | TurnstileLeader | 4649 | | EconomistManagement | 39 |
+| Admin | 1 | | LmsLearningCenter | 23833 | | IKT | 19756 |
+| Finance | 78 | | TurnstileViewer | 293 | | WorkersView | 38111 |
+| Economist | 41 | | EMM | 12258 | | LeaderManagement | 1177 |
+| Jurist | 57534 | | TimesheetHR | 11 | | | |
+| HrLeader | 27 | | NBT | 59898 | | | |
+| EconomistLeader | 255 | | ToshkentMtuIntegration | 1245 | | | |
+| OrganizationLeader | 14 | | | | | | |
 
-## Scriptlar (0-BOSQICH — yaratiladi)
-- `scripts/tokens.sh` — har role token (⏳ TODO)
-- `scripts/api-diff.sh` — METHOD PATH TOKEN BODY → ikki serverga so'rov, `jq -S` diff + header diff (⏳ TODO)
-- Mavjud yordamchi: `/tmp/pdfcheck/cmp.sh` (GET parity), python deep-diff (S3 URL normalizatsiya).
+*Worker=user1=Admin (ikkala rol bor) — toza Worker-403 testi uchun keyin faqat-Worker user kerak.
+**Vakil yo'q (⏳):** LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role.
+
+## Scriptlar (0-BOSQICH — ✅ tayyor)
+- `scripts/tokens.sh` — `get_token <Role>` / `get_tuser <Role>` (bash 3.2 mos, case-funksiya). 22 role.
+- `scripts/api-diff.sh` — `METHOD PATH ROLE [BODY] [LANG]` → ikki serverga so'rov, body (jq-style, S3-normalizatsiya) + header diff, MATCH/DIFFER. `RAW` → token'siz.
+- Mavjud yordamchi: `/tmp/pdfcheck/cmp.sh` (GET parity), python deep-diff.
 
 ---
 
@@ -81,7 +94,13 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 
 ---
 
+## ✅ Chuqur tasdiqlangan endpointlar (2-BOSQICH)
+| # | Method | Path | Holat | Izoh |
+|---|--------|------|-------|------|
+| 1 | GET | structure/countries | ✅ FIXED | NestJS `orderBy id asc` olib tashlandi → Laravel natural order (default/pagination/search MATCH) |
+
 ## Topilgan buglar va tuzatishlar (bu sessiya)
+- `structure/countries`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)
 - `user/mobile/work-info`: region/city/nationality SoftDeletes relation → o'chirilgan bo'lsa Laravel `null` qaytaradi (NestJS `notDeleted` qo'shildi)
 - `user/mobile/work-info`: `languages` belongsToMany pivot soft-delete'ni filtrlamaydi (NestJS'dan `notDeleted` olib tashlandi)
 - `user/mobile/work-info`: `positions.position:id,name` eager-load → `name_ru`/`name_en` yuklanmaydi → ru/en'da `null` (PositionMinimalResource fallback'siz)
@@ -94,6 +113,8 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | 1 | GET | structure/positions/{id} | 500 | (spot-check; keyin tekshiriladi) |
 
 ## E'tibor talab qiladigan joylar
-1. **B-kategoriya (43 GET-show)**: Laravel `apiResource` avtomatik `show()` — haqiqatda ishlatiladimi? Hammasini implement qilish ko'p, lekin frontend ishlatmasa keraksiz. → Prioritet bo'yicha qaror kerak.
-2. **28 role uchun test-user**: shared DB'ga 28 user + bog'liq data (organization/department) yoziladi — tasdiq kerak.
-3. **EXTRA 10**: NestJS qo'shgan route'lar Laravel'da yo'q — qoldiriladimi yoki olib tashlanadimi?
+1. **GLOBAL header diff**: NestJS `Content-Type: application/json; charset=utf-8`, Laravel `application/json` (charset'siz) — BARCHA endpointda. Global fix (`@/common` interceptor) — frontend'ga ta'sir qilmaydi, lekin global o'zgarish. Tasdiq kerak.
+2. **B-kategoriya (43 GET-show)**: tanlangan — ishlatilishini avval tekshirib, faqat real ishlatilganini implement.
+3. **6 vakil-yo'q role**: LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role — kerak bo'lganda test-user yaratiladi.
+4. **e2e test konvensiyasi**: loyihada `*.spec.ts` (service-unit, 18 ta) bor, lekin spec real e2e so'raydi — ikki-server diff'ni e2e qilib qo'shish kerakmi yoki `*.spec.ts` uslubida? (hozircha api-diff.sh bilan tekshirilyapti).
+5. **EXTRA 10**: NestJS qo'shgan route'lar — qoldiriladimi?
