@@ -2,7 +2,15 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayNotEmpty, IsArray, IsInt, IsString } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsDateString,
+  IsInt,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class WorkersByPinsDto {
   @ApiProperty({ example: [12345678, 87654321], type: [Number] })
@@ -27,4 +35,28 @@ export class WorkerUuidParamDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsString()
   workerUuid!: string;
+}
+
+// Laravel IntegrationTurnstileEventsByMonthRequest: month/year required.
+export class TurnstileEventsMonthQueryDto {
+  @ApiProperty({ example: 6 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty({ example: 2026 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2010)
+  @Max(2030)
+  year!: number;
+}
+
+// Laravel IntegrationTurnstileEventsByDayRequest: date required.
+export class TurnstileEventsDayQueryDto {
+  @ApiProperty({ example: '2026-06-12' })
+  @IsDateString()
+  date!: string;
 }
