@@ -21,6 +21,7 @@ import {
   MonthStatQueryDto,
   MyResumeQueryDto,
   MySchedulesQueryDto,
+  MyVacationsQueryDto,
   SalaryQueryDto,
   TurnstileEventsQueryDto,
   TurnstileStartLivenessDto,
@@ -122,9 +123,9 @@ export class UserMobileController {
   }
 
   @Get('my-vacations')
-  @ApiOperation({ summary: 'My latest vacations (stub)' })
-  async myVacations() {
-    return buildSuccess(true, await this.service.myVacations());
+  @ApiOperation({ summary: 'My latest vacations' })
+  async myVacations(@Query() q: MyVacationsQueryDto) {
+    return buildSuccess(true, await this.service.myVacations(q));
   }
 
   @Get('my-resume')

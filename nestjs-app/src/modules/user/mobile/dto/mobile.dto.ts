@@ -80,6 +80,15 @@ export class MySchedulesQueryDto {
   month?: number;
 }
 
+// Laravel myLatestVacations: worker_position_id (integer ?: null).
+export class MyVacationsQueryDto {
+  @ApiPropertyOptional({ example: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  worker_position_id?: number;
+}
+
 export class TurnstileEventsQueryDto {
   @ApiPropertyOptional({ example: '2026-05-01' })
   @IsOptional()

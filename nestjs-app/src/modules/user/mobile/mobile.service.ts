@@ -4,7 +4,7 @@
 
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -16,6 +16,8 @@ import {
   statements,
   users,
   user_mobile_keys,
+  vacations,
+  worker_positions,
   workers,
 } from '@/db/schema';
 import { buildStatementDetail } from '@/modules/integration/worker-salary/statement-details.util';
@@ -25,6 +27,7 @@ import type {
   MonthStatQueryDto,
   MyResumeQueryDto,
   MySchedulesQueryDto,
+  MyVacationsQueryDto,
   SalaryQueryDto,
   TurnstileEventsQueryDto,
   TurnstileStartLivenessDto,
@@ -293,10 +296,74 @@ export class UserMobileService {
     };
   }
 
-  /** GET /user/mobile/my-vacations — oxirgi ta'tillar (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async myVacations() {
-    return { data: [], stub: true };
+  /**
+   * GET /user/mobile/my-vacations — Laravel VacationService::getMyLatestVacation.
+   * WorkerPosition WHERE worker_id=user.worker_id AND id=worker_position_id (findOrFail→404)
+   * → Vacation WHERE worker_id, latest(id). Yo'q bo'lsa []. Wrapped.
+   */
+  async myVacations(q: MyVacationsQueryDto) {
+    const userWorkerId = this.ctx.user_or_fail.worker_id;
+    const wpId = q.worker_position_id ?? null;
+    const notFound = () =>
+      new BusinessException(404, this.i18n.t('messages.not_found'));
+    if (userWorkerId == null || wpId == null) throw notFound();
+    // findOrFail: pozitsiya foydalanuvchining worker'iga tegishli bo'lishi shart.
+    const [wp] = await this.db
+      .select({ id: worker_positions.id })
+      .from(worker_positions)
+      .where(
+        and(
+          eq(worker_positions.worker_id, userWorkerId),
+          eq(worker_positions.id, wpId),
+        ),
+      )
+      .limit(1);
+    if (!wp) throw notFound();
+
+    // WP worker_id = user.worker_id (yuqorida shu bilan filtrlangan).
+    const [v] = await this.db
+      .select()
+      .from(vacations)
+      .where(eq(vacations.worker_id, userWorkerId))
+      .orderBy(desc(vacations.id))
+      .limit(1);
+    if (!v) return [];
+
+    return {
+      all_day: v.all_day,
+      type: {
+        id: v.type,
+        name: this.vacationTypeName(v.type),
+      },
+      period_from: v.period_from,
+      period_to: v.period_to,
+      from: v.from,
+      to: v.to,
+      rest_day: v.rest_day,
+    };
+  }
+
+  // Laravel VacationTypeEnum::get — command-type qiymatini ta'til turi nomiga map qiladi.
+  private vacationTypeName(type: number): string {
+    // CommandType → vacation type kaliti (1..8).
+    const map: Record<number, string> = {
+      41: 'one',
+      42: 'one',
+      43: 'one',
+      44: 'one',
+      46: 'one',
+      45: 'three',
+      49: 'three',
+      48: 'two',
+      51: 'five',
+      52: 'four',
+      53: 'seven',
+      55: 'six',
+    };
+    const key = map[type] ?? 'eight';
+    return this.i18n.t(`messages.vacations.types.${key}`, {
+      lang: this.ctx.lang,
+    });
   }
 
   /** GET /user/mobile/my-resume — resume PDF (stub binary, hozir JSON). */
