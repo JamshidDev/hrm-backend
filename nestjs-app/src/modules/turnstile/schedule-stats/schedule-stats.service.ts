@@ -1390,19 +1390,16 @@ export class ScheduleStatsService {
   // ────────────────────────────────────────────────────────────────────────
   // PREVIEW: privilege_turnstile_workers — PrivilegeWorkersResource.
   //
-  // NOTE: Laravel `->where('start', '!=', 0)->orWhere('end', '!=', 0)` SQL'da
-  // top-level OR sifatida ulanadi (parens'siz) → SCOPE filterlarini buzadi va
-  // 244 row qaytaradi. Lekin dashboard CARD (stats-six) PROPER grouping
-  // ishlatadi va 216 qaytaradi. UX consistency uchun preview'ni card'ga
-  // tenglashtirib, proper grouping ishlatamiz.
+  // NOTE: Laravel `->where('start','!=',0)->orWhere('end','!=',0)` qavssiz top-level
+  // OR sifatida ulanadi → scope filterlardan "qochadi" va 244 row qaytaradi. Lekin
+  // dashboard CARD (stats-six) PROPER grouping ishlatadi → 216. Developer talabi
+  // (UX izchilligi): preview total CARD bilan mos bo'lsin → proper grouping
+  // `(start != 0 OR end != 0)` scope ICHIDA. Laravel'ning 244-buggy xulqidan ATAYIN
+  // chetlanish. trailingOr (qavssiz OR) hack'i olib tashlandi.
   // ────────────────────────────────────────────────────────────────────────
   async privilegeTurnstilePreview(q: PreviewQuery) {
-    // Laravel: ->where('start_minute','!=',0)->orWhere('end_minute','!=',0)
-    // guruhlanmagan → `(barcha AND start!=0) OR (end!=0)`. end!=0 rowlari
-    // scope/status/deleted shartlaridan "qochadi" (Laravel xulqi — parity).
     return this.workerPositionPreview(q, {
-      extraCond: sql`AND wp.turnstile_privilege_start_minute != 0`,
-      trailingOr: sql` OR wp.turnstile_privilege_end_minute != 0`,
+      extraCond: sql`AND (wp.turnstile_privilege_start_minute != 0 OR wp.turnstile_privilege_end_minute != 0)`,
       extraFields: [
         'turnstile_privilege_start_minute',
         'turnstile_privilege_end_minute',
