@@ -3,15 +3,19 @@
 
 import { Injectable } from '@nestjs/common';
 import { aliasedTable, and, eq, sql } from 'drizzle-orm';
+import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import { MinioService } from '@/shared/minio/minio.service';
+import { nowDb } from '@/common/utils/datetime.util';
 import {
   departments,
   organizations,
   positions,
+  terminal_mobile_events,
   worker_phones,
   worker_photos,
   worker_positions,
@@ -20,6 +24,7 @@ import {
 import type {
   MobileFaceCheckWorkerDto,
   MobileFaceSchedulesDto,
+  MobileFaceSendEventDto,
 } from '@/modules/integration/mobile-face/dto/mobile-face.dto';
 
 const POSITION_STATUS_ACTIVE = 2;
@@ -30,12 +35,97 @@ export class IntegrationMobileFaceService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly minio: MinioService,
+    private readonly i18n: I18nService,
   ) {}
 
-  /** POST /integration/mobile-face/send-event — stub (#16, yozuv — alohida). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async sendEvent(_body: unknown) {
-    return { success: true, stub: true };
+  /**
+   * POST /integration/mobile-face/send-event — Laravel MobileFaceController/Service.
+   * 1) TerminalMobileEvent yaratiladi (photo/lat/lng/pin) — har doim.
+   * 2) Worker (pin) topilmasa → not_found. Dublikat (worker_id+time) → event_already_exists.
+   * 3) terminal_events'ga yoziladi (partitsiyalangan) + mobile event yangilanadi.
+   */
+  async sendEvent(dto: MobileFaceSendEventDto) {
+    // Laravel controller: $newEvent = TerminalMobileEvent::create(...) — har doim avval.
+    const [mobileEvent] = await this.db
+      .insert(terminal_mobile_events)
+      .values({
+        photo: dto.photo ?? null,
+        lat: String(dto.lat),
+        lng: String(dto.lng),
+        pin: Number(dto.pin),
+        created_at: nowDb(),
+        updated_at: nowDb(),
+      })
+      .returning({ id: terminal_mobile_events.id });
+
+    const [worker] = await this.db
+      .select({
+        id: workers.id,
+        last_name: workers.last_name,
+        first_name: workers.first_name,
+        middle_name: workers.middle_name,
+      })
+      .from(workers)
+      .where(and(eq(workers.pin, Number(dto.pin)), notDeleted(workers)))
+      .limit(1);
+    if (!worker) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+
+    // Worker::position (active, hasOne) — birinchi faol lavozim.
+    const [pos] = await this.db
+      .select({ id: worker_positions.id })
+      .from(worker_positions)
+      .where(
+        and(
+          eq(worker_positions.worker_id, worker.id),
+          eq(worker_positions.status, POSITION_STATUS_ACTIVE),
+          notDeleted(worker_positions),
+        ),
+      )
+      .limit(1);
+    const workerPositionId = pos?.id ?? null;
+
+    // Dublikat tekshiruvi (terminal_events partitsiyalangan → raw SQL).
+    const dup = await this.db.execute(sql`
+      SELECT 1 FROM terminal_events
+      WHERE worker_id = ${worker.id} AND event_date_and_time = ${dto.event_date_and_time}
+      LIMIT 1
+    `);
+    if (rowsOf(dup).length > 0) {
+      throw new BusinessException(
+        400,
+        this.i18n.t('messages.turnstile.event_already_exists'),
+      );
+    }
+
+    const ins = await this.db.execute(sql`
+      INSERT INTO terminal_events
+        (worker_id, hik_central_access_level_id, worker_position_id,
+         event_date_and_time, auth_type, device_name, resource_name,
+         last_name, first_name, middle_name, direction, temperature, mask_status,
+         created_at, updated_at)
+      VALUES
+        (${worker.id}, NULL, ${workerPositionId},
+         ${dto.event_date_and_time}, 'MobileFaceEvent', ${dto.organization}, ${dto.organization},
+         ${worker.last_name}, ${worker.first_name}, ${worker.middle_name}, ${dto.event_type}, NULL, NULL,
+         NOW(), NOW())
+      RETURNING id
+    `);
+    const terminalEventId = Number(rowsOf(ins)[0]?.id);
+
+    await this.db
+      .update(terminal_mobile_events)
+      .set({
+        terminal_event_id: terminalEventId,
+        worker_position_id: workerPositionId,
+        worker_id: worker.id,
+        updated_at: nowDb(),
+      })
+      .where(eq(terminal_mobile_events.id, mobileEvent.id));
+
+    // Laravel Helper::response() → data [].
+    return [];
   }
 
   /**

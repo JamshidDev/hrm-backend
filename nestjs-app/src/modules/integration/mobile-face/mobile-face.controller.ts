@@ -9,6 +9,7 @@ import { IntegrationMobileFaceService } from '@/modules/integration/mobile-face/
 import {
   MobileFaceCheckWorkerDto,
   MobileFaceSchedulesDto,
+  MobileFaceSendEventDto,
 } from '@/modules/integration/mobile-face/dto/mobile-face.dto';
 
 @ApiTags('Integration / Mobile Face')
@@ -18,9 +19,9 @@ export class IntegrationMobileFaceController {
 
   @Public()
   @Post('send-event')
-  @ApiOperation({ summary: 'Mobile face send event (HMAC, public stub)' })
-  async sendEvent(@Body() body: unknown) {
-    return buildSuccess(true, await this.service.sendEvent(body));
+  @ApiOperation({ summary: 'Mobile face send event' })
+  async sendEvent(@Body() dto: MobileFaceSendEventDto) {
+    return buildSuccess(true, await this.service.sendEvent(dto));
   }
 
   @Public()
