@@ -214,9 +214,15 @@ export class FilterService {
     const page = filters.page ?? 1;
     const lang = this.ctx.lang;
 
+    // Laravel: ->filterByOrganization($user) — childIds (role/org-scope).
+    const inScope = await this.scope.whereOrg(departments.organization_id, {
+      organizations: (filters as { organizations?: string }).organizations,
+    });
+
     const where = and(
       isNull(departments.deleted_at),
       isNull(departments.parent_id),
+      inScope,
       filters.search
         ? ilike(departments.name, `%${filters.search}%`)
         : undefined,
@@ -230,6 +236,9 @@ export class FilterService {
           id: departments.id,
           name: departments.name,
           level: departments.level,
+          name_ru: departments.name_ru,
+          name_en: departments.name_en,
+          comment: departments.comment,
           org_id: organizations.id,
           org_name: organizations.name,
           org_name_ru: organizations.name_ru,
@@ -244,8 +253,8 @@ export class FilterService {
             isNull(organizations.deleted_at),
           ),
         )
+        // Laravel: whereIsRoot()->filterByOrganization()->paginate() — orderBy YO'Q.
         .where(where)
-        .orderBy(asc(departments.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(departments).where(where),
@@ -253,12 +262,22 @@ export class FilterService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
+      // Laravel Department\DepartmentResource: id, name, level:{id,name},
+      // name_ru, name_en, comment, organization.
       data: rows.map((r) => ({
         id: r.id,
         name: r.name,
-        level: r.level,
+        level: {
+          id: r.level,
+          name:
+            r.level != null
+              ? this.i18n.t(DEPARTMENT_LEVEL_KEYS[r.level] ?? '', { lang })
+              : '',
+        },
+        name_ru: r.name_ru,
+        name_en: r.name_en,
+        comment: r.comment,
         organization: r.org_id
           ? {
               id: r.org_id,
@@ -321,7 +340,7 @@ export class FilterService {
     ];
 
     if (positionIds.length === 0) {
-      return { current_page: page, per_page: perPage, total: 0, data: [] };
+      return { current_page: page, total: 0, data: [] };
     }
 
     const posWhere = and(
@@ -341,9 +360,9 @@ export class FilterService {
           name_ru: positionsTable.name_ru,
           name_en: positionsTable.name_en,
         })
+        // Laravel: Position::query()->search()->whereIn(...)->paginate() — orderBy YO'Q.
         .from(positionsTable)
         .where(posWhere)
-        .orderBy(asc(positionsTable.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(positionsTable).where(posWhere),
@@ -351,7 +370,6 @@ export class FilterService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({
         id: r.id,
