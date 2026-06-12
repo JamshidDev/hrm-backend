@@ -37,10 +37,10 @@ export class RegionService {
       count: () =>
         this.db.$count(sql`(${this.db.query.regions.findMany({ where })})`),
       query: ({ limit, offset }) =>
+        // Laravel: Region::query()->Search()->with('country')->paginate() — orderBy YO'Q.
         this.db.query.regions.findMany({
           where,
           with: { country: true },
-          orderBy: { id: 'asc' },
           limit,
           offset,
         }),

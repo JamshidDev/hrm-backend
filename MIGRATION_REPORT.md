@@ -97,7 +97,20 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 ## ✅ Chuqur tasdiqlangan endpointlar (2-BOSQICH)
 | # | Method | Path | Holat | Izoh |
 |---|--------|------|-------|------|
-| 1 | GET | structure/countries | ✅ FIXED | NestJS `orderBy id asc` olib tashlandi → Laravel natural order (default/pagination/search MATCH) |
+| 1 | GET | structure/countries | ✅ FIXED | `orderBy id asc` olib tashlandi → natural order (default/pagination/search MATCH) |
+| 2 | GET | structure/cities | ✅ MATCH | — |
+| 3 | GET | structure/regions | ✅ FIXED | `orderBy id asc` olib tashlandi → natural order |
+| 4 | GET | structure/languages | ✅ MATCH | (orderBy id asc — Laravel bilan mos) |
+| 5 | GET | structure/positions | ✅ MATCH | — |
+| 6 | GET | structure/holidays | ✅ MATCH | — |
+| 7 | GET | structure/command-types | ✅ MATCH | — |
+| 8 | GET | structure/contract-types | ✅ MATCH | — |
+| 9 | GET | structure/quotes | ✅ MATCH | — |
+| 10 | GET | structure/learning-centers | ✅ MATCH | (orderBy id desc — Laravel bilan mos) |
+| 11 | GET | structure/contract-additional-types | ✅ MATCH | — |
+
+> Faqat GET-list (default) tekshirildi. To'liq spec (har role 403, 422, 404, pagination, til) keyingi o'tishda chuqurlashtiriladi.
+> `orderBy: {id}` antipattern TIZIMLI EMAS — faqat countries/regions noto'g'ri edi. Qolganlari (languages/learning-centers) Laravel bilan mos. admin/roles, admin/permissions, admin/users — admin modulida tekshiriladi.
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
 - `structure/countries`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)
