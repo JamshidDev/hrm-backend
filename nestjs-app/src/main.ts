@@ -59,6 +59,29 @@ async function bootstrap() {
     maxAge: 0,
   });
 
+  // Laravel parity: Content-Type `application/json` (charset'siz). Express
+  // avtomatik `; charset=utf-8` qo'shadi — res.setHeader'ni patch qilib olib
+  // tashlaymiz (faqat shu aniq qiymat; boshqa content-type'larga tegmaydi).
+  app.use(
+    (
+      _req: unknown,
+      res: { setHeader: (n: string, v: unknown) => unknown },
+      next: () => void,
+    ) => {
+      const orig = res.setHeader.bind(res);
+      res.setHeader = (name: string, value: unknown) => {
+        if (
+          name.toLowerCase() === 'content-type' &&
+          value === 'application/json; charset=utf-8'
+        ) {
+          value = 'application/json';
+        }
+        return orig(name, value);
+      };
+      next();
+    },
+  );
+
   // class-validator NestJS DI'ga ulanishi uchun (async validator'lar @InjectDb
   // kabi inject qila olishi uchun zarur — `@Exists` validator ishlashida).
   useContainer(app.select(AppModule), { fallbackOnErrors: true });

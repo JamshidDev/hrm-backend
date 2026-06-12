@@ -139,10 +139,10 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | 1 | GET | structure/positions/{id} | 500 | (spot-check; keyin tekshiriladi) |
 
 ## E'tibor talab qiladigan joylar
-1. **GLOBAL header diff**: NestJS `Content-Type: application/json; charset=utf-8`, Laravel `application/json` (charset'siz) — BARCHA endpointda. Global fix (`@/common` interceptor) — frontend'ga ta'sir qilmaydi, lekin global o'zgarish. Tasdiq kerak.
+1. ✅ **HAL QILINDI — GLOBAL header diff**: main.ts'da `res.setHeader` patch → `application/json` (charset'siz). Barcha endpointda mos.
 2. **B-kategoriya (43 GET-show)**: tanlangan — ishlatilishini avval tekshirib, faqat real ishlatilganini implement.
 3. **6 vakil-yo'q role**: LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role — kerak bo'lganda test-user yaratiladi.
 4. **e2e test konvensiyasi**: loyihada `*.spec.ts` (service-unit, 18 ta) bor, lekin spec real e2e so'raydi — ikki-server diff'ni e2e qilib qo'shish kerakmi yoki `*.spec.ts` uslubida? (hozircha api-diff.sh bilan tekshirilyapti).
 5. **EXTRA 10**: NestJS qo'shgan route'lar — qoldiriladimi?
-7. **⚠️ TIZIMLI: 422 validation-message i18n** — NestJS class-validator inglizcha default xabar beradi ("must be a UUID"), Laravel lokalizatsiyalangan ("...maydoni to'ldirilishi shart"). Barcha 422 javoblariga taalluqli. Global yechim kerak (class-validator message'larni i18n bilan). `access-for-admin` da ko'rindi.
+7. **🟡 QISMAN — 422 validation-message i18n**: mexanizm bor (`laravel-validation.ts` + `.messages.ts`, ~15 qoida). `uuid` qo'shildi (`access-for-admin` ✅). Yetishmagan qoidalar (exists, regex, digits...) modul-bo'ylab qo'shiladi — yangi qoida chiqsa: CONSTRAINT_TO_RULE + VALIDATION_RULES(3 til) + RULE_PRIORITY.
 8. **⚠️ TIZIMLI: dept/position join soft-delete** — `confirmations` topgan bug (join'da `isNull(deleted_at)` yo'q → o'chirilgan dept nomi chiqib qoladi) kodda **25 ta `leftJoin(departments)`** da bo'lishi mumkin. Har birini Laravel relation (SoftDeletes qo'llaydimi) bilan tekshirib, kerak bo'lsa `isNull(deleted_at)` qo'shish kerak. Tekshirilgan/tuzatilgan: structure-tree (confirmations). Qolgan ~24: lms/certificates, integration/mobile-face, integration/main, economist/staffing, hr/worker-exports, hr/vacations, hr/worker-positions va h.k. — keyingi o'tishlarda har endpoint bilan birga.

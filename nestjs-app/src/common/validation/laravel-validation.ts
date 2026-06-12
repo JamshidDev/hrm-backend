@@ -33,6 +33,7 @@ const CONSTRAINT_TO_RULE: Record<string, string> = {
   isDateString: 'date',
   isDate: 'date',
   isEmail: 'email',
+  isUuid: 'uuid',
   isEnum: 'in',
   isIn: 'in',
   // chegaralar (numeric — class-validator @Min/@Max son uchun)
@@ -63,6 +64,7 @@ const RULE_PRIORITY = [
   'array',
   'date',
   'email',
+  'uuid',
   'in',
   'min_numeric',
   'max_numeric',

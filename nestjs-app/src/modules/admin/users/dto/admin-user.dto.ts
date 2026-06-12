@@ -8,6 +8,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -114,7 +115,9 @@ export class QueryAdminUserRoleDto extends PaginationQueryDto {
 }
 
 export class GenerateAdminUserTokenDto {
+  // Laravel: ['required', 'uuid', 'exists:users,uuid'].
   @ApiProperty({ example: '0b5b3658-801b-425f-9811-10952e72ad21' })
+  @IsNotEmpty()
   @IsUUID()
   user_uuid!: string;
 }
