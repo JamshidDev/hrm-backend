@@ -6,7 +6,6 @@ import { Injectable } from '@nestjs/common';
 import {
   and,
   count,
-  desc,
   eq,
   inArray,
   isNotNull,
@@ -150,8 +149,8 @@ export class VacancyService {
         )
         .leftJoin(cities, eq(cities.id, vacancy_positions.city_id))
         .leftJoin(regions, eq(regions.id, cities.region_id))
+        // Laravel: VacancyPosition::query()->filter()->...->paginate() — orderBy YO'Q.
         .where(where)
-        .orderBy(desc(vacancy_positions.id))
         .limit(perPage)
         .offset(offset),
       this.db
