@@ -711,5 +711,18 @@
   "zoom": {
     "not_found": "Zoom meeting not found"
   },
-  "successfully_sorted": "Successfully sorted"
+  "successfully_sorted": "Successfully sorted",
+  "mobile": {
+    "personal_information": "Personal Information",
+    "careers": "Career History",
+    "passport_information": "Passport Information",
+    "education": "Education",
+    "relatives": "Relatives",
+    "meds": "Medical Information",
+    "vacations": "Vacations",
+    "incentives": "Incentives",
+    "disciplinary_actions": "Disciplinary Actions",
+    "exams": "Exams",
+    "salary": "Salary"
+  }
 }

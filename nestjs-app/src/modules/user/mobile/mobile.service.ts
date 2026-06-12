@@ -134,16 +134,60 @@ export class UserMobileService {
     return { success: true };
   }
 
-  /** GET /user/mobile/my-schedules — workerning grafigi (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async mySchedules(_q: MySchedulesQueryDto) {
-    return { data: [], stub: true };
+  /**
+   * GET /user/mobile/my-schedules — Laravel UserScheduleStatsService::mySchedules.
+   * TurnstileWorkerSchedule WHERE worker_id + worker_position_id, date BETWEEN
+   * [oy-01, keyingi-oy-01] (inclusive). → {date, start_time, end_time, is_work}.
+   */
+  async mySchedules(q: MySchedulesQueryDto) {
+    const workerId = this.ctx.user_or_fail.worker_id;
+    const now = new Date();
+    const year = q.year ?? now.getUTCFullYear();
+    const month = q.month ?? now.getUTCMonth() + 1;
+    const mm = String(month).padStart(2, '0');
+    const start = `${year}-${mm}-01`;
+    // Laravel: $startDate->copy()->addMonth()->toDateString() — keyingi oy 1-kuni.
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    const end = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+    // turnstile_worker_schedules — partitsiyalangan parent → raw SQL.
+    const res = await this.db.execute(sql`
+      SELECT date::text AS date, start_time, end_time, work_status
+      FROM turnstile_worker_schedules
+      WHERE worker_id = ${workerId}
+        AND worker_position_id = ${q.worker_position_id}
+        AND date BETWEEN ${start} AND ${end}
+    `);
+    return mobileRowsOf(res).map((s) => ({
+      date: s.date as string,
+      start_time: s.start_time as string | null,
+      end_time: s.end_time as string | null,
+      is_work: s.work_status as boolean | number | null,
+    }));
   }
 
-  /** GET /user/mobile/personal-list — worker personal info (stub). */
+  /**
+   * GET /user/mobile/personal-list — Laravel UserMobileService::workerInfoLabels.
+   * Worker profil bo'limlari uchun i18n label'lar (DB so'rovi yo'q).
+   */
   // eslint-disable-next-line @typescript-eslint/require-await
   async personalList() {
-    return { data: [], stub: true };
+    const lang = this.ctx.lang;
+    const t = (k: string) => this.i18n.t(`messages.mobile.${k}`, { lang });
+    return {
+      personal_information: t('personal_information'),
+      careers: t('careers'),
+      passport_information: t('passport_information'),
+      educations: t('education'),
+      relatives: t('relatives'),
+      meds: t('meds'),
+      vacations: t('vacations'),
+      incentives: t('incentives'),
+      disciplinary_actions: t('disciplinary_actions'),
+      exams: t('exams'),
+      salary: t('salary'),
+    };
   }
 
   /** GET /user/mobile/work-info — worker work info (stub). */
@@ -290,4 +334,9 @@ export class UserMobileService {
   async turnstileShowStats(_q: MonthStatQueryDto) {
     return { data: [], stub: true };
   }
+}
+
+function mobileRowsOf(result: unknown): Record<string, unknown>[] {
+  const r = result as { rows?: unknown[] };
+  return (Array.isArray(r.rows) ? r.rows : result) as Record<string, unknown>[];
 }

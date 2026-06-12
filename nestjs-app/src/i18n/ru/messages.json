@@ -713,5 +713,18 @@
   "zoom": {
     "not_found": "Zoom-встреча не найдена"
   },
-  "successfully_sorted": "Успешно отсортировано"
+  "successfully_sorted": "Успешно отсортировано",
+  "mobile": {
+    "personal_information": "Личные данные",
+    "careers": "Трудовая деятельность",
+    "passport_information": "Паспортные данные",
+    "education": "Образование",
+    "relatives": "Родственники",
+    "meds": "Медицинские данные",
+    "vacations": "Отпуска",
+    "incentives": "Поощрения",
+    "disciplinary_actions": "Дисциплинарные взыскания",
+    "exams": "Экзамены",
+    "salary": "Заработная плата"
+  }
 }

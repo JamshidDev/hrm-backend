@@ -58,16 +58,26 @@ export class UpdateFcmDto {
   device_uuid?: string;
 }
 
+// Laravel MySchedulesRequest: worker_position_id required, year/month nullable.
 export class MySchedulesQueryDto {
-  @ApiPropertyOptional({ example: '2026-05-01' })
-  @IsOptional()
-  @IsString()
-  start_date?: string;
+  @ApiProperty({ example: 5 })
+  @Type(() => Number)
+  @IsInt()
+  worker_position_id!: number;
 
-  @ApiPropertyOptional({ example: '2026-05-31' })
+  @ApiPropertyOptional({ example: 2026 })
   @IsOptional()
-  @IsString()
-  end_date?: string;
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional({ example: 6 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month?: number;
 }
 
 export class TurnstileEventsQueryDto {

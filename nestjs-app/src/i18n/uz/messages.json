@@ -711,5 +711,18 @@
   "zoom": {
     "not_found": "Zoom uchrashuvi topilmadi"
   },
-  "successfully_sorted": "Muvaffaqqiyatli tartiblandi"
+  "successfully_sorted": "Muvaffaqqiyatli tartiblandi",
+  "mobile": {
+    "personal_information": "Shaxsiy ma’lumotlar",
+    "careers": "Mehnat faoliyati",
+    "passport_information": "Pasport ma’lumotlari",
+    "education": "Ma’lumoti",
+    "relatives": "Qarindoshlari",
+    "meds": "Tibbiy ma’lumotlar",
+    "vacations": "Ta’til ma’lumotlari",
+    "incentives": "Rag‘batlantirishlar",
+    "disciplinary_actions": "Intizomiy jazolar",
+    "exams": "Imtihonlar",
+    "salary": "Ish haqi"
+  }
 }
