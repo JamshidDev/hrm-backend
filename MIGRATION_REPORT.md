@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** `GET /api/v1/structure/countries` — ✅ FIXED (orderBy olib tashlandi).
-- **Keyingi qadam:** Strukturali ravishda `structure/*` modulidan davom (cities, regions, positions, languages...) har birini `bash scripts/api-diff.sh GET <path> Admin` bilan tekshirib, DIFFER bo'lsa tuzatib, e2e test yozib commit. So'ng qolgan modullar va 78 implement.
+- **Oxirgi tugatilgan:** admin moduli GET-list (5 FIXED: roles, activity-logs, telegram/users, telegram/bot/users, instructions).
+- **Keyingi qadam:** Keyingi modul GET-list (hr / turnstile / lms ...) `bash scripts/api-diff.sh GET <path> Admin` bilan batch tekshirish → DIFFER tuzatish. So'ng CRUD (store/update/delete) + 78 implement. access-for-admin 422 i18n tizimli — global hal qilinadi.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -112,6 +112,14 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | 29 | GET | structure/organization-services | ✅ FIXED | `organization_id` majburiy edi (422) → optional + IS NULL (Laravel `where(col,null)`) |
 | 30 | GET | structure/confirmations | ✅ FIXED | `departments`/`positions` join'da `isNull(deleted_at)` yo'q edi → o'chirilgan dept getFullPosition'da chiqib qolardi |
 
+| 31 | GET | admin/roles | ✅ FIXED | permissions sub-array Laravel pivot **ctid** tartibida (NestJS name-asc edi); manual batch yuklash |
+| 32 | GET | admin/activity-logs | ✅ FIXED | `created_at` → `toLaravelTimestamp` (ISO8601) |
+| 33 | GET | admin/telegram/users | ✅ FIXED | `created_at` → ISO8601 |
+| 34 | GET | admin/telegram/bot/users | ✅ FIXED | `active` filtri olib tashlandi + orderBy olib tashlandi + `whereNot id 101` + `user` UsersResource shakli (uuid qo'shildi, worker `photo:null` — Laravel `with('user.worker:id,...')` photo'siz yuklaydi) + per_page leak |
+| 35 | GET | admin/instructions | ✅ FIXED | orderBy olib tashlandi (natural order) + photos `fileUrl` qo'llandi |
+| 36-49 | GET | admin/{authentication-logs,integration-log/*,mobile/users,permissions,users,users/direct-permissions} | ✅ MATCH | batch (13 ta) |
+| — | GET | admin/access-for-admin | ⚠️ DEFER | 422 validation-message i18n: NestJS inglizcha ("must be a UUID"), Laravel lokal ("...maydoni to'ldirilishi shart") — TIZIMLI (barcha 422) |
+
 > Faqat GET-list (default) tekshirildi. To'liq spec (har role 403, 422, 404, pagination, til) keyingi o'tishda chuqurlashtiriladi.
 > `orderBy: {id}` antipattern TIZIMLI EMAS — faqat countries/regions noto'g'ri edi. Qolganlari (languages/learning-centers) Laravel bilan mos. admin/roles, admin/permissions, admin/users — admin modulida tekshiriladi.
 
@@ -136,4 +144,5 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 3. **6 vakil-yo'q role**: LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role — kerak bo'lganda test-user yaratiladi.
 4. **e2e test konvensiyasi**: loyihada `*.spec.ts` (service-unit, 18 ta) bor, lekin spec real e2e so'raydi — ikki-server diff'ni e2e qilib qo'shish kerakmi yoki `*.spec.ts` uslubida? (hozircha api-diff.sh bilan tekshirilyapti).
 5. **EXTRA 10**: NestJS qo'shgan route'lar — qoldiriladimi?
-6. **⚠️ TIZIMLI: dept/position join soft-delete** — `confirmations` topgan bug (join'da `isNull(deleted_at)` yo'q → o'chirilgan dept nomi chiqib qoladi) kodda **25 ta `leftJoin(departments)`** da bo'lishi mumkin. Har birini Laravel relation (SoftDeletes qo'llaydimi) bilan tekshirib, kerak bo'lsa `isNull(deleted_at)` qo'shish kerak. Tekshirilgan/tuzatilgan: structure-tree (confirmations). Qolgan ~24: lms/certificates, integration/mobile-face, integration/main, economist/staffing, hr/worker-exports, hr/vacations, hr/worker-positions va h.k. — keyingi o'tishlarda har endpoint bilan birga.
+7. **⚠️ TIZIMLI: 422 validation-message i18n** — NestJS class-validator inglizcha default xabar beradi ("must be a UUID"), Laravel lokalizatsiyalangan ("...maydoni to'ldirilishi shart"). Barcha 422 javoblariga taalluqli. Global yechim kerak (class-validator message'larni i18n bilan). `access-for-admin` da ko'rindi.
+8. **⚠️ TIZIMLI: dept/position join soft-delete** — `confirmations` topgan bug (join'da `isNull(deleted_at)` yo'q → o'chirilgan dept nomi chiqib qoladi) kodda **25 ta `leftJoin(departments)`** da bo'lishi mumkin. Har birini Laravel relation (SoftDeletes qo'llaydimi) bilan tekshirib, kerak bo'lsa `isNull(deleted_at)` qo'shish kerak. Tekshirilgan/tuzatilgan: structure-tree (confirmations). Qolgan ~24: lms/certificates, integration/mobile-face, integration/main, economist/staffing, hr/worker-exports, hr/vacations, hr/worker-positions va h.k. — keyingi o'tishlarda har endpoint bilan birga.

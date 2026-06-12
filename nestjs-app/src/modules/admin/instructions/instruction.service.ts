@@ -3,7 +3,7 @@
 // Photo upload va PDF export hozircha stub (MinIO + dompdf real implement keyin).
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -79,11 +79,11 @@ export class InstructionService {
     const where = and(...conds) ?? notDeleted(app_instructions);
 
     const [rows, [{ total }]] = await Promise.all([
+      // Laravel: AppInstruction::query()->...->paginate() — orderBy YO'Q (natural order).
       this.db
         .select()
         .from(app_instructions)
         .where(where)
-        .orderBy(desc(app_instructions.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(app_instructions).where(where),
@@ -213,6 +213,18 @@ export class InstructionService {
     for (const p of photos) {
       (byInstr[p.app_instruction_id] ??= []).push(p);
     }
-    return rows.map((r) => InstructionMapper.toItem(r, byInstr));
+    const items = rows.map((r) => InstructionMapper.toItem(r, byInstr));
+    // Laravel AppInstructionResource: photo => Helper::fileUrl($photo).
+    await Promise.all(
+      items.map(async (it) => {
+        it.photos = await Promise.all(
+          it.photos.map(async (p) => ({
+            id: p.id,
+            photo: (await this.minio.fileUrl(p.photo)) ?? p.photo,
+          })),
+        );
+      }),
+    );
+    return items;
   }
 }

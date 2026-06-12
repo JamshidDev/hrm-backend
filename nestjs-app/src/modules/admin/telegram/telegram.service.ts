@@ -7,6 +7,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { MinioService } from '@/shared/minio/minio.service';
+import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 import { user_telegrams, users, workers } from '@/db/schema';
 import type {
@@ -116,7 +117,7 @@ export class AdminTelegramService {
             chat_id: r.chat_id,
             // user_telegrams'da `tg_id` ustuni yo'q → Laravel $this->tg_id = null (parity).
             tg_id: null,
-            created_at: r.created_at,
+            created_at: toLaravelTimestamp(r.created_at),
           };
         }),
       ),
@@ -152,13 +153,15 @@ export class AdminTelegramService {
         );
       workerIdsForBirthday = todayRows.map((r) => r.id);
       if (!workerIdsForBirthday.length) {
-        return { current_page: page, per_page: perPage, total: 0, data: [] };
+        return { current_page: page, total: 0, data: [] };
       }
     }
 
+    // Laravel paginateUsers: UserTelegram::query()->when(birthdays)->whereNot('id', 101)
+    //   ->paginate() — active filtri YO'Q, orderBy YO'Q. (SoftDeletes → notDeleted).
     const conds: SQL[] = [
       notDeleted(user_telegrams),
-      eq(user_telegrams.active, true),
+      sql`${user_telegrams.id} != 101`,
     ];
 
     if (workerIdsForBirthday) {
@@ -168,7 +171,7 @@ export class AdminTelegramService {
         .where(inArray(users.worker_id, workerIdsForBirthday));
       const ids = userIds.map((u) => u.id);
       if (!ids.length) {
-        return { current_page: page, per_page: perPage, total: 0, data: [] };
+        return { current_page: page, total: 0, data: [] };
       }
       conds.push(inArray(user_telegrams.user_id, ids));
     }
@@ -179,7 +182,6 @@ export class AdminTelegramService {
         .select()
         .from(user_telegrams)
         .where(where)
-        .orderBy(desc(user_telegrams.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(user_telegrams).where(where),
@@ -188,7 +190,6 @@ export class AdminTelegramService {
     const data = await this.enrichWithUserWorker(rows);
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data,
     };
@@ -215,6 +216,7 @@ export class AdminTelegramService {
     const userRows = await this.db
       .select({
         id: users.id,
+        uuid: users.uuid,
         phone: users.phone,
         worker_id: users.worker_id,
       })
@@ -240,30 +242,34 @@ export class AdminTelegramService {
     const userMap: Record<number, (typeof userRows)[number]> = {};
     for (const u of userRows) userMap[u.id] = u;
 
+    // Laravel Telegram\UsersResource: {id, user: UserInfoResource, chat_id, phone}.
+    // UserInfoResource: {id, uuid, worker: WorkerUserResource, phone}.
+    // WorkerUserResource: {id, photo: fileUrl, last_name, first_name, middle_name}.
+    // MUHIM: Laravel `with(['user.worker:id,first_name,last_name,middle_name'])` —
+    //   worker'ni photo'siz yuklaydi → photo: fileUrl(null) = null.
     return rows.map((r) => {
       const u = userMap[r.user_id];
       const w = u?.worker_id != null ? workerMap[u.worker_id] : undefined;
       return {
         id: r.id,
-        user_id: r.user_id,
-        phone: r.phone,
-        chat_id: r.chat_id,
-        active: r.active,
         user: u
           ? {
               id: u.id,
-              phone: u.phone,
+              uuid: u.uuid,
               worker: w
                 ? {
                     id: w.id,
+                    photo: null,
                     last_name: w.last_name,
                     first_name: w.first_name,
                     middle_name: w.middle_name,
-                    photo: w.photo,
                   }
                 : null,
+              phone: u.phone,
             }
           : null,
+        chat_id: r.chat_id,
+        phone: r.phone,
       };
     });
   }

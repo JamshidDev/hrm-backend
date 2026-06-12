@@ -8,6 +8,7 @@ import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { OrgScopeService } from '@/common/database/org-scope.service';
 import { MinioService } from '@/shared/minio/minio.service';
+import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import { activity_log, users, workers } from '@/db/schema';
 import { buildWorkerSearchCond } from '@/modules/hr/_shared/worker-search.helper';
 
@@ -127,7 +128,7 @@ export class ActivityLogService {
             properties: r.properties,
             causer,
             description: r.description,
-            created_at: r.created_at,
+            created_at: toLaravelTimestamp(r.created_at),
           };
         }),
       ),

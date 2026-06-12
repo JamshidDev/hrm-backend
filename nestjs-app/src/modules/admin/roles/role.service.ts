@@ -2,14 +2,13 @@
 // Spatie laravel-permission moslab — roles + role_has_permissions + model_has_roles bilan ishlaydi.
 
 import { Injectable } from '@nestjs/common';
-import { eq, ilike } from 'drizzle-orm';
+import { eq, ilike, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource, Tx } from '@/db/types';
 import { roles, role_has_permissions, model_has_roles } from '@/db/schema';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { paginate } from '@/common/pagination/paginate.util';
-import { RoleMapper } from '@/modules/admin/roles/role.mapper';
 import type {
   QueryRoleDto,
   CreateRoleDto,
@@ -35,7 +34,7 @@ export class RoleService {
       ? ilike(roles.name, `%${filters.search}%`)
       : undefined;
 
-    return paginate({
+    const result = await paginate({
       db: this.db,
       countTable: roles,
       countWhere: where,
@@ -44,21 +43,46 @@ export class RoleService {
           where: filters.search
             ? { name: { ilike: `%${filters.search}%` } }
             : undefined,
-          // Laravel Spatie role.permissions default order — name ASC bilan mos.
-          with: {
-            permissions: {
-              columns: { id: true, name: true },
-              orderBy: { name: 'asc' },
-            },
-          },
           orderBy: { id: 'desc' },
           limit,
           offset,
         }),
       page,
       perPage,
-      mapper: RoleMapper.toItem,
+      mapper: (r: { id: number; name: string }) => ({
+        id: r.id,
+        name: r.name,
+        permissions: [] as { id: number; name: string }[],
+      }),
     });
+
+    // Laravel ->with('permissions'): pivot (role_has_permissions) fizik (ctid)
+    // tartibida qaytaradi — orderBy YO'Q. NestJS relational `with` ctid'ni qo'llay
+    // olmagani uchun qo'lda batch yuklab, ctid tartibini saqlaymiz.
+    const roleIds = result.data.map((r) => r.id);
+    if (roleIds.length) {
+      const res = await this.db.execute(sql`
+        SELECT rhp.role_id AS role_id, p.id AS id, p.name AS name
+        FROM role_has_permissions rhp
+        JOIN permissions p ON p.id = rhp.permission_id
+        WHERE rhp.role_id IN (${sql.join(
+          roleIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+        ORDER BY rhp.role_id, rhp.ctid
+      `);
+      const byRole = new Map<number, { id: number; name: string }[]>();
+      for (const row of rowsOf(res)) {
+        const k = Number(row.role_id);
+        const arr = byRole.get(k) ?? [];
+        arr.push({ id: Number(row.id), name: String(row.name) });
+        byRole.set(k, arr);
+      }
+      for (const role of result.data) {
+        role.permissions = byRole.get(role.id) ?? [];
+      }
+    }
+    return result;
   }
 
   async create(dto: CreateRoleDto): Promise<void> {
@@ -171,4 +195,9 @@ export class RoleService {
       .limit(1);
     return !!hasUsers;
   }
+}
+
+function rowsOf(result: unknown): Record<string, unknown>[] {
+  const r = result as { rows?: unknown[] };
+  return (Array.isArray(r.rows) ? r.rows : result) as Record<string, unknown>[];
 }
