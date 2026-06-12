@@ -60,7 +60,29 @@
       "four": "Adolat partiyasi",
       "five": "Milliy tiklanish partiyasi"
     },
-    "not_found": "Xodim topilmadi"
+    "not_found": "Xodim topilmadi",
+    "marital_status": {
+      "one": "Turmush qurmagan",
+      "two": "Uylangan / Turmushga chiqqan",
+      "three": "Ajrashgan"
+    },
+    "family": {
+      "one": "Otasi",
+      "two": "Onasi",
+      "three": "Akasi",
+      "four": "Opasi",
+      "five": "Turmush o'rtog'i",
+      "six": "Ukasi",
+      "seven": "Singlisi",
+      "eight": "O'g'li",
+      "nine": "Qizi",
+      "ten": "Qaynotasi",
+      "eleven": "Qaynonasi",
+      "twelve": "Qaynakasi",
+      "thirteen": "Qaynopasi",
+      "fourteen": "Qaynukasi",
+      "fifteen": "Qaynsingli"
+    }
   },
   "invalid_credentials": "Bunday foydalanuvchi tizimda topilmadi",
   "not_found_role_or_worker": "Foydalanuvchiga tegishli ruxsatlar aniqlanmadi, iltimos tizim ma'muriyatiga bog'laning...",

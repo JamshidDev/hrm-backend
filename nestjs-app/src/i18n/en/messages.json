@@ -60,7 +60,29 @@
       "four": "Adolat Party",
       "five": "Milliy Tiklanish Party"
     },
-    "not_found": "Employee not found"
+    "not_found": "Employee not found",
+    "marital_status": {
+      "one": "Single",
+      "two": "Married",
+      "three": "Divorced"
+    },
+    "family": {
+      "one": "Father",
+      "two": "Mother",
+      "three": "Older brother",
+      "four": "Older sister",
+      "five": "Spouse",
+      "six": "Younger brother",
+      "seven": "Younger sister",
+      "eight": "Son",
+      "nine": "Daughter",
+      "ten": "Father-in-law",
+      "eleven": "Mother-in-law",
+      "twelve": "Brother (husband's/wife's)",
+      "thirteen": "Sister (husband's/wife's)",
+      "fourteen": "young. Brother (husband's/wife's)",
+      "fifteen": "young. Sister (husband's/wife's)"
+    }
   },
   "invalid_credentials": "Such user was not found in the system. Please verify the entered information...",
   "not_found_role_or_worker": "No permissions were found for the user, please contact your system administrator...",
