@@ -416,10 +416,21 @@ export class StructureTreeService {
           isNull(organizations.deleted_at),
         ),
       )
-      .leftJoin(departments, eq(departments.id, worker_positions.department_id))
+      // Laravel relation'lar (department/position) SoftDeletes scope qo'llaydi →
+      // o'chirilgan bo'lsa null (getFullPosition'da dept nomi tushib qoladi).
+      .leftJoin(
+        departments,
+        and(
+          eq(departments.id, worker_positions.department_id),
+          isNull(departments.deleted_at),
+        ),
+      )
       .leftJoin(
         positionsTable,
-        eq(positionsTable.id, worker_positions.position_id),
+        and(
+          eq(positionsTable.id, worker_positions.position_id),
+          isNull(positionsTable.deleted_at),
+        ),
       )
       .where(where)
       .limit(pp)

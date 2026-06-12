@@ -108,12 +108,17 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | 9 | GET | structure/quotes | ✅ MATCH | — |
 | 10 | GET | structure/learning-centers | ✅ MATCH | (orderBy id desc — Laravel bilan mos) |
 | 11 | GET | structure/contract-additional-types | ✅ MATCH | — |
+| 12-28 | GET | structure/{all,enums,organizations,organization-list,parents,parent-leaders,reports,reports-stat,reports-per-month,schedules,specialities,universities,work-days,organization-levels,report/labels,export/tasks-count} | ✅ MATCH | batch (17 ta) |
+| 29 | GET | structure/organization-services | ✅ FIXED | `organization_id` majburiy edi (422) → optional + IS NULL (Laravel `where(col,null)`) |
+| 30 | GET | structure/confirmations | ✅ FIXED | `departments`/`positions` join'da `isNull(deleted_at)` yo'q edi → o'chirilgan dept getFullPosition'da chiqib qolardi |
 
 > Faqat GET-list (default) tekshirildi. To'liq spec (har role 403, 422, 404, pagination, til) keyingi o'tishda chuqurlashtiriladi.
 > `orderBy: {id}` antipattern TIZIMLI EMAS — faqat countries/regions noto'g'ri edi. Qolganlari (languages/learning-centers) Laravel bilan mos. admin/roles, admin/permissions, admin/users — admin modulida tekshiriladi.
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
-- `structure/countries`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)
+- `structure/countries` + `regions`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)
+- `structure/organization-services`: `organization_id` majburiy (422) → optional + yo'q bo'lsa `IS NULL` (Laravel `where(col,null)`)
+- `structure/confirmations`: `departments`/`positions` join'da `isNull(deleted_at)` yetishmasdi → o'chirilgan department `getFullPosition`'da nom sifatida chiqib qolardi (Laravel relation SoftDeletes null qaytaradi). ⚠️ Bu naqsh boshqa dept-join endpointlarda ham bo'lishi mumkin.
 - `user/mobile/work-info`: region/city/nationality SoftDeletes relation → o'chirilgan bo'lsa Laravel `null` qaytaradi (NestJS `notDeleted` qo'shildi)
 - `user/mobile/work-info`: `languages` belongsToMany pivot soft-delete'ni filtrlamaydi (NestJS'dan `notDeleted` olib tashlandi)
 - `user/mobile/work-info`: `positions.position:id,name` eager-load → `name_ru`/`name_en` yuklanmaydi → ru/en'da `null` (PositionMinimalResource fallback'siz)

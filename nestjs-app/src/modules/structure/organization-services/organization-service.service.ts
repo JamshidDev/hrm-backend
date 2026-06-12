@@ -21,7 +21,11 @@ export class OrganizationServiceService {
     const rows = await this.db.query.organization_services.findMany({
       columns: { key: true, active: true },
       where: {
-        organization_id: filters.organization_id,
+        // Laravel where('organization_id', $id): yo'q bo'lsa IS NULL.
+        organization_id:
+          filters.organization_id != null
+            ? filters.organization_id
+            : { isNull: true },
         deleted_at: { isNull: true },
       },
     });

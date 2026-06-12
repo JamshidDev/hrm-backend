@@ -3,7 +3,7 @@
 //
 // Logika: response — har enum case uchun `{key, name, active}`. Mavjud bo'lmasa active=false.
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -15,10 +15,13 @@ import {
 import { Exists } from '@/common/validators/exists.validator';
 
 export class QueryOrganizationServiceDto {
-  @ApiProperty({ example: 1 })
+  // Laravel: request('organization_id') — validatsiyasiz (ixtiyoriy).
+  // Yo'q bo'lsa Laravel `where(col, null)` → IS NULL.
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  organization_id!: number;
+  organization_id?: number;
 }
 
 export class CreateOrganizationServiceDto {
