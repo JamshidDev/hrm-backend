@@ -82,11 +82,17 @@ export class TurnstileEventsQueryDto {
   date_to?: string;
 }
 
+// Laravel SalaryRequest: year/month required integer.
 export class SalaryQueryDto {
-  @ApiProperty({ example: '2026-05' })
-  @IsString()
-  @IsNotEmpty()
-  month!: string;
+  @ApiProperty({ example: 2026 })
+  @Type(() => Number)
+  @IsInt()
+  year!: number;
+
+  @ApiProperty({ example: 5 })
+  @Type(() => Number)
+  @IsInt()
+  month!: number;
 }
 
 export class MonthStatQueryDto {

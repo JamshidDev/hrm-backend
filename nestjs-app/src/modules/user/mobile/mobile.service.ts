@@ -11,7 +11,14 @@ import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { RequestContext } from '@/common/context/request.context';
 import { UserResourceService } from '@/modules/user/_shared/user-resource.service';
-import { users, user_mobile_keys, workers } from '@/db/schema';
+import {
+  organizations,
+  statements,
+  users,
+  user_mobile_keys,
+  workers,
+} from '@/db/schema';
+import { buildStatementDetail } from '@/modules/integration/worker-salary/statement-details.util';
 import type {
   CheckLocationDto,
   MobileVersionCheckDto,
@@ -181,16 +188,65 @@ export class UserMobileService {
     return { data: [], stub: true };
   }
 
-  /** GET /user/mobile/get-salary-months — oxirgi oylik oylar (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async getSalaryMonths() {
-    return { months: [], stub: true };
+  // Auth user'ning worker pin'i (Laravel $user->worker?->pin).
+  private async workerPin(): Promise<number | null> {
+    const wid = this.ctx.user_or_fail.worker_id;
+    if (!wid) return null;
+    const [w] = await this.db
+      .select({ pin: workers.pin })
+      .from(workers)
+      .where(eq(workers.id, wid))
+      .limit(1);
+    return w?.pin ?? null;
   }
 
-  /** GET /user/mobile/get-salary — oylik tafsiloti (stub). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async getSalary(_q: SalaryQueryDto) {
-    return { data: null, stub: true };
+  /**
+   * GET /user/mobile/get-salary-months — Laravel UserMobileService::salaryMonths.
+   * Statement WHERE pin = worker.pin, distinct (year, month). Wrapped.
+   */
+  async getSalaryMonths() {
+    const pin = await this.workerPin();
+    if (pin == null) return [];
+    return this.db
+      .select({ year: statements.year, month: statements.month })
+      .from(statements)
+      .where(eq(statements.pin, pin))
+      .groupBy(statements.year, statements.month);
+  }
+
+  /**
+   * GET /user/mobile/get-salary — Laravel UserMobileService::salary.
+   * Statement WHERE pin AND year AND month → buildDetails. FLAT {salary:[...]}.
+   */
+  async getSalary(q: SalaryQueryDto) {
+    const pin = await this.workerPin();
+    const rows =
+      pin == null
+        ? []
+        : await this.db
+            .select({
+              stmt: statements,
+              org_full: organizations.full_name,
+              org_name: organizations.name,
+            })
+            .from(statements)
+            .leftJoin(
+              organizations,
+              eq(organizations.id, statements.organization_id),
+            )
+            .where(
+              and(
+                eq(statements.pin, pin),
+                eq(statements.year, q.year),
+                eq(statements.month, q.month),
+              ),
+            );
+    const lang = this.ctx.lang;
+    return {
+      salary: rows.map((r) =>
+        buildStatementDetail(r.stmt, r.org_full, r.org_name, lang),
+      ),
+    };
   }
 
   /** GET /user/mobile/my-vacations — oxirgi ta'tillar (stub). */

@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { UserMobileService } from '@/modules/user/mobile/mobile.service';
 import {
@@ -99,15 +100,17 @@ export class UserMobileController {
   }
 
   @Get('get-salary-months')
-  @ApiOperation({ summary: 'Recent salary months (stub)' })
+  @ApiOperation({ summary: 'Recent salary months' })
   async getSalaryMonths() {
     return buildSuccess(true, await this.service.getSalaryMonths());
   }
 
+  // Laravel: response()->json(['salary' => ...]) — FLAT.
   @Get('get-salary')
-  @ApiOperation({ summary: 'Salary details (stub)' })
+  @RawResponse()
+  @ApiOperation({ summary: 'Salary details' })
   async getSalary(@Query() q: SalaryQueryDto) {
-    return buildSuccess(true, await this.service.getSalary(q));
+    return this.service.getSalary(q);
   }
 
   @Get('enums')
