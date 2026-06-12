@@ -3,7 +3,7 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
-import { buildSuccess } from '@/common/utils/response.util';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { IntegrationWorkerSalaryService } from '@/modules/integration/worker-salary/worker-salary.service';
 import {
   WorkerSalaryDto,
@@ -17,15 +17,19 @@ import {
 export class IntegrationWorkerSalaryController {
   constructor(private readonly service: IntegrationWorkerSalaryService) {}
 
+  // Laravel response()->json(['salary' => ...]) — FLAT.
   @Post('salary')
-  @ApiOperation({ summary: 'Worker salary statements (stub)' })
+  @RawResponse()
+  @ApiOperation({ summary: 'Worker salary statements' })
   async getStatements(@Body() dto: WorkerSalaryDto) {
-    return buildSuccess(true, await this.service.getStatements(dto));
+    return this.service.getStatements(dto);
   }
 
+  // Laravel response()->json(['months' => ...]) — FLAT (Helper::response'siz).
   @Post('get-salary-months')
-  @ApiOperation({ summary: 'Worker salary months (stub)' })
+  @RawResponse()
+  @ApiOperation({ summary: 'Worker salary months' })
   async getStatementMonths(@Body() dto: WorkerSalaryMonthsDto) {
-    return buildSuccess(true, await this.service.getStatementMonths(dto));
+    return this.service.getStatementMonths(dto);
   }
 }
