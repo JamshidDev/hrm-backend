@@ -4,15 +4,26 @@
 //   GET stations/:code/workers/:workerId, .../resume, stats.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  inArray,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { OrgScopeService } from '@/common/database/org-scope.service';
 import { RequestContext } from '@/common/context/request.context';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
+  department_positions,
   departments,
   organizations,
   positions,
@@ -350,15 +361,138 @@ export class IntegrationStationService {
     return row ?? null;
   }
 
-  /** GET /integration/stations/:code/workers/:workerId/resume — stub. */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async workerResume(_code: string, _workerId: number) {
-    return { url: '', stub: true };
+  /** GET /integration/stations/:code/stats — stub (aggregatsiya, keyingi bosqich). */
+
+  // GET /integration/stations/:code/stats — Laravel StationService::stats.
+  // Diqqat: stationCond Laravel stats'da TESKARI (Department→organization_id,
+  // Organization→department_id) — workers listidan farqli.
+  async stats(code: string) {
+    const station = await this.resolveStationRaw(code);
+    if (!station) {
+      throw new BusinessException(404, this.i18n.t('messages.not_found'));
+    }
+    const isDept = station.model_type === DEPARTMENT_TYPE;
+    const modelId = station.model_id;
+
+    // Laravel filter($user, []) — org childIds scope (har jadval o'z organization_id'sida).
+    const dpScope = await this.scope.whereOrg(
+      department_positions.organization_id,
+      {},
+    );
+    const wpScope = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {},
+    );
+
+    const dpStation = isDept
+      ? eq(department_positions.organization_id, modelId)
+      : eq(department_positions.department_id, modelId);
+    const wpStation = isDept
+      ? eq(worker_positions.organization_id, modelId)
+      : eq(worker_positions.department_id, modelId);
+
+    // ratesCount — DepartmentPosition (soft-delete'siz) rate yig'indisi.
+    const [rc] = await this.db
+      .select({
+        s: sql<number>`COALESCE(SUM(${department_positions.rate}), 0)`,
+      })
+      .from(department_positions)
+      .where(and(dpScope, dpStation));
+    const ratesCount = Number(rc.s);
+
+    // sumRate — WorkerPosition rate yig'indisi. WorkerPosition::scopeFilter status=ACTIVE qo'shadi.
+    const [sr] = await this.db
+      .select({ s: sql<number>`COALESCE(SUM(${worker_positions.rate}), 0)` })
+      .from(worker_positions)
+      .where(
+        and(
+          notDeleted(worker_positions),
+          eq(worker_positions.status, 2),
+          wpScope,
+          wpStation,
+        ),
+      );
+    const sumRate = Number(sr.s);
+
+    const vacant = ratesCount - sumRate;
+
+    // Worker::whereHas('position', filter + stationCond) — korrelatsiyalangan EXISTS.
+    // position relation + WorkerPosition::scopeFilter ikkalasi ham status=ACTIVE talab qiladi.
+    const positionExists = exists(
+      this.db
+        .select({ x: sql`1` })
+        .from(worker_positions)
+        .where(
+          and(
+            eq(worker_positions.worker_id, workers.id),
+            notDeleted(worker_positions),
+            eq(worker_positions.status, 2),
+            wpScope,
+            wpStation,
+          ),
+        ),
+    );
+
+    const [agg] = await this.db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        male: sql<number>`COALESCE(SUM((${workers.sex})::int), 0)`,
+        female: sql<number>`COALESCE(SUM((NOT ${workers.sex})::int), 0)`,
+        higher: sql<number>`SUM(CASE WHEN ${workers.education} = 1 THEN 1 ELSE 0 END)`,
+        sec_spec: sql<number>`SUM(CASE WHEN ${workers.education} = 2 THEN 1 ELSE 0 END)`,
+        sec: sql<number>`SUM(CASE WHEN ${workers.education} = 3 THEN 1 ELSE 0 END)`,
+        age31: sql<number>`SUM(CASE WHEN ${workers.birthday} >= (NOW() - INTERVAL '31 years') THEN 1 ELSE 0 END)`,
+        age45: sql<number>`SUM(CASE WHEN ${workers.birthday} >= (NOW() - INTERVAL '45 years') THEN 1 ELSE 0 END)`,
+        allowanceMan: sql<number>`SUM(CASE WHEN ${workers.sex} AND ${workers.birthday} <= (NOW() - INTERVAL '60 years') THEN 1 ELSE 0 END)`,
+        allowanceWoman: sql<number>`SUM(CASE WHEN NOT ${workers.sex} AND ${workers.birthday} <= (NOW() - INTERVAL '55 years') THEN 1 ELSE 0 END)`,
+      })
+      .from(workers)
+      .where(and(notDeleted(workers), positionExists));
+
+    const [bc] = await this.db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(workers)
+      .where(
+        and(
+          notDeleted(workers),
+          positionExists,
+          sql`EXTRACT(MONTH FROM ${workers.birthday}) = EXTRACT(MONTH FROM CURRENT_DATE)`,
+        ),
+      );
+
+    const total = Number(agg.total);
+    const age45 = Number(agg.age45);
+    const age31 = Number(agg.age31);
+
+    return {
+      allowanceMan: Number(agg.allowanceMan),
+      allowanceWoman: Number(agg.allowanceWoman),
+      total_workers: total,
+      total_male: Number(agg.male),
+      total_female: Number(agg.female),
+      birthdays_count: Number(bc.c),
+      rates_count: ratesCount,
+      vacant: Math.max(vacant, 0),
+      overstaffed: Math.min(vacant, 0),
+      higher_education: Number(agg.higher),
+      secondary_speciality_education: Number(agg.sec_spec),
+      secondary_education: Number(agg.sec),
+      age31,
+      age32_45: age45 - age31,
+      age46: total - age45,
+    };
   }
 
-  /** GET /integration/stations/:code/stats — stub (aggregatsiya, keyingi bosqich). */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async stats(_code: string) {
-    return { workers_count: 0, departments_count: 0, stub: true };
+  // resolveStation faqat {model_type, model_id} — stats uchun (name kerak emas).
+  private async resolveStationRaw(code: string) {
+    const [station] = await this.db
+      .select({
+        model_type: station_codes.model_type,
+        model_id: station_codes.model_id,
+      })
+      .from(station_codes)
+      .where(eq(station_codes.code, Number(code)))
+      .limit(1);
+    return station ?? null;
   }
 }

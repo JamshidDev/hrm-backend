@@ -6,12 +6,15 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationStationService } from '@/modules/integration/stations/station.service';
+import { ResumeService } from '@/modules/hr/worker-exports/resume.service';
 import { StationWorkersQueryDto } from '@/modules/integration/stations/dto/station-workers.dto';
 
 @ApiTags('Integration / Stations')
@@ -19,7 +22,10 @@ import { StationWorkersQueryDto } from '@/modules/integration/stations/dto/stati
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/integration/stations')
 export class IntegrationStationController {
-  constructor(private readonly service: IntegrationStationService) {}
+  constructor(
+    private readonly service: IntegrationStationService,
+    private readonly resume: ResumeService,
+  ) {}
 
   @Get(':code/workers')
   @ApiOperation({ summary: 'Station workers by code (+ director, deputy)' })
@@ -39,13 +45,22 @@ export class IntegrationStationController {
     return buildSuccess(true, await this.service.showWorker(code, workerId));
   }
 
+  // Laravel: WorkerPosition::whereUuid({workerId}) → downloadResume — BinaryFileResponse (.docx).
+  // {workerId} = worker_position UUID. ResumeService.generate shu uuidni qabul qiladi.
   @Get(':code/workers/:workerId/resume')
-  @ApiOperation({ summary: 'Station worker resume (stub)' })
+  @ApiOperation({ summary: 'Station worker resume DOCX' })
   async workerResume(
-    @Param('code') code: string,
-    @Param('workerId', ParseIntPipe) workerId: number,
-  ) {
-    return buildSuccess(true, await this.service.workerResume(code, workerId));
+    @Param('workerId') workerId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { buffer, filename } = await this.resume.generate(workerId);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', String(buffer.length));
+    res.end(buffer);
   }
 
   @Get(':code/stats')
