@@ -25,7 +25,6 @@ import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { ChatNewsService } from '@/modules/chat/news/news.service';
 import {
-  CreateNewsDto,
   NewsListQueryDto,
   PublicNewsListQueryDto,
   UpdateNewsDto,
@@ -53,15 +52,26 @@ export class ChatNewsAdminController {
     return buildSuccess(true, await this.service.show(id));
   }
 
+  // Frontend FormData yuboradi (bracket-notation maydonlar + media fayllari).
+  // `@Body() dto` multipart'ni o'qiy olmaydi — updateMultipart singari xom
+  // `req.body` + files bilan ishlaymiz (AnyFilesInterceptor). JSON body ham
+  // shu yo'l bilan ishlaydi (multer multipart'gina ushlaydi).
   @Post()
+  @UseInterceptors(AnyFilesInterceptor())
   @ApiOperation({
-    summary: 'Create news (transaction: news + translations + categories)',
+    summary:
+      'Create news (multipart FormData: news + translations + categories + media)',
   })
-  async store(@Body() dto: CreateNewsDto) {
-    return buildSuccess(
-      this.i18n.t('messages.successfully_stored'),
-      await this.service.create(dto),
+  async store(
+    @Req() req: Request,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    await this.service.createFromForm(
+      (req.body ?? {}) as Record<string, unknown>,
+      files ?? [],
     );
+    // Laravel ChatNewsController::store — Helper::response(message) → data=[].
+    return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
   // PUT (JSON) — translations/categories nested JSON bilan.

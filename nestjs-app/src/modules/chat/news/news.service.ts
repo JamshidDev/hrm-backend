@@ -39,6 +39,23 @@ function toBool(v: unknown): boolean {
   return v === true || v === 1 || v === '1' || v === 'true';
 }
 
+// Frontend turli format yuboradi: "2026.06.12 09:35" (nuqtali, soniyasiz),
+// ISO "2026-06-12T09:35:00Z", "2026-06-12 09:35:00". Laravel `date` rule
+// (strtotime) hammasini qabul qiladi; Postgres timestamp ustuni uchun bizga
+// "YYYY-MM-DD HH:mm:ss" kerak.
+function normalizePublishedAt(v: unknown): string | null {
+  if (v == null || v === '') return null;
+  const s = String(v).trim();
+  const m =
+    /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(
+      s,
+    );
+  if (!m) return s; // tanimadik — xom holda qoldiramiz
+  const [, y, mo, d, h, mi, se] = m;
+  const p = (n: string) => n.padStart(2, '0');
+  return `${y}-${p(mo)}-${p(d)} ${p(h)}:${p(mi)}:${p(se ?? '00')}`;
+}
+
 // FormData bracket-notation (a[0][b]=c) → nested obyekt/massiv. JSON body o'zgarmaydi.
 function unflattenForm(flat: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -374,7 +391,109 @@ export class ChatNewsService {
   }
 
   /**
-   * POST /chat/news — transaction ichida news + translations + categories pivot.
+   * POST /chat/news (multipart FormData) — Laravel ChatNewsService::store parity.
+   * Frontend FormData yuboradi (bracket-notation: translations[0][title],
+   * categories[0], media[0][file]). `@Body() dto` multipart'ni o'qiy olmaydi,
+   * shuning uchun updateFromForm singari xom `req.body` + files bilan ishlaymiz.
+   *
+   * Laravel FormRequest yengil: status `sometimes|integer` (0 ham mumkin),
+   * published_at `date` (har qanday strtotime format), is_pinned `boolean`
+   * ("0"/"1"). Shu sababli DTO o'rniga manual coercion qilamiz.
+   */
+  async createFromForm(
+    rawBody: Record<string, unknown>,
+    files: Express.Multer.File[],
+  ): Promise<void> {
+    const body = unflattenForm(rawBody);
+    delete body._method;
+
+    const userOrgId = this.ctx.user?.organization_id ?? null;
+
+    await this.db.transaction(async (tx) => {
+      // 1. News — Laravel ChatNews::create (organization_id user'dan).
+      const [news] = await tx
+        .insert(chat_news)
+        .values({
+          organization_id: userOrgId,
+          slug: body.slug != null ? String(body.slug) : '',
+          status: body.status != null ? Number(body.status) : 0,
+          published_at: normalizePublishedAt(body.published_at),
+          is_pinned: toBool(body.is_pinned),
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        })
+        .returning();
+
+      // 2. Translations — Laravel: foreach ($data['translations']) create.
+      const translations = Array.isArray(body.translations)
+        ? (body.translations as Record<string, string>[])
+        : [];
+      const validTr = translations.filter((t) => t?.locale);
+      if (validTr.length) {
+        await tx.insert(chat_news_translations).values(
+          validTr.map((t) => ({
+            chat_news_id: news.id,
+            locale: t.locale,
+            title: t.title ?? null,
+            short_description: t.short_description ?? null,
+            content: t.content ?? null,
+            created_at: sql`NOW()`,
+            updated_at: sql`NOW()`,
+          })),
+        );
+      }
+
+      // 3. Categories pivot (chat_categories_news).
+      // NOTE: Laravel store'da `extracted($news)` $data'siz chaqirilgani uchun
+      // categories/media SAQLANMAYDI (Laravel bug). Biz frontend niyatiga
+      // ko'ra saqlaymiz — store javobi data=[] bo'lgani uchun response parity
+      // buzilmaydi, faqat keyingi GET'da farq bo'ladi.
+      if ('categories' in body) {
+        const catIds = (Array.isArray(body.categories) ? body.categories : [])
+          .map((c) => Number(c))
+          .filter((n) => Number.isFinite(n));
+        if (catIds.length) {
+          await tx.insert(chat_categories_news).values(
+            catIds.map((catId) => ({
+              chat_news_id: news.id,
+              chat_news_category_id: catId,
+            })),
+          );
+        }
+      }
+
+      // 4. Media fayllari (yuborilgan bo'lsa) — updateFromForm bilan bir xil.
+      const mediaMeta = Array.isArray(body.media)
+        ? (body.media as Record<string, unknown>[])
+        : [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const meta = mediaMeta[i] ?? {};
+        const path = await this.minio.uploadFormFile(f, 'chat-media', [
+          'pdf',
+          'doc',
+          'docx',
+          'png',
+          'jpg',
+          'jpeg',
+        ]);
+        await tx.insert(chat_news_media).values({
+          chat_news_id: news.id,
+          type: String(meta.type ?? 'image'),
+          path,
+          extension:
+            (f.originalname.split('.').pop() ?? '').toLowerCase() || null,
+          size: f.size,
+          order: meta.order != null ? Number(meta.order) : i + 1,
+          created_at: sql`NOW()`,
+          updated_at: sql`NOW()`,
+        });
+      }
+    });
+  }
+
+  /**
+   * POST /chat/news (JSON) — transaction ichida news + translations + categories.
    * Media file upload alohida endpoint orqali (news-media).
    */
   async create(dto: CreateNewsDto) {
