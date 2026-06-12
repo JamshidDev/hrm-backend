@@ -45,7 +45,7 @@ export class IntegrationMainController {
   }
 
   @Get('structure/:organizationId/leaders')
-  @ApiOperation({ summary: 'Organization leaders (stub)' })
+  @ApiOperation({ summary: 'Organization leaders' })
   async leaders(@Param('organizationId', ParseIntPipe) organizationId: number) {
     return buildSuccess(true, await this.service.leaders(organizationId));
   }
@@ -75,8 +75,8 @@ export class IntegrationMainController {
   }
 
   @Get('kpi/report')
-  @ApiOperation({ summary: 'KPI report (stub)' })
-  async kpiReport(@Query() q: IntegrationPageQueryDto) {
-    return buildSuccess(true, await this.service.kpiReport(q));
+  @ApiOperation({ summary: 'KPI report' })
+  async kpiReport() {
+    return buildSuccess(true, await this.service.kpiReport());
   }
 }
