@@ -13,7 +13,6 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -88,10 +87,12 @@ export class IntegrationLogFilterDto {
 }
 
 export class IntegrationLogTimelineDto extends IntegrationLogFilterDto {
-  @ApiPropertyOptional({ example: 'day', enum: ['day', 'hour'] })
+  // Laravel: request('group_by', 'day') — validatsiyasiz, faqat 'hour' maxsus
+  // (boshqa har qanday qiymat → kunlik 'YYYY-MM-DD'). Shuning uchun enum cheklov YO'Q.
+  @ApiPropertyOptional({ example: 'day' })
   @IsOptional()
-  @IsIn(['day', 'hour'])
-  group_by?: 'day' | 'hour';
+  @IsString()
+  group_by?: string;
 }
 
 export class IntegrationLogTopDto extends IntegrationLogFilterDto {

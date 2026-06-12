@@ -20,6 +20,7 @@ import {
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
+import { toLaravelTimestamp } from '@/common/utils/datetime.util';
 import { hmac_users, integration_api_logs, users, workers } from '@/db/schema';
 import {
   IntegrationLogMapper,
@@ -144,8 +145,9 @@ export class IntegrationLogService {
       name: r.name,
       public_key: r.public_key,
       secret_type: r.secret_type,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
+      // Laravel Eloquent ISO8601 (toJson): "Y-m-d\TH:i:s.000000\Z".
+      created_at: toLaravelTimestamp(r.created_at),
+      updated_at: toLaravelTimestamp(r.updated_at),
       is_active: r.is_active,
     }));
   }
@@ -158,7 +160,8 @@ export class IntegrationLogService {
         total_requests: count(),
         success_requests: sql<number>`COUNT(*) FILTER (WHERE ${integration_api_logs.response_status} BETWEEN 200 AND 299)`,
         error_requests: sql<number>`COUNT(*) FILTER (WHERE ${integration_api_logs.response_status} >= 400)`,
-        avg_duration_ms: sql<number>`COALESCE(ROUND(AVG(${integration_api_logs.duration_ms}), 2), 0)`,
+        // Laravel selectRaw → PDO numeric'ni STRING qaytaradi ("159.73"/"365.00").
+        avg_duration_ms: sql<string>`COALESCE(ROUND(AVG(${integration_api_logs.duration_ms}), 2), 0)`,
         max_duration_ms: sql<number>`COALESCE(MAX(${integration_api_logs.duration_ms}), 0)`,
         unique_clients: sql<number>`COUNT(DISTINCT (COALESCE(${integration_api_logs.model_type}, '') || ':' || COALESCE(${integration_api_logs.model_id}::text, '0')))`,
       })
@@ -168,7 +171,7 @@ export class IntegrationLogService {
       total_requests: Number(row.total_requests),
       success_requests: Number(row.success_requests),
       error_requests: Number(row.error_requests),
-      avg_duration_ms: Number(row.avg_duration_ms),
+      avg_duration_ms: row.avg_duration_ms,
       max_duration_ms: Number(row.max_duration_ms),
       unique_clients: Number(row.unique_clients),
     };
@@ -288,7 +291,7 @@ export class IntegrationLogService {
         method: integration_api_logs.method,
         total_requests: count(),
         error_requests: sql<number>`COUNT(*) FILTER (WHERE ${integration_api_logs.response_status} >= 400)`,
-        avg_duration_ms: sql<number>`COALESCE(ROUND(AVG(${integration_api_logs.duration_ms}), 2), 0)`,
+        avg_duration_ms: sql<string>`COALESCE(ROUND(AVG(${integration_api_logs.duration_ms}), 2), 0)`,
       })
       .from(integration_api_logs)
       .where(where)
@@ -300,7 +303,7 @@ export class IntegrationLogService {
       method: r.method,
       total_requests: Number(r.total_requests),
       error_requests: Number(r.error_requests),
-      avg_duration_ms: Number(r.avg_duration_ms),
+      avg_duration_ms: r.avg_duration_ms,
     }));
   }
 
@@ -312,7 +315,7 @@ export class IntegrationLogService {
         method: integration_api_logs.method,
         total_requests: count(),
         error_requests: sql<number>`COUNT(*) FILTER (WHERE ${integration_api_logs.response_status} >= 400)`,
-        avg_duration_ms: sql<number>`COALESCE(ROUND(AVG(${integration_api_logs.duration_ms}), 2), 0)`,
+        avg_duration_ms: sql<string>`COALESCE(ROUND(AVG(${integration_api_logs.duration_ms}), 2), 0)`,
       })
       .from(integration_api_logs)
       .where(where)
@@ -322,7 +325,7 @@ export class IntegrationLogService {
       method: r.method,
       total_requests: Number(r.total_requests),
       error_requests: Number(r.error_requests),
-      avg_duration_ms: Number(r.avg_duration_ms),
+      avg_duration_ms: r.avg_duration_ms,
     }));
   }
 
@@ -346,12 +349,13 @@ export class IntegrationLogService {
 
   /** PUT /admin/integration-log/users/:id — update HmacUser. */
   async updateHmacUser(id: number, dto: UpdateHmacUserDto) {
+    // Laravel array_filter(!is_null) — null/undefined o'tkazib yuboriladi (false/0/'' qoladi).
     const data: Record<string, unknown> = { updated_at: sql`NOW()` };
-    if (dto.is_active !== undefined) data.is_active = dto.is_active;
-    if (dto.name !== undefined) data.name = dto.name;
-    if (dto.public_key !== undefined) data.public_key = dto.public_key;
-    if (dto.secret_key !== undefined) data.secret_key = dto.secret_key;
-    if (dto.secret_type !== undefined) data.secret_type = dto.secret_type;
+    if (dto.is_active != null) data.is_active = dto.is_active;
+    if (dto.name != null) data.name = dto.name;
+    if (dto.public_key != null) data.public_key = dto.public_key;
+    if (dto.secret_key != null) data.secret_key = dto.secret_key;
+    if (dto.secret_type != null) data.secret_type = dto.secret_type;
     const [row] = await this.db
       .update(hmac_users)
       .set(data)
