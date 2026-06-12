@@ -1,7 +1,7 @@
 // ConfirmationWorker service. ConfirmationWorkerLevelEnum 1..2.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -92,8 +92,8 @@ export class ConfirmationWorkerService {
             isNull(organizations.deleted_at),
           ),
         )
+        // Laravel: ConfirmationWorker::query()->...->paginate() — orderBy YO'Q.
         .where(where)
-        .orderBy(asc(confirmation_workers.id))
         .limit(perPage)
         .offset(offset),
       this.db

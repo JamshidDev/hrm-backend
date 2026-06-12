@@ -39,6 +39,9 @@ const CONSTRAINT_TO_RULE: Record<string, string> = {
   // chegaralar (numeric — class-validator @Min/@Max son uchun)
   min: 'min_numeric',
   max: 'max_numeric',
+  // string uzunligi — Laravel `min`/`max` (string variant)
+  minLength: 'min_string',
+  maxLength: 'max_string',
   arrayMinSize: 'min_string',
   arrayMaxSize: 'max_string',
   // same:other (custom @Match dekoratori — ValidatorConstraint name 'Match')

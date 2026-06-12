@@ -2,7 +2,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SearchPaginationQueryDto } from '@/common/dto/pagination.dto';
 
 export class FilterDepartmentPositionsQueryDto {
@@ -53,7 +53,9 @@ export class FilterPositionsQueryDto extends SearchPaginationQueryDto {
 
 // search-workers — paginated, filterable by organization_id + search/last/first/middle name.
 export class FilterSearchWorkersQueryDto extends SearchPaginationQueryDto {
+  // Laravel: organization_id required.
   @ApiProperty({ example: 1 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   organization_id!: number;

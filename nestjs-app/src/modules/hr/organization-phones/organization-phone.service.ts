@@ -56,7 +56,6 @@ export class OrganizationPhoneService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows,
     };

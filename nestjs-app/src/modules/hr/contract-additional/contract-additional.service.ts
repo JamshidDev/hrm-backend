@@ -103,12 +103,14 @@ export class ContractAdditionalService {
           worker_positions,
           eq(worker_positions.id, contract_additional.worker_position_id),
         )
-        // worker_id bo'sh bo'lsa — worker_position orqali hodimni topamiz.
+        // Laravel: worker => new WorkerInfoResource($this->worker) — faqat
+        // contract_additional.worker_id (worker_position fallback YO'Q).
+        // Relation SoftDeletes → o'chirilgan bo'lsa null.
         .leftJoin(
           workers,
-          eq(
-            workers.id,
-            sql`COALESCE(${contract_additional.worker_id}, ${worker_positions.worker_id})`,
+          and(
+            eq(workers.id, contract_additional.worker_id),
+            isNull(workers.deleted_at),
           ),
         )
         .leftJoin(

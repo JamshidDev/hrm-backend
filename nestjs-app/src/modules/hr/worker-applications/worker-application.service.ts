@@ -121,7 +121,6 @@ export class WorkerApplicationService {
           worker: r.worker_id
             ? {
                 id: r.worker_id,
-                uuid: r.worker_uuid,
                 photo: await this.minio.fileUrl(r.worker_photo),
                 last_name: r.worker_last,
                 first_name: r.worker_first,

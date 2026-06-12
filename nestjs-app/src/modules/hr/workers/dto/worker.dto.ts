@@ -15,16 +15,19 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Length,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 import { Exists } from '@/common/validators/exists.validator';
 
 // ---------- Query ----------
 
 export class CheckWorkerQueryDto {
+  // Laravel: 'pin' => 'required|max:14|min:14' (string rule YO'Q).
   @ApiProperty({ example: '12345678901234' })
-  @IsString()
-  @Length(14, 14)
+  @IsNotEmpty()
+  @MaxLength(14)
+  @MinLength(14)
   pin!: string;
 }
 
