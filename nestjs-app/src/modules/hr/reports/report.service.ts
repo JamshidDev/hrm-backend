@@ -181,7 +181,10 @@ export class ReportService {
       .where(
         and(
           notDeleted(departments),
-          eq(departments.organization_id, filters.organization_id),
+          // Laravel where('organization_id', request(...)): yo'q bo'lsa IS NULL.
+          filters.organization_id != null
+            ? eq(departments.organization_id, filters.organization_id)
+            : isNull(departments.organization_id),
           filters.search
             ? ilike(departments.name, `%${filters.search}%`)
             : undefined,
@@ -282,7 +285,10 @@ export class ReportService {
 
     const where = and(
       notDeleted(department_positions),
-      eq(department_positions.organization_id, filters.organization_id),
+      // Laravel where('organization_id', request(...)): yo'q bo'lsa IS NULL.
+      filters.organization_id != null
+        ? eq(department_positions.organization_id, filters.organization_id)
+        : isNull(department_positions.organization_id),
       filters.department_id
         ? eq(department_positions.department_id, filters.department_id)
         : undefined,
@@ -305,8 +311,8 @@ export class ReportService {
           positionsTable,
           eq(positionsTable.id, department_positions.position_id),
         )
+        // Laravel report: paginate() — orderBy YO'Q (natural order).
         .where(where)
-        .orderBy(asc(department_positions.id))
         .limit(perPage)
         .offset(offset),
       this.db
@@ -326,6 +332,8 @@ export class ReportService {
           .where(
             and(
               inArray(worker_positions.department_position_id, ids),
+              // Laravel worker_positions relation: ->where('status', ACTIVE).
+              eq(worker_positions.status, POSITION_STATUS_ACTIVE),
               notDeleted(worker_positions),
             ),
           )
@@ -339,7 +347,6 @@ export class ReportService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({
         id: r.id,
@@ -354,12 +361,16 @@ export class ReportService {
               ),
             }
           : null,
-        rate: r.rate,
+        // Laravel DepartmentPosition `rate` accessor: get => $value / 100.
+        rate: r.rate / 100,
         real_rate: (wpMap.get(r.id) ?? 0) / 100,
-        status: { id: r.status, name: String(r.status) },
+        status: {
+          id: r.status,
+          name: this.statusName(CONFIRM_STATUS_KEYS, r.status, lang),
+        },
         changed_status: {
           id: r.changed_status,
-          name: String(r.changed_status),
+          name: this.statusName(CHANGED_STATUS_KEYS, r.changed_status, lang),
         },
       })),
     };
@@ -383,15 +394,23 @@ export class ReportService {
     // Laravel: WorkerPosition::filter($user) (rol/org-scope childIds) +
     // ->where('organization_id', request('organization_id')). whereOrg ikkalasini
     // ham qo'llaydi (childIds AND organization_id).
-    const inScope = await this.scope.whereOrg(worker_positions.organization_id, {
-      organizations: (filters as { organizations?: string }).organizations,
-      organization_id: filters.organization_id,
-    });
+    const inScope = await this.scope.whereOrg(
+      worker_positions.organization_id,
+      {
+        organizations: (filters as { organizations?: string }).organizations,
+        organization_id: filters.organization_id,
+      },
+    );
 
     const where = and(
       notDeleted(worker_positions),
       eq(worker_positions.status, POSITION_STATUS_ACTIVE),
       inScope,
+      // Laravel where('organization_id', request(...)): yo'q bo'lsa IS NULL
+      // (whereOrg org_id berilmaganda faqat childIds qo'llaydi).
+      filters.organization_id == null
+        ? isNull(worker_positions.organization_id)
+        : undefined,
       filters.department_id
         ? eq(worker_positions.department_id, filters.department_id)
         : undefined,
@@ -443,8 +462,8 @@ export class ReportService {
             isNull(organizations.deleted_at),
           ),
         )
+        // Laravel report: paginate() — orderBy YO'Q (natural order).
         .where(where)
-        .orderBy(asc(worker_positions.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(worker_positions).where(where),
@@ -452,7 +471,6 @@ export class ReportService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: await Promise.all(
         rows.map(async (r) => ({
@@ -473,11 +491,15 @@ export class ReportService {
             department_level: r.dept_level,
             organization_full_name: r.org_full_name,
           }),
-          rate: r.rate,
+          // Laravel WorkerPosition `rate` accessor: get => $value / 100.
+          rate: r.rate / 100,
           rank: r.rank,
           group: r.group,
           position_date: r.position_date,
-          type: { id: r.type, name: String(r.type) },
+          type: {
+            id: r.type,
+            name: this.statusName(CONTRACT_TYPE_KEYS, r.type, _lang),
+          },
         })),
       ),
     };
@@ -617,4 +639,35 @@ export class ReportService {
     if (lang === 'en') return en ?? uz;
     return uz;
   }
+
+  // Laravel ConfirmStatusEnum::get / ChangedStatusEnum::get — yo'q bo'lsa "".
+  private statusName(
+    keys: Record<number, string>,
+    value: number | null,
+    lang: string,
+  ): string {
+    if (value == null || !keys[value]) return '';
+    return this.i18n.t(keys[value], { lang });
+  }
 }
+
+const CONFIRM_STATUS_KEYS: Record<number, string> = {
+  1: 'messages.economist.changed.confirm_statuses.new',
+  2: 'messages.economist.changed.confirm_statuses.process',
+  3: 'messages.economist.changed.confirm_statuses.done',
+  4: 'messages.economist.changed.confirm_statuses.reject',
+};
+const CHANGED_STATUS_KEYS: Record<number, string> = {
+  1: 'messages.economist.changed.change_statuses.created',
+  2: 'messages.economist.changed.change_statuses.updated',
+  3: 'messages.economist.changed.change_statuses.deleted',
+};
+// Laravel ContractTypeEnum (HR/Transformers/Report/WorkerPositionResource).
+const CONTRACT_TYPE_KEYS: Record<number, string> = {
+  1: 'messages.contract.employment_contract_indefinite',
+  2: 'messages.contract.civil_labor_contract',
+  3: 'messages.contract.employment_contract_part_time',
+  4: 'messages.contract.employment_contract_remote',
+  5: 'messages.contract.employment_contract_seasonal',
+  6: 'messages.contract.employment_contract_fixed',
+};

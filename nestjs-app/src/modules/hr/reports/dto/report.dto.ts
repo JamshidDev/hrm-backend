@@ -19,17 +19,19 @@ export class ReportStructureQueryDto {
 }
 
 export class ReportDepartmentsQueryDto extends SearchPaginationQueryDto {
-  @ApiProperty({ example: 1 })
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  organization_id!: number;
+  organization_id?: number;
 }
 
 export class ReportDepartmentPositionsQueryDto extends SearchPaginationQueryDto {
-  @ApiProperty({ example: 1 })
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  organization_id!: number;
+  organization_id?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -39,10 +41,11 @@ export class ReportDepartmentPositionsQueryDto extends SearchPaginationQueryDto 
 }
 
 export class ReportWorkerPositionsQueryDto extends SearchPaginationQueryDto {
-  @ApiProperty({ example: 1 })
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  organization_id!: number;
+  organization_id?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
