@@ -19,6 +19,7 @@ import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { WorkerScheduleService } from '@/modules/turnstile/worker-schedules/worker-schedule.service';
+import { DayInMonthQueryDto } from '@/modules/turnstile/worker-schedules/dto/worker-schedule.dto';
 
 @ApiTags('Turnstile / Worker Schedules')
 @ApiBearerAuth('access-token')
@@ -71,8 +72,8 @@ export class WorkerScheduleController {
   @Get('get-workers') async getWorkers(@Query() q: any) {
     return buildSuccess(true, await this.service.generateGetWorkers(q));
   }
-  @Get('day-in-month') async dayInMonth(@Query() q: any) {
-    return buildSuccess(true, this.service.generateDayInMonth(q));
+  @Get('day-in-month') async dayInMonth(@Query() q: DayInMonthQueryDto) {
+    return buildSuccess(true, await this.service.generateDayInMonth(q));
   }
   @Post('generate-schedule') async generateScheduleAction(@Body() body: any) {
     return buildSuccess(true, await this.service.generateScheduleAction(body));

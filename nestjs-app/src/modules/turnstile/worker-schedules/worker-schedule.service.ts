@@ -1400,17 +1400,33 @@ export class WorkerScheduleService {
 
   // Laravel: dayInMonth — { month, year, days: [{day, weekDay, is_holiday}] }.
   // Carbon::dayOfWeek: 0=Sunday..6=Saturday.
-  generateDayInMonth(q: { year?: number; month?: number }) {
+  async generateDayInMonth(q: { year?: number; month?: number }) {
     const now = new Date();
     const year = Number(q.year ?? now.getFullYear());
     const month = Number(q.month ?? now.getMonth() + 1);
     const daysInMonth = new Date(year, month, 0).getDate();
+    const mm = String(month).padStart(2, '0');
+    const start = `${year}-${mm}-01`;
+    const end = `${year}-${mm}-${String(daysInMonth).padStart(2, '0')}`;
+
+    // Laravel: Holiday::whereBetween('holiday_date', [oy boshi, oy oxiri]).
+    const res = await this.db.execute(sql`
+      SELECT holiday_date::text AS d FROM holidays
+      WHERE holiday_date BETWEEN ${start}::date AND ${end}::date
+    `);
+    const rows = ((res as { rows?: unknown[] }).rows ?? res) as Array<{
+      d: string;
+    }>;
+    const holidaySet = new Set(rows.map((r) => String(r.d).slice(0, 10)));
+
     const days = Array.from({ length: daysInMonth }, (_, i) => {
-      const d = new Date(Date.UTC(year, month - 1, i + 1));
+      const dayNum = i + 1;
+      const d = new Date(Date.UTC(year, month - 1, dayNum));
+      const dateStr = `${year}-${mm}-${String(dayNum).padStart(2, '0')}`;
       return {
-        day: i + 1,
+        day: dayNum,
         weekDay: d.getUTCDay(),
-        is_holiday: false,
+        is_holiday: holidaySet.has(dateStr),
       };
     });
     return { month, year, days };
