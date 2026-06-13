@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** turnstile schedule/* GET TO'LIQ (stats-* 8 MATCH, day-in-month holidays+DTO FIXED). DB-backed GET-list deyarli barcha modullarda tugadi.
-- **Keyingi qadam:** Qolgan GET: turnstile `hik-central/*` ~25 (tashqi HikCentral), `lms/exams` (deviation A/B). Asosiy qolgan ish: **CRUD** (store/update/delete) + **78 implement** (audit'dagi yo'q endpointlar).
+- **Oxirgi tugatilgan:** 78-missing = LARAVEL_ERROR aniqlandi. CRUD-validation faza boshlandi — cities/regions POST 422 FIXED (@IsNotEmpty).
+- **Keyingi qadam:** CRUD POST/PUT validation parity qolgan resurslar: `holidays`, `command-types`, `contract-types`, `quotes` (nested author.en/ru), `polyclinics`, `specializations`. Naqsh: (a) required fieldlarga @IsNotEmpty, (b) yetishmagan required fieldlar, (c) nested DTO. So'ng multi-role 403 verify + e2e testlar.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -166,6 +166,16 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 
 > Faqat GET-list (default) tekshirildi. To'liq spec (har role 403, 422, 404, pagination, til) keyingi o'tishda chuqurlashtiriladi.
 > `orderBy: {id}` antipattern TIZIMLI EMAS — faqat countries/regions noto'g'ri edi. Qolganlari (languages/learning-centers) Laravel bilan mos. admin/roles, admin/permissions, admin/users — admin modulida tekshiriladi.
+
+## CRUD-validation parity (POST/PUT 422) — faza boshlandi
+| Resurs | Holat | Muammo |
+|--------|-------|--------|
+| structure/countries, positions, languages, learning-centers | ✅ MATCH | — |
+| lms/subjects, directions | ✅ MATCH | — |
+| structure/cities, regions | ✅ FIXED | region_id/country_id @IsNotEmpty (required) |
+| structure/holidays, command-types, contract-types, polyclinics, lms/specializations | ⏳ TODO | required field / @IsNotEmpty farqi |
+| structure/quotes | ⏳ TODO | nested `author.en`/`author.ru` (NestJS author obyekt sifatida) |
+| hr/nationalities POST | ⛔ LARAVEL_ERROR | store() undefined (500) |
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
 - `structure/countries` + `regions`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)
