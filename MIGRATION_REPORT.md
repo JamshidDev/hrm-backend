@@ -150,8 +150,10 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | lms/learning-centers | ✅ FIXED | pivot (learning_center_users) ctid order, dedup yo'q |
 | lms/subjects, specializations | ✅ FIXED | orderBy(desc id) olib tashlandi (natural) |
 | lms/teachers | 🔧 QISMAN | orderBy fix; QOLDI: learning_center.code, worker.photo fileUrl, subjects tartibi |
-| lms/{edu-plan,exams,group-workers} | ⏳ TODO | DIFFER |
-| lms/groups, protocol | ⏳ SCOPE | Admin'da bo'sh — LMS-scope (teacher/learning-center) filter NestJS'da qo'llanmagan |
+| lms/teachers | ✅ FIXED | code + worker.photo fileUrl + subjects.id order |
+| lms/edu-plan | ⏳ TODO | resource shakli farqi (DIFFER) |
+| lms/exams | ⚠️ DEVIATION | Laravel `topic.org = user.org` (strict), NestJS `scope.ids()` (admin→all). Dev ATAYLAB og'ishgan ("Laravel bug"). Qaror kerak (#12 quyida) |
+| lms/groups, protocol, group-workers | ⏳ SCOPE | Admin'da bo'sh — ehtimol o'sha deliberate org-scope deviation |
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
 
@@ -169,6 +171,9 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 - `user/mobile/work-info`: `positions.position:id,name` eager-load → `name_ru`/`name_en` yuklanmaydi → ru/en'da `null` (PositionMinimalResource fallback'siz)
 - `user/mobile/my-vacations`: VacationTypeEnum command-type→ta'til-turi map
 - `user/mobile/personal-list` + `work-info`: i18n `messages.mobile.*`, `worker.marital_status`, `worker.family` qo'shildi (3 til)
+
+## ⚠️ Ataylab Laravel'dan og'ishlar (qaror kerak)
+12. **lms org-scope deviation** — `exams` (va ehtimol `groups`/`protocol`/`group-workers`) NestJS'da `OrgScopeService.ids()` (admin→barcha org) ishlatadi, Laravel esa `topic.organization_id = user.organization_id` (strict). Dev kodda izohlagan: Laravel'ning strict org_id'si HQ-userlar uchun "real bug". Spec qoidasi: *"yaxshilama — Laravel'ga aynan moslashtir"*. **Qaror:** (A) strict parity (Laravel'dek user.org) yoki (B) deviation'ni saqlash (admin→all). Hozircha B (mavjud kod). Bu endpointlar Admin token bilan diff beradi (Laravel bo'sh, NestJS to'la).
 
 ## ⛔ Laravel'da error bergan route'lar
 | # | Method | Path | Status | Sabab |
