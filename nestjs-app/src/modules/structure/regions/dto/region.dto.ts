@@ -24,7 +24,9 @@ export class QueryRegionDto extends SearchPaginationQueryDto {
 }
 
 export class CreateRegionDto {
+  // Laravel: country_id required.
   @ApiProperty({ example: 1 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Exists('countries', 'id')
