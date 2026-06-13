@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -28,6 +29,7 @@ import {
   CreateQuoteDto,
   UpdateQuoteDto,
 } from '@/modules/structure/quotes/dto/quote.dto';
+import { validateQuoteStore } from '@/modules/structure/quotes/quote.validation';
 
 // CRUD endpointlar — Laravel /api/v1/structure/quotes
 @ApiTags('Structure / Quotes')
@@ -51,9 +53,13 @@ export class QuoteController {
   @UseGuards(PermissionGuard)
   @Permission('admin')
   @ApiOperation({ summary: 'Create quote' })
+  @ApiBody({ type: CreateQuoteDto })
   @ApiOkResponse()
-  async create(@Body() dto: CreateQuoteDto) {
-    await this.service.create(dto);
+  // @Body() loose tip — global ValidationPipe skip qiladi; nested-required
+  // validatsiyani Laravel-format'da qo'lda quramiz (validateQuoteStore).
+  async create(@Body() body: Record<string, unknown>) {
+    validateQuoteStore(body);
+    await this.service.create(body as unknown as CreateQuoteDto);
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
   }
 
