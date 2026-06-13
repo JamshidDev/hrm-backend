@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** 78-missing = LARAVEL_ERROR aniqlandi. CRUD-validation faza boshlandi — cities/regions POST 422 FIXED (@IsNotEmpty).
-- **Keyingi qadam:** CRUD POST/PUT validation parity qolgan resurslar: `holidays`, `command-types`, `contract-types`, `quotes` (nested author.en/ru), `polyclinics`, `specializations`. Naqsh: (a) required fieldlarga @IsNotEmpty, (b) yetishmagan required fieldlar, (c) nested DTO. So'ng multi-role 403 verify + e2e testlar.
+- **Oxirgi tugatilgan:** CRUD-validation — cities/regions/holidays/specializations/polyclinics POST 422 FIXED (@IsNotEmpty pattern). 5/8 resurs.
+- **Keyingi qadam:** Murakkab CRUD-validation: `command-types`+`contract-types` (Laravel `file`+`organizations` required — DTO'da yo'q, file-upload endpoint), `quotes` (nested author.en/ru). So'ng multi-role 403 verify + e2e testlar.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -173,8 +173,11 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | structure/countries, positions, languages, learning-centers | ✅ MATCH | — |
 | lms/subjects, directions | ✅ MATCH | — |
 | structure/cities, regions | ✅ FIXED | region_id/country_id @IsNotEmpty (required) |
-| structure/holidays, command-types, contract-types, polyclinics, lms/specializations | ⏳ TODO | required field / @IsNotEmpty farqi |
-| structure/quotes | ⏳ TODO | nested `author.en`/`author.ru` (NestJS author obyekt sifatida) |
+| structure/holidays | ✅ FIXED | holiday_date + type @IsNotEmpty |
+| lms/specializations | ✅ FIXED | direction_id @IsNotEmpty |
+| hr/polyclinics | ✅ FIXED | required\|array — @IsNotEmpty+@IsArray (ortiqcha validator olib tashlandi) |
+| structure/command-types, contract-types | ⏳ TODO | Laravel `file`+`organizations` (va boshqa) required — NestJS DTO'da yo'q (murakkab: file upload + organizations array) |
+| structure/quotes | ⏳ TODO | nested `author.en`/`author.ru` required (NestJS author obyekt sifatida) |
 | hr/nationalities POST | ⛔ LARAVEL_ERROR | store() undefined (500) |
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
