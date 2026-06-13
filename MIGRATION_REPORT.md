@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** turnstile schedule/departments (ctid tie-order) + get-workers (Laravel typo `schedyleType`→null) + buildings/enums/organization-terminals/schedule-groups/schedule-types MATCH.
-- **Keyingi qadam:** turnstile schedule/stats-* (param kerak), hik-central/* (tashqi HikCentral). So'ng lms → CRUD → 78 implement. (403-format global HAL QILINDI.)
+- **Oxirgi tugatilgan:** lms GET-list batch — learning-centers (pivot ctid), subjects+specializations (orderBy), 10 MATCH. teachers qisman (orderBy).
+- **Keyingi qadam:** lms qolgan DIFFER: `teachers` (learning_center.code + worker.photo fileUrl + subjects tartibi), `edu-plan`, `exams`, `group-workers`, `groups`+`protocol` (Admin'da bo'sh — LMS-scope filter). So'ng turnstile stats-*/hik-central → CRUD → 78 implement.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -142,6 +142,16 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | GET | turnstile/schedule/stats-* (one/three/four/five/six/seven/preview), day-in-month, schedule-workers | ⏳ TODO | param kerak |
 | GET | turnstile/absent-scheduled-workers | ✅ FIXED | 403 flat Spatie format (global #403) |
 | GET | turnstile/hik-central/* (~25) | ⏳ TASHQI | HikCentral integratsiya (external) |
+
+## lms moduli (boshlandi)
+| Path | Holat | Izoh |
+|------|-------|------|
+| lms/{certificates,directions,enums,lessons,list/*,worker-exams} | ✅ MATCH | 10 endpoint |
+| lms/learning-centers | ✅ FIXED | pivot (learning_center_users) ctid order, dedup yo'q |
+| lms/subjects, specializations | ✅ FIXED | orderBy(desc id) olib tashlandi (natural) |
+| lms/teachers | 🔧 QISMAN | orderBy fix; QOLDI: learning_center.code, worker.photo fileUrl, subjects tartibi |
+| lms/{edu-plan,exams,group-workers} | ⏳ TODO | DIFFER |
+| lms/groups, protocol | ⏳ SCOPE | Admin'da bo'sh — LMS-scope (teacher/learning-center) filter NestJS'da qo'llanmagan |
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
 
