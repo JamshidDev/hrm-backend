@@ -70,7 +70,7 @@ export class DepartmentPositionController {
 
   @Post()
   @UseGuards(PermissionGuard)
-  @Permission('hr-positions-write')
+  @Permission('hr')
   @ApiOperation({ summary: 'Create department position' })
   @ApiOkResponse()
   async create(@Body() dto: CreateDepartmentPositionDto) {
@@ -80,7 +80,7 @@ export class DepartmentPositionController {
 
   @Put(':id')
   @UseGuards(PermissionGuard)
-  @Permission('hr-positions-write')
+  @Permission('hr')
   @ApiOperation({ summary: 'Update department position' })
   @ApiOkResponse()
   async update(
@@ -93,7 +93,7 @@ export class DepartmentPositionController {
 
   @Delete(':id')
   @UseGuards(PermissionGuard)
-  @Permission('hr-positions-write')
+  @Permission('hr')
   @ApiOperation({ summary: 'Delete department position (soft)' })
   @ApiOkResponse()
   async remove(@Param('id', ParseIntPipe) id: number) {

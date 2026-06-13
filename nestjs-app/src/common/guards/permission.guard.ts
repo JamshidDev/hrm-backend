@@ -24,7 +24,10 @@ export class PermissionGuard implements CanActivate {
     if (!required) return true;
 
     const userId = this.ctx.user_or_fail.id;
-    const ok = await this.perms.hasPermission(userId, required);
+    // Spatie `permission:a|b` — `|` bilan OR semantikasi (bittasi yetarli).
+    const names = required.split('|').map((s) => s.trim());
+    const granted = await this.perms.getUserPermissions(userId);
+    const ok = names.some((n) => granted.has(n));
     if (!ok) {
       // Laravel Spatie PermissionMiddleware — FLAT { message } (error/data YO'Q),
       // xabar hardcoded inglizcha (locale'ga bog'liq emas).

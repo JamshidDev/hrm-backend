@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** `quotes` PUT `sometimes` partial parity FIXED (`validateQuoteUpdate`, partial JSON-replace, 6/6 resp+stored MATCH). **CRUD-validation TO'LIQ (STORE + quotes PUT) ✅ TUGADI.**
-- **Keyingi qadam:** multi-role 403 verify YOKI e2e testlar (test-app).
+- **Oxirgi tugatilgan:** Multi-role 403 permission-mapping audit — 74 mismatch topildi, **48 fix** (19 DIFF + 26 integration + 3 hr/enums). `PermissionGuard`ga `|` OR-semantikasi qo'shildi. Runtime tasdiqlandi.
+- **Keyingi qadam:** qolgan 26 NONE (admin `users-write` 19 + `instructions` 6 + `document-view-exam-results` 1) — controllerlarga guard qo'shish. So'ng e2e testlar.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -180,6 +180,17 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | structure/quotes POST | ✅ FIXED | `quote.validation.ts` — `validateQuoteStore()` flat dotted-key (`text.uz`...) synthetic `ValidationError[]` → builder Laravel-format yasaydi (humanize "text.uz" o'zgarmaydi). `@Body()` loose tip → global pipe skip (aks holda `author must be object`). 6 kalit mustaqil `required\|string`, rule-tartibi text→author. Parity 7/7: empty(uz/ru/en)/partial/text-only/non-string/text=string MATCH. Happy-path create OK. |
 | structure/quotes PUT | ✅ FIXED | `validateQuoteUpdate()` — `sometimes\|string`: faqat MAVJUD kalitlar tekshiriladi (required emas), faqat berilgan field yoziladi (JSON column REPLACE — Laravel `$q->update($validated)` empirik tasdiqlandi: en yo'qoladi, tegilmagan field qoladi). 404 (findByIdOrFail) validate'dan oldin. Parity 6/6 — response + stored JSON ikkalasi MATCH (partial/full/empty/both/non-string-422/text=string-skip). |
 | hr/nationalities POST | ⛔ LARAVEL_ERROR | store() undefined (500) |
+
+## Multi-role 403 parity — PERMISSION-MAPPING AUDIT
+**Usul:** Laravel `php artisan route:list --json` → har route'ning `PermissionMiddleware:X` (authoritative). NestJS controllerlarni parse → route→`@Permission`. Ikkala app BIR DB (Spatie) → permission NOMI mos bo'lsa, har rol uchun 403/200 avtomatik bir xil. 500 Laravel perm-route, 21 distinct perm.
+
+**Topildi: 74 mismatch.** Fix qilingan:
+- **19 DIFF (NestJS boshqa/torroq perm)** ✅ — `filter` (5 get-*), `department-positions` write (`hr`), `worker-positions` read+write (`hr`), `extra/department/locations` (`extra-worker-user`). DB role-set divergensiyasi tasdiqlandi (`filter`≠`hr` har ikki yo'nalishda; finer-perm'lar `hr` subset → NestJS noto'g'ri 403). Runtime: filter-not-hr 200/200, hr-not-filter 403/403 MATCH.
+- **26 integration NONE** ✅ — Laravel `sanctum + permission:integration`, NestJS faqat AuthHybridGuard edi (perm tekshiruvsiz → ruxsatsiz user 200). 8 controllerga `PermissionGuard + @Permission('integration')` qo'shildi; salary/check uchun OR-perm (`integration|integration-worker-salary`/`-info`). `PermissionGuard` `|` OR-semantikasini qo'llab-quvvatlaydi (Spatie parity). Runtime 403 JSON body MATCH.
+- **3 hr/enums NONE** ✅ — `enums-extras.controller` → `@Permission('hr')`.
+
+**Qolgan NONE (26) — admin/exam, keyingi qadam:** `users-write` (19: admin/deploy, integration-log, mobile/users, telegram), `instructions|instructions-write` (6: admin/instructions, instruction-photos), `document-view-exam-results` (1: exam/worker-exams-results).
+**113 route Laravel-perm bor lekin nest-map'da yo'q** — asosan `/create`+`/{id}/edit`+`/{id}` show (apiResource over-registration = LARAVEL_ERROR, NestJS 404, oldindan hujjatlangan).
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
 - `structure/countries` + `regions`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)

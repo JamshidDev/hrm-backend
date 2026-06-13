@@ -3,6 +3,8 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { RawResponse } from '@/common/decorators/raw-response.decorator';
 import { IntegrationWorkerSalaryService } from '@/modules/integration/worker-salary/worker-salary.service';
 import {
@@ -12,7 +14,8 @@ import {
 
 @ApiTags('Integration / Worker Salary')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('integration|integration-worker-salary')
 @Controller('api/v1/integration/worker')
 export class IntegrationWorkerSalaryController {
   constructor(private readonly service: IntegrationWorkerSalaryService) {}

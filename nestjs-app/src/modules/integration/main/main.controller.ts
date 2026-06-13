@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationMainService } from '@/modules/integration/main/main.service';
 import {
@@ -20,7 +22,8 @@ import {
 
 @ApiTags('Integration')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('integration')
 @Controller('api/v1/integration')
 export class IntegrationMainController {
   constructor(private readonly service: IntegrationMainService) {}

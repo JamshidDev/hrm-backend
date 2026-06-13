@@ -43,7 +43,7 @@ export class WorkerPositionController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @Permission('hr-workers-read')
+  @Permission('hr')
   @ApiOperation({ summary: 'Worker positions list (ACTIVE only, with joins)' })
   @ApiOkResponse({ type: WorkerPositionListResponseDto })
   async findAll(@Query() query: QueryWorkerPositionDto) {
@@ -52,7 +52,7 @@ export class WorkerPositionController {
 
   @Get(':uuid')
   @UseGuards(PermissionGuard)
-  @Permission('hr-workers-read')
+  @Permission('hr')
   @ApiOperation({ summary: 'Show worker by worker_position uuid (full data)' })
   async show(@Param('uuid') uuid: string) {
     return buildSuccess(true, await this.service.show(uuid));
@@ -60,7 +60,7 @@ export class WorkerPositionController {
 
   @Get(':uuid/edit')
   @UseGuards(PermissionGuard)
-  @Permission('hr-workers-write')
+  @Permission('hr')
   @ApiOperation({ summary: 'Edit worker (WorkerShowResource shape)' })
   async edit(@Param('uuid') uuid: string) {
     return buildSuccess(true, await this.service.edit(uuid));
@@ -68,7 +68,7 @@ export class WorkerPositionController {
 
   @Post(':uuid/edit/attach-role')
   @UseGuards(PermissionGuard)
-  @Permission('hr-workers-write')
+  @Permission('hr')
   @ApiOperation({ summary: 'Attach role to worker user (by organization)' })
   async attachRole(
     @Param('uuid') uuid: string,
@@ -80,7 +80,7 @@ export class WorkerPositionController {
 
   @Put(':uuid/edit/detach-role')
   @UseGuards(PermissionGuard)
-  @Permission('hr-workers-write')
+  @Permission('hr')
   @ApiOperation({ summary: 'Detach role from worker user (by organization)' })
   async detachRole(
     @Param('uuid') uuid: string,
@@ -92,7 +92,7 @@ export class WorkerPositionController {
 
   @Put(':id/update')
   @UseGuards(PermissionGuard)
-  @Permission('hr-workers-write')
+  @Permission('hr')
   @ApiOperation({
     summary: 'Update worker_position fields (contract/group/rank/etc.)',
   })

@@ -25,7 +25,7 @@ export class FilterController {
 
   @Get('get-department-positions')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('filter')
   @ApiOperation({ summary: 'Department positions by department_id' })
   async getDepartmentPositions(
     @Query() query: FilterDepartmentPositionsQueryDto,
@@ -38,7 +38,7 @@ export class FilterController {
 
   @Get('get-departments-tree')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('filter')
   @ApiOperation({ summary: 'Departments tree (flat → nested by parent_id)' })
   async getDepartmentsTree(@Query() query: FilterDepartmentsTreeQueryDto) {
     return buildSuccess(true, await this.service.departmentTree(query));
@@ -46,7 +46,7 @@ export class FilterController {
 
   @Get('get-departments')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('filter')
   @ApiOperation({ summary: 'Departments paginated by organizations' })
   async getDepartments(@Query() query: FilterDepartmentsByOrgsQueryDto) {
     return this.service.departmentsByOrganizations(query);
@@ -54,7 +54,7 @@ export class FilterController {
 
   @Get('get-department')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('filter')
   @ApiOperation({ summary: 'Root departments (whereIsRoot)' })
   async getDepartment(@Query() query: FilterRootDepartmentsQueryDto) {
     return buildSuccess(true, await this.service.rootDepartments(query));
@@ -62,7 +62,7 @@ export class FilterController {
 
   @Get('get-positions')
   @UseGuards(PermissionGuard)
-  @Permission('hr')
+  @Permission('filter')
   @ApiOperation({
     summary: 'Active positions (filter by organizations/departments)',
   })

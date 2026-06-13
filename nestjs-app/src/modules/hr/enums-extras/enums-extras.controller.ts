@@ -7,6 +7,8 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { EnumsExtrasService } from '@/modules/hr/enums-extras/enums-extras.service';
 import {
@@ -17,7 +19,8 @@ import {
 
 @ApiTags('HR / Enums Extras')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('hr')
 @Controller('api/v1/hr/enums')
 export class EnumsExtrasController {
   constructor(private readonly service: EnumsExtrasService) {}
