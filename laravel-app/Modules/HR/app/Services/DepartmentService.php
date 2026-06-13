@@ -29,7 +29,11 @@ class DepartmentService
             )
             ->groupBy('departments.id')
             ->filterByOrganizationsWithJoin($user)
-            ->with(['organization:id,name,group'])
+            ->with([
+                'organization:id,name,group',
+                'city:id,name,name_en,name_ru',
+                'region:id,name'
+            ])
             ->withExists('children')
             ->orderBy('departments.organization_id')
             ->orderByDesc('departments.id')
@@ -92,6 +96,8 @@ class DepartmentService
             'name_ru' => $dto->nameRu,
             'name_en' => $dto->nameEn,
             'comment' => $dto->comment,
+            'region_id' => $dto->regionId,
+            'city_id' => $dto->cityId,
             'level' => $dto->level,
             'organization_id' => $dto->organizationId,
             'parent_id' => $dto->parentId,

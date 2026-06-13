@@ -28,6 +28,7 @@ return [
     'does_not_delete_current_photo' => "Asosiy rasmni o'chirish mumkin emas",
     'server_error' => "Tizimda xatolik yuzaga keldi. Birozdan so'ng qayta urinib ko'ring.",
     'invalid_credentials' => "Bunday foydalanuvchi tizimda topilmadi",
+    'not_found_role_or_worker' => "Foydalanuvchiga tegishli ruxsatlar aniqlanmadi, iltimos tizim ma'muriyatiga bog'laning...",
     'invalid_credentials_password' => "Foydalanuvchi nomi yoki parol to'g'riligini tekshiring",
     'token_is_expired' => "Token muddati tugagan.",
     'not_found' => "Ma'lumot topilmadi",

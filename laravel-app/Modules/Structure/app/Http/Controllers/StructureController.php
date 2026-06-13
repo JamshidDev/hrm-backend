@@ -30,37 +30,42 @@ class StructureController extends Controller
 {
     public function index(): JsonResponse
     {
-        $user = auth()->user()->load('roles.permissions', 'organization');
+        try {
+            $user = auth()->user()->load('roles.permissions', 'organization');
 
-        $matchingNodes = Organization::query()
-            ->search()
-            ->when(request('organization_id'), function ($query) {
-                $query->where('id', request('organization_id'));
-            })
-            ->defaultOrder()
-            ->get();
+            $matchingNodes = Organization::query()
+                ->search()
+                ->when(request('organization_id'), function ($query) {
+                    $query->where('id', request('organization_id'));
+                })
+                ->defaultOrder()
+                ->get();
 
-        if (!$user->organization_id) {
-            return Helper::response(trans('messages.organization_not_found'), [], 400);
-        }
-
-        if (count($user->getAllPermissions())) {
-            if ($user->hasPermissionTo('organization-admin')) {
-                $children = Organization::query()
-                    ->adminOrganizations($matchingNodes)
-                    ->defaultOrder()
-                    ->get()
-                    ->toTree();
-            } elseif ($user->hasPermissionTo('organization-leader')) {
-                $children = Organization::query()
-                    ->search()
-                    ->leaderOrganizations($user)->defaultOrder()->get()->toTree();
-            } else {
-                $children = $matchingNodes->where('id', $user->organization_id)->values();
+            if (!$user->organization_id) {
+                return Helper::response(trans('messages.organization_not_found'), [], 400);
             }
-        }
 
-        return Helper::response(true, OrganizationChildResource::collection($children ?? []));
+            if (count($user->getAllPermissions())) {
+                if ($user->hasPermissionTo('organization-admin')) {
+                    $children = Organization::query()
+                        ->adminOrganizations($matchingNodes)
+                        ->defaultOrder()
+                        ->get()
+                        ->toTree();
+                } elseif ($user->hasPermissionTo('organization-leader')) {
+                    $children = Organization::query()
+                        ->search()
+                        ->leaderOrganizations($user)->defaultOrder()->get()->toTree();
+                } else {
+                    $children = $matchingNodes->where('id', $user->organization_id)->values();
+                }
+            }
+
+            return Helper::response(true, OrganizationChildResource::collection($children ?? []));
+        } catch (\Exception $e) {
+            Helper::setLog($e, 'StructureController@index');
+            return Helper::response(trans('messages.server_error'), [], 500);
+        }
     }
 
     public function enums(): JsonResponse

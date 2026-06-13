@@ -81,6 +81,7 @@ class EduPlanWorkerController extends Controller
             ->when(request('search'), fn($query) => $query->whereHas('worker', function ($query) {
                 $query->searchByFullName();
             }))
+            ->whereHas('worker_position.worker')
             ->with([
                 'worker_position:id,department_id,position_id,organization_id,worker_id',
                 'worker_position.department:id,name,level',

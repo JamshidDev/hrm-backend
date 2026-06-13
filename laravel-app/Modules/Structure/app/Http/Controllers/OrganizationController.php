@@ -57,20 +57,28 @@ class OrganizationController implements HasMiddleware
 
     public function store(Request $request): JsonResponse
     {
-        $request->validate([
+        $data = $request->validate([
+            'parent_id' => 'nullable|integer|exists:organizations,id',
             'city_id' => 'required|integer|exists:cities,id',
-            'name' => 'required',
-            'full_name' => 'required',
-            'level' => 'required',
-            'group' => 'boolean',
-            'code' => 'required',
+            'name' => 'required|string',
+            'name_ru' => 'nullable|string',
+            'name_en' => 'nullable|string',
+            'full_name' => 'required|string',
+            'level' => 'required|integer',
+            'group' => 'sometimes|boolean',
+            'code' => 'required|string',
+            'inn' => 'nullable|integer',
+            'lat' => 'nullable|string',
+            'long' => 'nullable|string',
+            'address' => 'nullable|string',
+            'external' => 'nullable|integer',
+            'command_address' => 'nullable|string',
         ]);
 
-        $data = $request->all();
         $data['id'] = Organization::query()->max('id') + 1;
 
-        if ($request->parent_id) {
-            $parent = Organization::find($request->parent_id);
+        if (!empty($data['parent_id'])) {
+            $parent = Organization::find($data['parent_id']);
 
             if (!$parent) {
                 return Helper::response(trans('messages.organization_not_found'), 404);

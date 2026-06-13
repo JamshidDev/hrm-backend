@@ -49,7 +49,7 @@ class CommandAdditionalTemplateHelper
         if (!empty($additional['pension_count'])) {
             $data = $additional['pension_count'];
             $temp->setValue('year', $data['year']);
-            $temp->setValue('count', "lavozim maoshining {$data['count']} barobari miqdorida");
+            $temp->setValue('count', "{$data['count']} barobari miqdorida");
             $temp->cloneBlock('pension_count', 1, true, true);
             return;
         }
@@ -57,7 +57,7 @@ class CommandAdditionalTemplateHelper
         if (!empty($additional['pension_coefficient'])) {
             $data = $additional['pension_coefficient'];
             $temp->setValue('year', $data['year']);
-            $temp->setValue('count', "lavozim maoshining {$data['count']} foizi miqdorida");
+            $temp->setValue('count', "{$data['count']} foizi miqdorida");
             $temp->setValue('codes', "172,269\u{2011}moddalariga");
             $temp->cloneBlock('pension_count', 1, true, true);
             return;

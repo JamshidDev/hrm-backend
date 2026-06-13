@@ -121,6 +121,7 @@ class EduPlanController extends Controller
                 'worker_position.worker:id,last_name,first_name,middle_name,photo',
                 'worker_position.worker.phones',
             ])
+            ->whereHas('worker_position.worker')
             ->where('edu_plan_id', $eduPlanId)
             ->orderByDesc('edu_plan_id')
             ->paginate(request('per_page', 10));

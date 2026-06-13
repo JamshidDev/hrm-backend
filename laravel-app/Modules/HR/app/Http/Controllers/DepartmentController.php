@@ -42,10 +42,7 @@ class DepartmentController implements HasMiddleware
             auth()->user()
         );
 
-        return Helper::response(
-            true,
-            PaginateResource::make($data, DepartmentWithJoinResource::class)
-        );
+        return Helper::response(true, PaginateResource::make($data, DepartmentWithJoinResource::class));
     }
 
     public function levels(): JsonResponse

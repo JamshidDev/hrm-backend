@@ -36,6 +36,8 @@ const CONSTRAINT_TO_RULE: Record<string, string> = {
   isUuid: 'uuid',
   isEnum: 'in',
   isIn: 'in',
+  // fayl mimes:doc,docx (multipart store) — synthetic konstreynt
+  mimes: 'mimes',
   // chegaralar (numeric — class-validator @Min/@Max son uchun)
   min: 'min_numeric',
   max: 'max_numeric',
@@ -69,6 +71,7 @@ const RULE_PRIORITY = [
   'email',
   'uuid',
   'in',
+  'mimes',
   'min_numeric',
   'max_numeric',
   'min_string',
@@ -98,14 +101,21 @@ function extractBound(message: string): string | undefined {
 function applyTemplate(
   tpl: string,
   attr: string,
-  ctx: { min?: string; max?: string; date?: string; other?: string },
+  ctx: {
+    min?: string;
+    max?: string;
+    date?: string;
+    other?: string;
+    values?: string;
+  },
 ): string {
   return tpl
     .replace(/:attribute/g, attr)
     .replace(/:min/g, ctx.min ?? '')
     .replace(/:max/g, ctx.max ?? '')
     .replace(/:date/g, ctx.date ?? '')
-    .replace(/:other/g, ctx.other ?? '');
+    .replace(/:other/g, ctx.other ?? '')
+    .replace(/:values/g, ctx.values ?? '');
 }
 
 // @Match defaultMessage formati: "<prop> must match <other>" → <other> ni ajratadi.
@@ -143,12 +153,20 @@ function collectField(
             rule.startsWith('min') || rule.startsWith('max')
               ? extractBound(constraints[k])
               : undefined;
-          let ctx: { min?: string; max?: string; other?: string } = {};
+          let ctx: {
+            min?: string;
+            max?: string;
+            other?: string;
+            values?: string;
+          } = {};
           if (rule.startsWith('min')) ctx = { min: bound };
           else if (rule.startsWith('max')) ctx = { max: bound };
           else if (rule === 'same') {
             const otherField = extractOther(constraints[k]);
             ctx = { other: otherField ? humanize(otherField, lang) : '' };
+          } else if (rule === 'mimes') {
+            // synthetic konstreynt message'i = ":values" qiymati (masalan "doc, docx").
+            ctx = { values: constraints[k] };
           }
           byRule.set(rule, applyTemplate(rules[rule], attr, ctx));
         } else {

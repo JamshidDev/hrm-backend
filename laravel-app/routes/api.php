@@ -131,6 +131,7 @@ Route::middleware(['auth.hybrid'])
 
                 //Test
                 Route::post('test', [ToDoController::class, 'test']);
+                Route::get('wrong-worker-pins', [ToDoController::class, 'wrongWorkerPins']);
 
 
                 Route::get('users/direct-permissions', [AdminUserController::class, 'directPermissionUsers']);

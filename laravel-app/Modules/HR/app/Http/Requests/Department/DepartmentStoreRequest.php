@@ -20,6 +20,8 @@ class DepartmentStoreRequest extends FormRequest
             'name_en' => ['nullable', 'string'],
             'comment' => ['nullable', 'string'],
             'level' => ['required', 'integer'],
+            'region_id' => ['nullable', 'integer'],
+            'city_id' => ['required', 'integer'],
             'parent_id' => ['nullable', 'exists:departments,id'],
             'organization_id' => ['nullable', 'exists:organizations,id'],
         ];
@@ -35,6 +37,8 @@ class DepartmentStoreRequest extends FormRequest
             nameEn: $this->validated('name_en'),
             comment: $this->validated('comment'),
             level: $this->validated('level'),
+            regionId: $this->validated('region_id'),
+            cityId: $this->validated('city_id'),
             organizationId: $this->validated('organization_id') ?? $user->organization_id,
             parentId: $this->validated('parent_id')
         );

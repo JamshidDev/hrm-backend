@@ -21,6 +21,8 @@ class DepartmentUpdateRequest extends FormRequest
             'name_en' => ['nullable'],
             'comment' => ['nullable'],
             'level' => ['required', 'integer'],
+            'region_id' => ['nullable', 'integer'],
+            'city_id' => ['required', 'integer'],
             'parent_id' => ['nullable', 'exists:departments,id'],
         ];
     }
@@ -35,6 +37,8 @@ class DepartmentUpdateRequest extends FormRequest
             nameEn: $this->validated('name_en'),
             comment: $this->validated('comment'),
             level: $this->validated('level'),
+            regionId: $this->validated('region_id'),
+            cityId: $this->validated('city_id'),
             organizationId: $user->organization_id,
             parentId: $this->validated('parent_id')
         );

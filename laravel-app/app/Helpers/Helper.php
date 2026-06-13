@@ -207,12 +207,19 @@ class Helper
     public static function userRoleAndPermissions($roles, $currentOrganizationId)
     {
         $currentRole = [];
+        $r = false;
         foreach ($roles as $role) {
             if ($role->pivot->organization_id === $currentOrganizationId) {
                 $currentRole = $role;
+                $r = true;
                 break;
             }
         }
+
+        if (!$r) {
+            $currentRole = $roles->first();
+        }
+
         return $currentRole;
     }
 

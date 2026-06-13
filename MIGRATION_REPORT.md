@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** CRUD-validation — cities/regions/holidays/specializations/polyclinics POST 422 FIXED (@IsNotEmpty pattern). 5/8 resurs.
-- **Keyingi qadam:** Murakkab CRUD-validation: `command-types`+`contract-types` (Laravel `file`+`organizations` required — DTO'da yo'q, file-upload endpoint), `quotes` (nested author.en/ru). So'ng multi-role 403 verify + e2e testlar.
+- **Oxirgi tugatilgan:** CRUD-validation — command-types/contract-types/contract-additional-types multipart store 422 FIXED (`validateDocumentTypeStore` + builder'da `mimes`/`:values`). 18/18 MATCH. CRUD-validation 7/8 resurs (qolgan faqat `quotes` nested-edge).
+- **Keyingi qadam:** `quotes` nested author.en/ru required (custom validator, bo'sh-body edge) YOKI multi-role 403 verify + e2e testlar.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -176,7 +176,7 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | structure/holidays | ✅ FIXED | holiday_date + type @IsNotEmpty |
 | lms/specializations | ✅ FIXED | direction_id @IsNotEmpty |
 | hr/polyclinics | ✅ FIXED | required\|array — @IsNotEmpty+@IsArray (ortiqcha validator olib tashlandi) |
-| structure/command-types, contract-types, contract-additional-types | ⏳ TODO (murakkab) | **Multipart** (`document-types.controllers.ts` shared). Laravel `store` rules: `type`=required, `organizations`=required, `file`=required\|mimes:doc,docx. NestJS `create()` validatsiyasiz (FileInterceptor + body). Kerak: 422'ni qo'lda Laravel-format'da qurish (type/organizations/file required + file mimes) — standart pipe DTO multipart+file bilan ishlamaydi. |
+| structure/command-types, contract-types, contract-additional-types | ✅ FIXED | **Multipart** store 422. `document-type.validation.ts` qo'lda `validateDocumentTypeStore(type, organizations, file)` → `LaravelValidationException` (type/organizations required, file required\|mimes). Builder'ga `mimes` rule + `:values` placeholder qo'shildi. Parity: 3 endpoint × 3 til × {empty, type-only, type+orgs, wrong-ext} = 18/18 MATCH (suffiks `(and N more errors)` + per-field `errors` + `doc, docx` mimes — bayt-bayt). |
 | structure/quotes | ⏳ TODO (murakkab) | DTO'da @ValidateNested BOR. Muammo: author/text **butunlay yo'q** bo'lsa Laravel `author.en/ru/uz required` (nested kalit mustaqil fire qiladi), class-validator esa `author must be object` (parent yo'q→nested skip). Semantik farq — happy-path (to'liq payload) ISHLAYDI, faqat bo'sh-body edge'da diff. Custom validator kerak. |
 | hr/nationalities POST | ⛔ LARAVEL_ERROR | store() undefined (500) |
 

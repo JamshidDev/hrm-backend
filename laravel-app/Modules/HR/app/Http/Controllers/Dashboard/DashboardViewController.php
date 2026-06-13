@@ -36,15 +36,19 @@ class DashboardViewController extends Controller
         $user = auth()->user();
 
         $workers = WorkerPosition::query()
-            ->search()->filter($user, request()->all())->with([
+            ->search()
+            ->filter($user, request()->all())
+            ->with([
                 'organization:id,name,name_en,name_ru,group',
                 'worker:id,uuid,last_name,first_name,middle_name,birthday,photo',
                 'department:id,name,level',
                 'position:id,name,name_ru,name_en',
-            ])->whereHas('worker', function ($query) {
+            ])
+            ->whereHas('worker', function ($query) {
                 $query->where('birth_day', request('birth_day'))
                     ->where('birth_month', request('birth_month'));
-            })->paginate(request('per_page', 10));
+            })
+            ->paginate(request('per_page', 10));
 
         $data = PaginateResource::make($workers, BirthdaysResource::class);
 

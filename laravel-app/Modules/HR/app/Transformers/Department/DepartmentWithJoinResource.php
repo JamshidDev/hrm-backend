@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\HR\Enums\DepartmentLevelEnum;
 use Modules\Structure\Transformers\Organization\OrganizationListResource;
+use Modules\Structure\Transformers\Structure\CityOnlyResource;
+use Modules\Structure\Transformers\Structure\RegionMinimalResource;
 
 class DepartmentWithJoinResource extends JsonResource
 {
@@ -24,7 +26,9 @@ class DepartmentWithJoinResource extends JsonResource
             'name_en' => $this->name_en,
             'comment' => $this->comment,
             'organization' => new OrganizationListResource($this->organization),
-            'children' => $this->children_exists
+            'children' => $this->children_exists,
+            'city' => new CityOnlyResource($this->whenLoaded('city')),
+            'region' => new RegionMinimalResource($this->whenLoaded('region'))
         ];
     }
 }

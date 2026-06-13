@@ -3,6 +3,7 @@
 namespace App\Jobs\TurnstileJobs;
 
 use App\Enums\ExportJobStatusEnum;
+use App\Exports\DynamicExportFromArray;
 use App\Exports\DynamicExportFromCollection;
 use App\Helpers\Helper;
 use App\Models\User;
@@ -41,11 +42,22 @@ class TurnstileComeWorkersExportToExcelJob implements ShouldQueue
         try {
             $date = Carbon::parse(request('date', now()->toDateString()));
             $q = $service->filterQuery($user);
-            $query = $service->lastEvent($q, $date);
+            $allEvents = (bool)($this->query['auth_type'] ?? false);
+            if ($allEvents) {
+                $query = $service->allEvents($q, $date);
+            } else {
+                $query = $service->lastEvent($q, $date);
+            }
             $workers = $query
-                ->distinct('workers.id')
+                ->when(!$allEvents, fn($query) => $query->distinct('workers.id'))
                 ->whereNotNull('te.direction')
-                ->whereNotIn('o.id', $this->dontInstallDeviceOrgIds)
+                ->when($this->query['auth_type'] ?? null, function ($query, $authType) {
+                    if ($authType === 'MobileFaceEvent') {
+                        $query->where('te.auth_type', 'MobileFaceEvent');
+                    } elseif ($authType === 'ACSEventFaceVerifyPass') {
+                        $query->where('te.auth_type', '!=', 'MobileFaceEvent');
+                    }
+                })
                 ->select([
                     'workers.last_name',
                     'workers.first_name',
@@ -56,10 +68,21 @@ class TurnstileComeWorkersExportToExcelJob implements ShouldQueue
                     'd.name as department_name',
                     'p.name as position_name',
                 ])
-                ->get();
+                ->get()->map(function ($worker) {
+                    return [
+                        'last_name' => $worker->last_name,
+                        'first_name' => $worker->first_name,
+                        'middle_name' => $worker->middle_name,
+                        'last_event' => $worker->last_event,
+                        'direction' => $worker->direction ? 'Kirish' : 'Chiqish',
+                        'organization_name' => $worker->organization_name,
+                        'department_name' => $worker->department_name,
+                        'position_name' => $worker->position_name,
+                    ];
+                })->values()->toArray();
 
             $fileName = 'tasks/export/turnstile/' . md5($this->task->id) . '.xlsx';
-            Excel::store(new DynamicExportFromCollection($workers, 'turnstile'), $fileName, 'minio');
+            Excel::store(new DynamicExportFromArray($workers, 'turnstile'), $fileName, 'minio');
 
             $this->task->update(['file' => $fileName, 'status' => ExportJobStatusEnum::DONE->value]);
         } catch (Throwable $e) {

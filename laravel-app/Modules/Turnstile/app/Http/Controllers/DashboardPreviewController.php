@@ -595,7 +595,6 @@ class DashboardPreviewController extends Controller
         $user = auth()->user();
         if ($status === 'view') {
             $workers = $this->currentWorkers($user)
-                ->whereNotIn('o.id', $this->service->dontInstallDeviceOrgIds())
                 ->distinct('workers.id')
                 ->whereNotNull('te.direction')
                 ->when($request->auth_type, function ($query, $auth_type) {
@@ -638,7 +637,6 @@ class DashboardPreviewController extends Controller
             $workerIds = WorkerPosition::query()
                 ->select('worker_id')
                 ->filter($user, request()->all())
-                ->whereNotIn('organization_id', $this->service->dontInstallDeviceOrgIds())
                 ->when(request('departments'), function ($q) {
                     $q->whereIn('department_id', explode(',', request('departments')));
                 })

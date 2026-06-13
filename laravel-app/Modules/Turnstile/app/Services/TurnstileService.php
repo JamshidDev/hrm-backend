@@ -60,6 +60,26 @@ class TurnstileService
                 LIMIT 1
             ) AS te"),
             DB::raw('TRUE'),
+            '=',
+            DB::raw('TRUE')
+        );
+    }
+
+    public function allEvents($query, $date)
+    {
+        $start = $date->copy()->startOfDay()->toDateTimeString();
+        $end = $date->copy()->addDay()->startOfDay()->toDateTimeString();
+        return $query->leftJoin(
+            DB::raw("LATERAL (
+                SELECT te1.direction,te1.auth_type,te1.event_date_and_time AS last_event
+                FROM terminal_events te1
+                WHERE te1.worker_id = workers.id
+                  AND te1.event_date_and_time >= '{$start}'
+                  AND te1.event_date_and_time < '{$end}'
+                ORDER BY te1.event_date_and_time DESC
+            ) AS te"),
+            DB::raw('TRUE'),
+            '=',
             DB::raw('TRUE')
         );
     }
@@ -113,7 +133,6 @@ class TurnstileService
             ->whereNull('v.worker_id')
             ->where('wp.is_turnstile', true)
             ->where('wp.status', PositionStatusEnum::ACTIVE->value)
-            ->whereNotIn('wp.organization_id', $this->dontInstallDeviceOrgIds())
             ->select(
                 'w.id as worker_id',
                 DB::raw("

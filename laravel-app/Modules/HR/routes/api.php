@@ -236,7 +236,7 @@ Route::middleware(['auth.hybrid'])
                 Route::get('vacancy/{id}/applications/{applicationId}/show-user', [VacancyApplicationStatusController::class, 'showVacancyUser']);
 
                 //Zoom
-                Route::post('Gzoom/check-meet', [ZoomController::class, 'checkMeeting']);
+                Route::post('zoom/check-meet', [ZoomController::class, 'checkMeeting']);
 
                 //EDU PLAN
                 Route::get('edu-plans', [EduPlanController::class, 'list']);

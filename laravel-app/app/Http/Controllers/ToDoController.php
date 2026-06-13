@@ -22,6 +22,7 @@ class ToDoController extends Controller
 
     public function test(Request $request)
     {
+        return $this->createPartitions();
         $query = $request->all();
         $user = auth()->user();
         $from = Carbon::parse(request('from', now()->toDateString()));
@@ -119,6 +120,97 @@ class ToDoController extends Controller
         return $data;
 
     }
+
+    public function createPartitions()
+    {
+        $minDate = Carbon::parse('2026-06-01')->startOfMonth();
+        $maxDate = Carbon::parse('2026-06-30')->startOfMonth();
+        $currentMonth = $minDate->copy();
+
+        while ($currentMonth <= $maxDate) {
+            $monthName = $currentMonth->format('Ym');
+            $monthStart = $currentMonth->format('Y-m-d');
+            $monthEnd = $currentMonth->copy()->addMonth()->format('Y-m-d');
+
+            DB::statement("
+            CREATE TABLE IF NOT EXISTS terminal_events_{$monthName} PARTITION OF terminal_events
+            FOR VALUES FROM ('$monthStart') TO ('$monthEnd')
+            PARTITION BY RANGE (event_date_and_time);
+        ");
+
+            $daysInMonth = $currentMonth->daysInMonth;
+            for ($day = 1; $day <= $daysInMonth; $day++) {
+                $currentDay = $currentMonth->copy()->day($day);
+                if ($currentDay > Carbon::parse('2026-06-30')->startOfDay()) {
+                    break;
+                }
+                $dayStart = $currentDay->format('Y-m-d');
+                $dayEnd = $currentDay->copy()->addDay()->format('Y-m-d');
+                $dayPartition = "terminal_events_{$monthName}_" . str_pad($day, 2, '0', STR_PAD_LEFT);
+
+                DB::statement("
+                    CREATE TABLE IF NOT EXISTS {$dayPartition} PARTITION OF terminal_events_{$monthName}
+                    FOR VALUES FROM ('$dayStart') TO ('$dayEnd');
+                ");
+                DB::statement("SELECT create_terminal_events_indexes('{$dayPartition}');");
+            }
+
+            $currentMonth->addMonth();
+        }
+        return 'success';
+    }
+
+    public function wrongWorkerPins()
+    {
+        $workers = DB::table('worker_positions as wp')
+            ->join('workers as w', 'w.id', '=', 'wp.worker_id')
+            ->leftJoin('organizations as o', 'o.id', '=', 'wp.organization_id')
+            ->leftJoin('departments as d', 'd.id', '=', 'wp.department_id')
+            ->leftJoin('positions as p', 'p.id', '=', 'wp.position_id')
+            ->where('wp.status', PositionStatusEnum::ACTIVE->value)
+            ->whereNull('wp.deleted_at')
+            ->whereNull('w.deleted_at')
+            ->whereRaw("
+                (
+                    w.pin IS NULL
+                    OR LENGTH(w.pin::text) < 13
+                    OR SUBSTRING(w.pin::text FROM 2 FOR 6) <> TO_CHAR(w.birthday, 'DDMMYY')
+                )
+            ")
+            ->selectRaw("
+                CONCAT_WS(' ', w.last_name, w.first_name, w.middle_name) as full_name,
+                o.name as organization_name,
+                d.name as department_name,
+                p.name as position_name,
+                w.pin,
+                TO_CHAR(w.birthday, 'DD.MM.YYYY') as birthday
+            ")
+            ->orderBy('o.name')
+            ->orderBy('full_name')
+            ->get()
+            ->map(function ($worker) {
+                return [
+                    'full_name' => $worker->full_name,
+                    'organization_name' => $worker->organization_name,
+                    'department_name' => $worker->department_name,
+                    'position_name' => $worker->position_name,
+                    'pin' => $worker->pin,
+                    'birthday' => $worker->birthday,
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        return Excel::download(new DynamicExportFromArray($workers, 'worker', [
+            'full_name',
+            'organization_name',
+            'department_name',
+            'position_name',
+            'pin',
+            'birthday',
+        ]), 'wrong_worker_pins.xlsx');
+    }
+
 
     public function terminalEvents()
     {

@@ -184,7 +184,7 @@ class IntegrationWorkerService
             ->where('month', $data['month'])
             ->get();
         $amounts = [];
-        $amounts = $this->statementService->getStatements($statements, $amounts);
+        $this->statementService->getStatements($statements, $amounts);
         return response()->json([
             'salary' => $amounts
         ]);

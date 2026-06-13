@@ -27,6 +27,7 @@ return [
     'does_not_delete_related_item' => "This item is linked to other data, Cannot be deleted...",
     'does_not_delete_current_photo' => "Unable to delete main image",
     'server_error' => "A system error has occurred. Please try again later.",
+    'not_found_role_or_worker' => "No permissions were found for the user, please contact your system administrator...",
     'invalid_credentials' => "Such user was not found in the system. Please verify the entered information...",
     'invalid_credentials_password' => "Check if the username or password is correct.",
     'token_is_expired' => "The token has expired.",

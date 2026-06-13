@@ -19,6 +19,8 @@ export const VALIDATION_RULES: Record<ValLang, Record<string, string>> = {
     in: ':attribute uchun tanlangan qiymat xato.',
     email: ':attribute haqiqiy elektron pochta manzili bo‘lishi kerak.',
     uuid: ':attribute to‘g‘ri UUID qiymatga ega bo‘lishi kerak.',
+    mimes:
+      ':attribute dagi fayl quyidagi turlardan biri bo‘lishi kerak: :values.',
     after_or_equal:
       ':attribute da sana :date ga teng yoki undan keyin bo‘lishi kerak.',
     min_numeric: ':attribute ning qiymati :min dan kam bo‘lmasligi kerak.',
@@ -40,6 +42,8 @@ export const VALIDATION_RULES: Record<ValLang, Record<string, string>> = {
     email:
       'Значение поля :attribute должно быть действительным электронным адресом.',
     uuid: 'Значение поля :attribute должно быть корректным UUID.',
+    mimes:
+      'Файл, указанный в поле :attribute, должен быть одного из следующих типов: :values.',
     after_or_equal:
       'Значение поля :attribute должно быть датой после или равной :date.',
     min_numeric: 'Значение поля :attribute должно быть не меньше :min.',
@@ -61,6 +65,7 @@ export const VALIDATION_RULES: Record<ValLang, Record<string, string>> = {
     in: 'The selected :attribute is invalid.',
     email: 'The :attribute field must be a valid email address.',
     uuid: 'The :attribute field must be a valid UUID.',
+    mimes: 'The :attribute field must be a file of type: :values.',
     after_or_equal:
       'The :attribute field must be a date after or equal to :date.',
     min_numeric: 'The :attribute field must be at least :min.',

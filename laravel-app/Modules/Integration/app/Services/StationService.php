@@ -3,6 +3,7 @@
 namespace Modules\Integration\Services;
 
 use App\Helpers\Helper;
+use App\Helpers\QueryHelper;
 use App\Http\Resources\PaginateResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -33,6 +34,24 @@ class StationService
         $user = auth()->user();
         $baseQuery = WorkerPosition::query()
             ->filter($user, $data)
+            ->when($data['search'] ?? null, function ($query, $search) {
+                $query->whereHas('worker', function ($query) use ($search) {
+                    $search = QueryHelper::escapeLike($search);
+
+                    $terms = explode(' ', trim($search));
+                    foreach ($terms as $term) {
+                        $query->where(function ($query) use ($term) {
+                            $query->whereLike('last_name', "%$term%")
+                                ->orWhereLike('first_name', "%$term%")
+                                ->orWhereLike('middle_name', "%$term%");
+                        });
+                    }
+                    if (strlen($search) === 14) {
+                        $query->orWhereLike('pin', $search);
+                    }
+                });
+
+            })
             ->with([
                 'department:id,name,level',
                 'worker:id,last_name,first_name,middle_name,photo',

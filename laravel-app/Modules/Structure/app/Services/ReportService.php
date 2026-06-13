@@ -2,6 +2,7 @@
 
 namespace Modules\Structure\Services;
 
+use App\Exceptions\BusinessException;
 use App\Helpers\ConvertHelper;
 use App\Helpers\Helper;
 use App\Traits\Base64FileUploadTrait;
@@ -245,7 +246,14 @@ class ReportService
             ->where('year', $year)
             ->where('month', $month)
             ->where('confirmation', ConfirmationStatusEnum::SUCCESS->value)->exists()) {
-            throw new \Exception(trans("Ushbu tashkilotda joriy oy uchun hisobot allaqachon imzolangan!"));
+
+            if (!ReportMothPer::query()
+                ->where('organization_id', $user->organization_id)
+                ->where('year', $year)
+                ->where('month', $month)
+                ->exists()) {
+                throw StructureServiceException::invalidReportStats(trans("Ushbu tashkilotda joriy oy uchun hisobot allaqachon imzolangan!"));
+            }
         }
 
         //Amaldagi xodimlar statistikasi
@@ -287,7 +295,7 @@ class ReportService
 
                 COUNT(DISTINCT w.id) FILTER (WHERE wp.type IN ($contractTypeValues)) as total,
 
-                SUM(wp.rate) as total_rate,
+                SUM(wp.rate) FILTER (WHERE wp.type IN ($contractTypeValues)) as total_rate,
 
                 COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '1' AND wp.type IN ($contractTypeValues)) as men,
                 COUNT(DISTINCT w.id) FILTER (WHERE w.sex = '0' AND wp.type IN ($contractTypeValues)) as women,

@@ -46,15 +46,18 @@ class AuthController extends Controller
 
         if (
             !$user ||
-            !$passwordValid ||
             !$user->worker_id
         ) {
             RateLimiter::hit($key, 60);
             return Helper::response(trans('messages.invalid_credentials'), [], 401);
         }
 
+        if (!$passwordValid) {
+            return Helper::response(trans('messages.invalid_credentials_password'), [], 401);
+        }
+
         if (!Helper::userRoleAndPermissions($user->roles, $user->organization_id)) {
-            return Helper::response(trans('messages.invalid_credentials'), [], 401);
+            return Helper::response(trans('messages.not_found_role_or_worker'), [], 401);
         }
 
         if (!$user->status) {

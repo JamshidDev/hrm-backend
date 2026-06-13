@@ -39,6 +39,7 @@ import {
   CONTRACT_ADDITIONAL_TYPE_ENUM_MAP,
 } from '@/modules/structure/document-types/document-type.enums';
 import { QueryDocumentTypeDto } from '@/modules/structure/document-types/dto/document-type.dto';
+import { validateDocumentTypeStore } from '@/modules/structure/document-types/document-type.validation';
 
 // Helpers — multipart body fields parser (Laravel `type`, `organizations` form data).
 function parseOrganizations(input: unknown): number[] {
@@ -91,11 +92,12 @@ export class ContractTypeController {
     @Body() body: { type?: string; organizations?: string },
     @UploadedFile() file: Express.Multer.File | undefined,
   ) {
+    validateDocumentTypeStore(body?.type, body?.organizations, file);
     await this.service.create(
       this.cfg,
       this.folder,
-      parseInteger(body.type),
-      parseOrganizations(body.organizations),
+      parseInteger(body?.type),
+      parseOrganizations(body?.organizations),
       file,
     );
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
@@ -117,8 +119,8 @@ export class ContractTypeController {
       this.cfg,
       this.folder,
       id,
-      parseInteger(body.organization_id),
-      parseInteger(body.type),
+      parseInteger(body?.organization_id),
+      parseInteger(body?.type),
       file,
     );
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
@@ -169,11 +171,12 @@ export class ContractAdditionalTypeController {
     @Body() body: { type?: string; organizations?: string },
     @UploadedFile() file: Express.Multer.File | undefined,
   ) {
+    validateDocumentTypeStore(body?.type, body?.organizations, file);
     await this.service.create(
       this.cfg,
       this.folder,
-      parseInteger(body.type),
-      parseOrganizations(body.organizations),
+      parseInteger(body?.type),
+      parseOrganizations(body?.organizations),
       file,
     );
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
@@ -195,8 +198,8 @@ export class ContractAdditionalTypeController {
       this.cfg,
       this.folder,
       id,
-      parseInteger(body.organization_id),
-      parseInteger(body.type),
+      parseInteger(body?.organization_id),
+      parseInteger(body?.type),
       file,
     );
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
@@ -252,11 +255,12 @@ export class CommandTypeController {
     @Body() body: { type?: string; organizations?: string },
     @UploadedFile() file: Express.Multer.File | undefined,
   ) {
+    validateDocumentTypeStore(body?.type, body?.organizations, file);
     await this.service.create(
       this.cfg,
       this.folderStore,
-      parseInteger(body.type),
-      parseOrganizations(body.organizations),
+      parseInteger(body?.type),
+      parseOrganizations(body?.organizations),
       file,
     );
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);
@@ -278,8 +282,8 @@ export class CommandTypeController {
       this.cfg,
       this.folderUpdate,
       id,
-      parseInteger(body.organization_id),
-      parseInteger(body.type),
+      parseInteger(body?.organization_id),
+      parseInteger(body?.type),
       file,
     );
     return buildSuccess(this.i18n.t('messages.successfully_stored'), []);

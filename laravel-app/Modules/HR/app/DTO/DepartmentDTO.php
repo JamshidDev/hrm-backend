@@ -10,6 +10,8 @@ final readonly class DepartmentDTO
         public ?string $nameEn,
         public ?string $comment,
         public int $level,
+        public ?int $regionId,
+        public ?int $cityId,
         public int $organizationId,
         public ?int $parentId,
     )

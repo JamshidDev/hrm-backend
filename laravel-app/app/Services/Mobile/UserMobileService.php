@@ -97,7 +97,10 @@ class UserMobileService
             );
         }
 
-        $user->update(['password' => bcrypt($newPassword)]);
+        $user->update([
+            'password' => bcrypt($newPassword),
+            'password_changed_at' => now(),
+        ]);
 
         return new UserResource($user);
     }
