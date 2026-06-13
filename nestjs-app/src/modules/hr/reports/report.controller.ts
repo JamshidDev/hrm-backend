@@ -93,7 +93,9 @@ export class ReportController {
   @ApiOperation({ summary: 'Merge duplicate department-positions' })
   async optimization(@Query() query: ReportOptimizationQueryDto) {
     await this.service.optimization(query);
-    return buildSuccess(this.i18n.t('messages.successfully_optimizated'), []);
+    // Laravel: trans('messages.successfully_optimizated') — bu kalit Laravel lang
+    // fayllarida YO'Q → Laravel xom kalitni qaytaradi (parity uchun shunday).
+    return buildSuccess('messages.successfully_optimizated', []);
   }
 
   @Post('orderable')

@@ -100,7 +100,8 @@ export class ReportService {
             : undefined,
         ),
       )
-      .orderBy(asc(organizations.id));
+      // Laravel: ->defaultOrder() = NestedSet `_lft` (tree traversal tartibi).
+      .orderBy(asc(organizations._lft));
 
     // Sum rates per org.
     const wpRates = await this.db
