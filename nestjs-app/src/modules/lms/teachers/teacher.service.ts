@@ -1,7 +1,7 @@
 // Teachers service. Laravel: TeacherController + TeacherLessonController.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, gte, inArray, lte, max, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lte, max, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -82,11 +82,11 @@ export class LmsTeacherService {
       page,
       perPage,
       query: ({ limit, offset }) =>
+        // Laravel: Teacher::query()->whereHas('subjects')->paginate() — orderBy YO'Q.
         this.db
           .select()
           .from(teachers)
           .where(where)
-          .orderBy(desc(teachers.id))
           .limit(limit)
           .offset(offset),
       mapper: () => ({}) as never,
