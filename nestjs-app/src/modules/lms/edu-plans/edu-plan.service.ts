@@ -102,11 +102,11 @@ export class LmsEduPlanService {
       page,
       perPage,
       query: ({ limit, offset }) =>
+        // Laravel: EduPlan::query()->filter()->...->paginate() — orderBy YO'Q (natural).
         this.db
           .select()
           .from(edu_plans)
           .where(where)
-          .orderBy(desc(edu_plans.id))
           .limit(limit)
           .offset(offset),
       mapper: () => ({}) as never,
@@ -119,7 +119,11 @@ export class LmsEduPlanService {
         const [lcRows, specRows, subjLinks, workersC, examsC] =
           await Promise.all([
             this.db
-              .select({ id: learning_centers.id, name: learning_centers.name })
+              .select({
+                id: learning_centers.id,
+                name: learning_centers.name,
+                code: learning_centers.code,
+              })
               .from(learning_centers)
               .where(inArray(learning_centers.id, lcIds)),
             this.db
@@ -169,7 +173,10 @@ export class LmsEduPlanService {
               .where(inArray(subjectsTable.id, subjectIds))
           : [];
 
-        const lcMap: Record<number, { id: number; name: string | null }> = {};
+        const lcMap: Record<
+          number,
+          { id: number; name: string | null; code: string | null }
+        > = {};
         for (const lc of lcRows) lcMap[lc.id] = lc;
         const specMap: Record<number, { id: number; name: string | null }> = {};
         for (const s of specRows) specMap[s.id] = s;
