@@ -67,12 +67,15 @@ export class QuoteController {
   @UseGuards(PermissionGuard)
   @Permission('admin')
   @ApiOperation({ summary: 'Update quote' })
+  @ApiBody({ type: UpdateQuoteDto })
   @ApiOkResponse()
+  // @Body() loose — Laravel `sometimes|string` partial: validatsiya + partial
+  // replace service ichida (quote.validation.ts).
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateQuoteDto,
+    @Body() body: Record<string, unknown>,
   ) {
-    await this.service.update(id, dto);
+    await this.service.update(id, body);
     return buildSuccess(this.i18n.t('messages.successfully_updated'), []);
   }
 

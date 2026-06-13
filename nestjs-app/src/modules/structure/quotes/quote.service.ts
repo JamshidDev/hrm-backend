@@ -12,10 +12,10 @@ import { QuoteMapper } from '@/modules/structure/quotes/quote.mapper';
 import {
   QueryQuoteDto,
   CreateQuoteDto,
-  UpdateQuoteDto,
   QuoteListResponseDto,
   QuoteItemDto,
 } from '@/modules/structure/quotes/dto/quote.dto';
+import { validateQuoteUpdate } from '@/modules/structure/quotes/quote.validation';
 
 @Injectable()
 export class QuoteService {
@@ -61,15 +61,15 @@ export class QuoteService {
     });
   }
 
-  async update(id: number, dto: UpdateQuoteDto): Promise<void> {
+  async update(id: number, body: unknown): Promise<void> {
+    // Laravel: route-model binding (404) validate()'dan oldin ishlaydi.
     await findByIdOrFail(this.db, quotes, id, this.i18n);
-    await this.db
-      .update(quotes)
-      .set({
-        text: dto.text,
-        author: dto.author,
-      })
-      .where(eq(quotes.id, id));
+
+    // sometimes|string — faqat berilgan field'lar yoziladi (partial replace).
+    const partial = validateQuoteUpdate(body);
+    if (partial.text === undefined && partial.author === undefined) return;
+
+    await this.db.update(quotes).set(partial).where(eq(quotes.id, id));
   }
 
   async remove(id: number): Promise<void> {

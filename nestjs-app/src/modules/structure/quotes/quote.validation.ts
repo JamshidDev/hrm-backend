@@ -48,3 +48,44 @@ export function validateQuoteStore(body: unknown): void {
 
   if (errors.length) throw new LaravelValidationException(errors);
 }
+
+// Update — Laravel `sometimes|string`: faqat MAVJUD kalitlar tekshiriladi (required
+// emas), keyin `$quote->update($validated)` — berilgan field'ning JSON column'i
+// faqat berilgan sub-kalitlar bilan ALMASHTIRILADI (boshqa sub-kalitlar yo'qoladi),
+// berilmagan field tegilmaydi. Tasdiqlangan partial set obyektini qaytaradi.
+export interface QuotePartial {
+  text?: Record<string, string>;
+  author?: Record<string, string>;
+}
+
+export function validateQuoteUpdate(body: unknown): QuotePartial {
+  const obj = (body ?? {}) as Record<string, unknown>;
+  const errors: ValidationError[] = [];
+  const result: QuotePartial = {};
+
+  for (const field of FIELDS) {
+    const group = obj[field];
+    // Field yo'q yoki obyekt emas → `sometimes` ishlamaydi (data_get null) → skip.
+    if (!group || typeof group !== 'object') continue;
+    const g = group as Record<string, unknown>;
+    const sub: Record<string, string> = {};
+
+    for (const lang of LANGS) {
+      if (!(lang in g)) continue; // faqat mavjud kalit (sometimes)
+      const value = g[lang];
+      if (typeof value !== 'string') {
+        errors.push({
+          property: `${field}.${lang}`,
+          constraints: { isString: 'string' },
+        });
+      } else {
+        sub[lang] = value;
+      }
+    }
+
+    if (Object.keys(sub).length) result[field] = sub;
+  }
+
+  if (errors.length) throw new LaravelValidationException(errors);
+  return result;
+}

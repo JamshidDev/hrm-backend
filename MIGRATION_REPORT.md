@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** CRUD-validation — `quotes` POST nested-required FIXED (`validateQuoteStore`, flat dotted-key synthetic errors). **CRUD-validation STORE 8/8 ✅ TUGADI.** (qolgan faqat `quotes` PUT partial — minor deviation.)
-- **Keyingi qadam:** `quotes` PUT `sometimes` partial parity (minor) YOKI multi-role 403 verify + e2e testlar.
+- **Oxirgi tugatilgan:** `quotes` PUT `sometimes` partial parity FIXED (`validateQuoteUpdate`, partial JSON-replace, 6/6 resp+stored MATCH). **CRUD-validation TO'LIQ (STORE + quotes PUT) ✅ TUGADI.**
+- **Keyingi qadam:** multi-role 403 verify YOKI e2e testlar (test-app).
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -178,7 +178,7 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | hr/polyclinics | ✅ FIXED | required\|array — @IsNotEmpty+@IsArray (ortiqcha validator olib tashlandi) |
 | structure/command-types, contract-types, contract-additional-types | ✅ FIXED | **Multipart** store 422. `document-type.validation.ts` qo'lda `validateDocumentTypeStore(type, organizations, file)` → `LaravelValidationException` (type/organizations required, file required\|mimes). Builder'ga `mimes` rule + `:values` placeholder qo'shildi. Parity: 3 endpoint × 3 til × {empty, type-only, type+orgs, wrong-ext} = 18/18 MATCH (suffiks `(and N more errors)` + per-field `errors` + `doc, docx` mimes — bayt-bayt). |
 | structure/quotes POST | ✅ FIXED | `quote.validation.ts` — `validateQuoteStore()` flat dotted-key (`text.uz`...) synthetic `ValidationError[]` → builder Laravel-format yasaydi (humanize "text.uz" o'zgarmaydi). `@Body()` loose tip → global pipe skip (aks holda `author must be object`). 6 kalit mustaqil `required\|string`, rule-tartibi text→author. Parity 7/7: empty(uz/ru/en)/partial/text-only/non-string/text=string MATCH. Happy-path create OK. |
-| structure/quotes PUT | ⏳ minor deviation | Laravel update `sometimes\|string` (partial; berilgan kalitlargina, JSON column REPLACE). NestJS `UpdateQuoteDto=CreateQuoteDto` → partial PUT'da full-required 422 (Laravel 200). Admin-only, kam partial — alohida kichik edge. |
+| structure/quotes PUT | ✅ FIXED | `validateQuoteUpdate()` — `sometimes\|string`: faqat MAVJUD kalitlar tekshiriladi (required emas), faqat berilgan field yoziladi (JSON column REPLACE — Laravel `$q->update($validated)` empirik tasdiqlandi: en yo'qoladi, tegilmagan field qoladi). 404 (findByIdOrFail) validate'dan oldin. Parity 6/6 — response + stored JSON ikkalasi MATCH (partial/full/empty/both/non-string-422/text=string-skip). |
 | hr/nationalities POST | ⛔ LARAVEL_ERROR | store() undefined (500) |
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
