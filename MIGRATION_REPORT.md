@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** lms GET-list batch — learning-centers (pivot ctid), subjects+specializations (orderBy), 10 MATCH. teachers qisman (orderBy).
-- **Keyingi qadam:** lms qolgan DIFFER: `teachers` (learning_center.code + worker.photo fileUrl + subjects tartibi), `edu-plan`, `exams`, `group-workers`, `groups`+`protocol` (Admin'da bo'sh — LMS-scope filter). So'ng turnstile stats-*/hik-central → CRUD → 78 implement.
+- **Oxirgi tugatilgan:** lms moduli TO'LIQ — teachers/edu-plan/groups/group-workers/protocol FIXED. Faqat `exams` (deviation #12) qoldi.
+- **Keyingi qadam:** `exams` deviation qarori (A/B) → keyin turnstile schedule/stats-* (param) + hik-central (tashqi) → CRUD (store/update/delete) → 78 implement.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -151,9 +151,13 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | lms/subjects, specializations | ✅ FIXED | orderBy(desc id) olib tashlandi (natural) |
 | lms/teachers | 🔧 QISMAN | orderBy fix; QOLDI: learning_center.code, worker.photo fileUrl, subjects tartibi |
 | lms/teachers | ✅ FIXED | code + worker.photo fileUrl + subjects.id order |
-| lms/edu-plan | ⏳ TODO | resource shakli farqi (DIFFER) |
-| lms/exams | ⚠️ DEVIATION | Laravel `topic.org = user.org` (strict), NestJS `scope.ids()` (admin→all). Dev ATAYLAB og'ishgan ("Laravel bug"). Qaror kerak (#12 quyida) |
-| lms/groups, protocol, group-workers | ⏳ SCOPE | Admin'da bo'sh — ehtimol o'sha deliberate org-scope deviation |
+| lms/edu-plan | ✅ FIXED | orderBy olib tashlandi (ctid) + learning_center.code |
+| lms/groups | ✅ FIXED | edu_plan_id yo'q→IS NULL (Laravel where(col,null)) |
+| lms/group-workers | ✅ FIXED | group_id yo'q→IS NULL + orderBy olib tashlandi (natural ctid) |
+| lms/protocol | ✅ FIXED | group_id filter qo'shildi (yo'q→IS NULL) |
+| lms/exams | ⚠️ DEVIATION | Laravel `topic.org = user.org` (strict), NestJS `scope.ids()` (admin→all). Dev ATAYLAB og'ishgan. **Qaror kerak (#12)** |
+
+**✅ lms moduli TO'LIQ** (faqat `exams` deviation-qarori kutilmoqda).
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
 
