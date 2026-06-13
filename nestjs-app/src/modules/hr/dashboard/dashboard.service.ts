@@ -586,11 +586,16 @@ export class DashboardService {
         cnt: count(),
       })
       .from(worker_relative_disabilities)
+      // Laravel whereHas('workerRelative...') — workerRelative SoftDeletes →
+      // o'chirilgan relative'li disability hisobga olinmaydi.
       .innerJoin(
         worker_relatives,
-        eq(
-          worker_relatives.id,
-          worker_relative_disabilities.worker_relative_id,
+        and(
+          eq(
+            worker_relatives.id,
+            worker_relative_disabilities.worker_relative_id,
+          ),
+          notDeleted(worker_relatives),
         ),
       )
       .where(and(notDeleted(worker_relative_disabilities), activeWorker))
