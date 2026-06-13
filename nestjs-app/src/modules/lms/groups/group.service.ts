@@ -232,7 +232,12 @@ export class LmsGroupService {
    */
   async list(q: GroupListQueryDto) {
     const conditions = [notDeleted(groups)];
-    if (q.edu_plan_id) conditions.push(eq(groups.edu_plan_id, q.edu_plan_id));
+    // Laravel: where('edu_plan_id', $request->edu_plan_id) — yo'q bo'lsa IS NULL.
+    conditions.push(
+      q.edu_plan_id
+        ? eq(groups.edu_plan_id, q.edu_plan_id)
+        : isNull(groups.edu_plan_id),
+    );
     const where = and(...conditions);
 
     const rows = await this.db
