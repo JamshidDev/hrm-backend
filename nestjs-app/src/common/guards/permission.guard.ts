@@ -1,17 +1,12 @@
 // PermissionGuard — Spatie permission middleware ekvivalenti.
 // Usage: @UseGuards(AuthHybridGuard, PermissionGuard) + @Permission('users-write')
 
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { I18nService } from 'nestjs-i18n';
 import { PERMISSION_KEY } from '@/common/decorators/permission.decorator';
 import { RequestContext } from '@/common/context/request.context';
 import { PermissionService } from '@/shared/permission/permission.service';
+import { RawHttpException } from '@/common/exceptions/raw-http.exception';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -19,7 +14,6 @@ export class PermissionGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly ctx: RequestContext,
     private readonly perms: PermissionService,
-    private readonly i18n: I18nService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,7 +26,11 @@ export class PermissionGuard implements CanActivate {
     const userId = this.ctx.user_or_fail.id;
     const ok = await this.perms.hasPermission(userId, required);
     if (!ok) {
-      throw new ForbiddenException(this.i18n.t('messages.permission_denied'));
+      // Laravel Spatie PermissionMiddleware — FLAT { message } (error/data YO'Q),
+      // xabar hardcoded inglizcha (locale'ga bog'liq emas).
+      throw new RawHttpException(403, {
+        message: 'User does not have the right permissions.',
+      });
     }
     return true;
   }
