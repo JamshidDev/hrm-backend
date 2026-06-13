@@ -176,8 +176,8 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | structure/holidays | ✅ FIXED | holiday_date + type @IsNotEmpty |
 | lms/specializations | ✅ FIXED | direction_id @IsNotEmpty |
 | hr/polyclinics | ✅ FIXED | required\|array — @IsNotEmpty+@IsArray (ortiqcha validator olib tashlandi) |
-| structure/command-types, contract-types | ⏳ TODO | Laravel `file`+`organizations` (va boshqa) required — NestJS DTO'da yo'q (murakkab: file upload + organizations array) |
-| structure/quotes | ⏳ TODO | nested `author.en`/`author.ru` required (NestJS author obyekt sifatida) |
+| structure/command-types, contract-types, contract-additional-types | ⏳ TODO (murakkab) | **Multipart** (`document-types.controllers.ts` shared). Laravel `store` rules: `type`=required, `organizations`=required, `file`=required\|mimes:doc,docx. NestJS `create()` validatsiyasiz (FileInterceptor + body). Kerak: 422'ni qo'lda Laravel-format'da qurish (type/organizations/file required + file mimes) — standart pipe DTO multipart+file bilan ishlamaydi. |
+| structure/quotes | ⏳ TODO (murakkab) | DTO'da @ValidateNested BOR. Muammo: author/text **butunlay yo'q** bo'lsa Laravel `author.en/ru/uz required` (nested kalit mustaqil fire qiladi), class-validator esa `author must be object` (parent yo'q→nested skip). Semantik farq — happy-path (to'liq payload) ISHLAYDI, faqat bo'sh-body edge'da diff. Custom validator kerak. |
 | hr/nationalities POST | ⛔ LARAVEL_ERROR | store() undefined (500) |
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
