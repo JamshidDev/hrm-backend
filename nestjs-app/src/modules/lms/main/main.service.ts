@@ -80,7 +80,9 @@ export class LmsMainService {
           eq(learning_center_users.user_id, userId),
           notDeleted(learning_center_users),
         ),
-      );
+      )
+      // Laravel LearningCenterUser::get() — orderBy YO'Q, heap (ctid) tartibi.
+      .orderBy(sql`ctid`);
     const lcIds = [...new Set(links.map((l) => Number(l.learning_center_id)))];
     if (!lcIds.length) return [];
 
@@ -93,7 +95,14 @@ export class LmsMainService {
       .where(
         and(inArray(learning_centers.id, lcIds), notDeleted(learning_centers)),
       );
-    return rows.map((r) => ({ id: Number(r.id), name: r.name }));
+    const lcMap = new Map(
+      rows.map((r) => [Number(r.id), { id: Number(r.id), name: r.name }]),
+    );
+    // Laravel: LearningCenterUser::get()->map() — pivot tartibida, dedup YO'Q
+    // (har pivot row uchun bitta yozuv).
+    return links
+      .map((l) => lcMap.get(Number(l.learning_center_id)))
+      .filter((x): x is { id: number; name: string } => x != null);
   }
 
   // GET /lms/list/directions — Laravel: LMSController::listDirections →
