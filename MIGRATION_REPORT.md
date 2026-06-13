@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** lms moduli TO'LIQ — teachers/edu-plan/groups/group-workers/protocol FIXED. Faqat `exams` (deviation #12) qoldi.
-- **Keyingi qadam:** `exams` deviation qarori (A/B) → keyin turnstile schedule/stats-* (param) + hik-central (tashqi) → CRUD (store/update/delete) → 78 implement.
+- **Oxirgi tugatilgan:** turnstile schedule/* GET TO'LIQ (stats-* 8 MATCH, day-in-month holidays+DTO FIXED). DB-backed GET-list deyarli barcha modullarda tugadi.
+- **Keyingi qadam:** Qolgan GET: turnstile `hik-central/*` ~25 (tashqi HikCentral), `lms/exams` (deviation A/B). Asosiy qolgan ish: **CRUD** (store/update/delete) + **78 implement** (audit'dagi yo'q endpointlar).
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -139,7 +139,8 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | GET | turnstile/{buildings,enums,organization-terminals,schedule/schedule-groups,schedule/schedule-types} | ✅ MATCH | — |
 | GET | turnstile/schedule/departments | ✅ FIXED | orderBy (organization_id, **ctid**) — Laravel heap-scan tie order |
 | GET | turnstile/schedule/get-workers | ✅ FIXED | scheduleType har doim null (Laravel TYPO `$this->schedyleType`) |
-| GET | turnstile/schedule/stats-* (one/three/four/five/six/seven/preview), day-in-month, schedule-workers | ⏳ TODO | param kerak |
+| GET | turnstile/schedule/stats-{one,three,four,five,six,seven,preview} + schedule-workers | ✅ MATCH | 8 endpoint |
+| GET | turnstile/schedule/day-in-month | ✅ FIXED | DayInMonthQueryDto (year/month required|integer|min|max) + is_holiday holidays jadvalidan (false edi) |
 | GET | turnstile/absent-scheduled-workers | ✅ FIXED | 403 flat Spatie format (global #403) |
 | GET | turnstile/hik-central/* (~25) | ⏳ TASHQI | HikCentral integratsiya (external) |
 
