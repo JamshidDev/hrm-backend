@@ -15,6 +15,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { buildSuccess } from '@/common/utils/response.util';
 import { ResultService } from '@/modules/exam/results/result.service';
@@ -101,6 +103,8 @@ export class ResultController {
 
   // UUID bo'yicha natija — ichki link uchun.
   @Get('worker-exams-results/:uuid')
+  @UseGuards(PermissionGuard)
+  @Permission('document-view-exam-results')
   @ApiOperation({ summary: 'Show exam result by UUID' })
   async showByUuid(@Param('uuid') uuid: string) {
     return buildSuccess(true, await this.service.showByUuid(uuid));

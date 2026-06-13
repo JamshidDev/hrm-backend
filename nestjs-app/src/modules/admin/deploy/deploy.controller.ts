@@ -15,6 +15,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { DeployService } from '@/modules/admin/deploy/deploy.service';
 import {
@@ -26,7 +28,8 @@ import {
 
 @ApiTags('Admin / Deploy')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('users-write')
 @Controller('api/v1/admin/deploy')
 export class DeployController {
   constructor(

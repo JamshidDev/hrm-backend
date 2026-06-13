@@ -10,13 +10,16 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { AdminMobileUserService } from '@/modules/admin/mobile-users/mobile-user.service';
 import { MobileUserListQueryDto } from '@/modules/admin/mobile-users/dto/mobile-user.dto';
 
 @ApiTags('Admin / Mobile Users')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('users-write')
 @Controller('api/v1/admin/mobile/users')
 export class AdminMobileUserController {
   constructor(private readonly service: AdminMobileUserService) {}

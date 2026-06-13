@@ -21,6 +21,8 @@ import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { InstructionService } from '@/modules/admin/instructions/instruction.service';
 import {
@@ -32,7 +34,8 @@ import {
 
 @ApiTags('Admin / Instructions')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('instructions|instructions-write')
 @Controller('api/v1/admin')
 export class InstructionController {
   constructor(
@@ -41,6 +44,7 @@ export class InstructionController {
   ) {}
 
   @Get('instructions')
+  @Permission('instructions')
   @ApiOperation({
     summary: 'List app instructions (paginated, filter: menu/sub_menu)',
   })

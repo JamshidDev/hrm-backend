@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { AdminTelegramService } from '@/modules/admin/telegram/telegram.service';
 import {
@@ -21,7 +23,8 @@ import {
 
 @ApiTags('Admin / Telegram')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('users-write')
 @Controller('api/v1/admin/telegram')
 export class AdminTelegramController {
   constructor(private readonly service: AdminTelegramService) {}

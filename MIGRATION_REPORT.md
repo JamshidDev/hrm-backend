@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** Multi-role 403 permission-mapping audit — 74 mismatch topildi, **48 fix** (19 DIFF + 26 integration + 3 hr/enums). `PermissionGuard`ga `|` OR-semantikasi qo'shildi. Runtime tasdiqlandi.
-- **Keyingi qadam:** qolgan 26 NONE (admin `users-write` 19 + `instructions` 6 + `document-view-exam-results` 1) — controllerlarga guard qo'shish. So'ng e2e testlar.
+- **Oxirgi tugatilgan:** Multi-role 403 permission-mapping audit **TO'LIQ — 74/74 mismatch FIXED** (DIFF=0, NONE=0). `PermissionGuard`ga `|` OR-semantikasi qo'shildi. Runtime tasdiqlandi (admin/low-priv L=N).
+- **Keyingi qadam:** e2e testlar (test-app) YOKI `lms/exams` deviation YOKI hik-central.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -189,8 +189,11 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 - **26 integration NONE** ✅ — Laravel `sanctum + permission:integration`, NestJS faqat AuthHybridGuard edi (perm tekshiruvsiz → ruxsatsiz user 200). 8 controllerga `PermissionGuard + @Permission('integration')` qo'shildi; salary/check uchun OR-perm (`integration|integration-worker-salary`/`-info`). `PermissionGuard` `|` OR-semantikasini qo'llab-quvvatlaydi (Spatie parity). Runtime 403 JSON body MATCH.
 - **3 hr/enums NONE** ✅ — `enums-extras.controller` → `@Permission('hr')`.
 
-**Qolgan NONE (26) — admin/exam, keyingi qadam:** `users-write` (19: admin/deploy, integration-log, mobile/users, telegram), `instructions|instructions-write` (6: admin/instructions, instruction-photos), `document-view-exam-results` (1: exam/worker-exams-results).
+- **26 admin/exam NONE** ✅ — `users-write` (deploy/integration-log/mobile-users/telegram → class-level), `instructions|instructions-write` (instruction.controller class-level, GET list override `instructions`), `document-view-exam-results` (exam result — FAQAT `worker-exams-results/:uuid` method-level, qolgan exam route'lar Laravel'da ham perm'siz → class-level QILINMADI). Runtime: admin 200/200, low-priv 403/403 MATCH.
+
+**✅ NATIJA: 74/74 mismatch FIXED. DIFF=0, NONE=0** (500 Laravel perm-route'dan nest-map'da bor 387 tasi to'liq mos).
 **113 route Laravel-perm bor lekin nest-map'da yo'q** — asosan `/create`+`/{id}/edit`+`/{id}` show (apiResource over-registration = LARAVEL_ERROR, NestJS 404, oldindan hujjatlangan).
+**Eslatma:** non-JSON `Accept` header'da Laravel 403 HTML qaytaradi (Symfony), NestJS JSON — API client'lar doim `Accept: application/json` yuboradi, shu holda body bayt-bayt mos.
 
 ## Topilgan buglar va tuzatishlar (bu sessiya)
 - `structure/countries` + `regions`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)

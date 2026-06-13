@@ -13,6 +13,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { PermissionGuard } from '@/common/guards/permission.guard';
+import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationLogService } from '@/modules/admin/integration-log/integration-log.service';
 import {
@@ -24,7 +26,8 @@ import {
 
 @ApiTags('Admin / Integration Log')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard)
+@Permission('users-write')
 @Controller('api/v1/admin/integration-log')
 export class IntegrationLogController {
   constructor(
