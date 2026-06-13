@@ -3,7 +3,7 @@
 // Source table: `turnstile_worker_schedules` (partitioned by date).
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -1304,7 +1304,8 @@ export class WorkerScheduleService {
       ),
     ];
 
-    const [wRows, posRows, stRows, grpRows] = await Promise.all([
+    // _stRows: scheduleType Laravel typo tufayli har doim null — natija ishlatilmaydi.
+    const [wRows, posRows, _stRows, grpRows] = await Promise.all([
       wIds.length
         ? this.db
             .select({
@@ -1366,16 +1367,7 @@ export class WorkerScheduleService {
       ),
     );
     const posMap = new Map(posRows.map((p) => [Number(p.id), p] as const));
-    const stMap = new Map(stRows.map((s) => [Number(s.id), s] as const));
     const grpMap = new Map(grpRows.map((g) => [Number(g.id), g] as const));
-
-    const lang = this.ctx.lang;
-    const localizedSt = (s: any): string =>
-      lang === 'ru'
-        ? (s.name_ru ?? s.name)
-        : lang === 'en'
-          ? (s.name_en ?? s.name)
-          : s.name;
 
     return {
       current_page: page,
@@ -1383,9 +1375,6 @@ export class WorkerScheduleService {
       data: rows.map((r) => {
         const w = r.worker_id ? (wMap.get(Number(r.worker_id)) ?? null) : null;
         const pos = r.position_id ? posMap.get(Number(r.position_id)) : null;
-        const st = r.turnstile_schedule_type_id
-          ? stMap.get(Number(r.turnstile_schedule_type_id))
-          : null;
         const grp = r.turnstile_schedule_group_id
           ? grpMap.get(Number(r.turnstile_schedule_group_id))
           : null;
