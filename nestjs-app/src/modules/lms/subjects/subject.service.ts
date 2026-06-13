@@ -1,7 +1,7 @@
 // Subjects service. Laravel: SubjectController.
 
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, ilike, max, or, sql } from 'drizzle-orm';
+import { and, eq, ilike, max, or, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -49,11 +49,11 @@ export class LmsSubjectService {
       page,
       perPage,
       query: ({ limit, offset }) =>
+        // Laravel: Subject::query()->search()->paginate() — orderBy YO'Q (natural).
         this.db
           .select()
           .from(subjects)
           .where(where)
-          .orderBy(desc(subjects.id))
           .limit(limit)
           .offset(offset),
       mapper: SubjectMapper.toItem,

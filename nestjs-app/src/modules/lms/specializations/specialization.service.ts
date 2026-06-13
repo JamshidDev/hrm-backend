@@ -3,7 +3,7 @@
 // Detail: positions array (specialization_positions + positions).
 
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ilike, inArray, max, or, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, max, or, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -67,11 +67,11 @@ export class LmsSpecializationService {
       page,
       perPage,
       query: ({ limit, offset }) =>
+        // Laravel: Specialization::query()->search()->...->paginate() — orderBy YO'Q.
         this.db
           .select()
           .from(specializations)
           .where(where)
-          .orderBy(desc(specializations.id))
           .limit(limit)
           .offset(offset),
       mapper: () => ({}) as never, // mapList ishlatamiz
