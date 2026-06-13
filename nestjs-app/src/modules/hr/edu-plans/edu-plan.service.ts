@@ -65,55 +65,99 @@ export class EduPlanService {
       sql`EXTRACT(YEAR FROM ${edu_plans.start_date})::int = ${currentYear}`,
     );
 
+    // Laravel: EduPlan::query()->with([...])->paginate() — `with` relation'larni
+    // ALOHIDA query bilan yuklaydi (main query JOIN'siz → natural heap order).
+    // NestJS'da ham join'siz olamiz, relation'larni batch yuklaymiz (tartib parity).
     const [rows, [{ total }]] = await Promise.all([
       this.db
         .select({
           id: edu_plans.id,
           name: edu_plans.name,
-          type: edu_plans.type,
           start_date: edu_plans.start_date,
-          end_date: edu_plans.end_date,
           hours: edu_plans.hours,
-          serial: edu_plans.serial,
           count_groups: edu_plans.count_groups,
           count_workers: edu_plans.count_workers,
-          spec_id: specializations.id,
-          spec_name: specializations.name,
-          lc_id: learning_centers.id,
-          lc_name: learning_centers.name,
+          specialization_id: edu_plans.specialization_id,
+          learning_center_id: edu_plans.learning_center_id,
         })
         .from(edu_plans)
-        .leftJoin(
-          specializations,
-          eq(specializations.id, edu_plans.specialization_id),
-        )
-        .leftJoin(
-          learning_centers,
-          eq(learning_centers.id, edu_plans.learning_center_id),
-        )
         .where(where)
-        .orderBy(asc(edu_plans.id))
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(edu_plans).where(where),
     ]);
 
+    const specIds = [
+      ...new Set(
+        rows
+          .map((r) => r.specialization_id)
+          .filter((x): x is number => x != null),
+      ),
+    ];
+    const lcIds = [
+      ...new Set(
+        rows
+          .map((r) => r.learning_center_id)
+          .filter((x): x is number => x != null),
+      ),
+    ];
+    const [specs, lcs] = await Promise.all([
+      specIds.length
+        ? this.db
+            .select({ id: specializations.id, name: specializations.name })
+            .from(specializations)
+            .where(
+              and(
+                inArray(specializations.id, specIds),
+                notDeleted(specializations),
+              ),
+            )
+        : Promise.resolve([] as Array<{ id: number; name: string | null }>),
+      lcIds.length
+        ? this.db
+            .select({
+              id: learning_centers.id,
+              name: learning_centers.name,
+              code: learning_centers.code,
+            })
+            .from(learning_centers)
+            .where(
+              and(
+                inArray(learning_centers.id, lcIds),
+                notDeleted(learning_centers),
+              ),
+            )
+        : Promise.resolve(
+            [] as Array<{
+              id: number;
+              name: string | null;
+              code: string | null;
+            }>,
+          ),
+    ]);
+    const specMap = new Map(specs.map((s) => [s.id, s]));
+    const lcMap = new Map(lcs.map((l) => [l.id, l]));
+
+    // Laravel EduPlanMinResource: id, name, learning_center, specialization,
+    // start_date, hours, count_groups, count_workers (type/end_date/serial YO'Q).
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => ({
         id: r.id,
         name: r.name,
-        type: r.type,
+        learning_center:
+          r.learning_center_id != null
+            ? (lcMap.get(r.learning_center_id) ?? null)
+            : null,
+        specialization:
+          r.specialization_id != null
+            ? (specMap.get(r.specialization_id) ?? null)
+            : null,
         start_date: r.start_date,
-        end_date: r.end_date,
         hours: r.hours,
-        serial: r.serial,
         count_groups: r.count_groups,
         count_workers: r.count_workers,
-        specialization: r.spec_id ? { id: r.spec_id, name: r.spec_name } : null,
-        learning_center: r.lc_id ? { id: r.lc_id, name: r.lc_name } : null,
       })),
     };
   }
