@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** hr/get-department (level obyekt, comment, childIds scope) + get-positions (orderBy, per_page).
-- **Keyingi qadam:** Qolgan hr GET DIFFER: `dashboard`, `dashboard-three`, `edu-plans`, `report/optimization` (422), `report/structure`. So'ng turnstile/lms modullari → CRUD → 78 implement.
+- **Oxirgi tugatilgan:** hr/report/structure (_lft tree order) + report/optimization (raw key) + token refresh (22 role).
+- **Keyingi qadam:** 3 ta hr GET DIFFER qoldi: `dashboard` (vacation-type `id` 49≠45), `dashboard-three`, `edu-plans` (NestJS ortiqcha field — resource shakli). So'ng turnstile/lms modullari → CRUD → 78 implement.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -125,7 +125,9 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | 67-69 | GET | hr/report/{departments,department-positions,worker-positions} | ✅ FIXED | org_id optional+IS NULL, orderBy, Confirm/Changed/ContractType enum, rate accessor /100, worker_rate ACTIVE filter, per_page |
 | 70 | GET | hr/get-department | ✅ FIXED | level→{id,name:DeptLevelEnum}, comment/name_ru/name_en, orderBy, childIds scope, per_page |
 | 71 | GET | hr/get-positions | ✅ FIXED | orderBy, per_page (default/10/50/100/200 MATCH; per_page=5 Postgres plan-instability) |
-| — | GET | hr/{dashboard,dashboard-three,edu-plans,report/optimization,report/structure} | ⚠️ TODO | DIFFER — keyingi continue-ct |
+| 72 | GET | hr/report/structure | ✅ FIXED | orderBy `_lft` (NestedSet defaultOrder) — tree children tartibi |
+| 73 | GET | hr/report/optimization | ✅ FIXED | xom kalit `messages.successfully_optimizated` (Laravel lang'da yo'q → kalit) |
+| — | GET | hr/{dashboard,dashboard-three,edu-plans} | ⚠️ TODO | dashboard: vacation-type id 49≠45; edu-plans: NestJS ortiqcha field (resource shakli) — keyingi continue-ct |
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
 
