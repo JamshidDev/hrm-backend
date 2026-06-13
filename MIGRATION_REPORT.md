@@ -21,7 +21,7 @@ Oxirgi yangilanish: 2026-06-12
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
 - **Oxirgi tugatilgan:** turnstile schedule/departments (ctid tie-order) + get-workers (Laravel typo `schedyleType`→null) + buildings/enums/organization-terminals/schedule-groups/schedule-types MATCH.
-- **Keyingi qadam:** turnstile schedule/stats-* (param kerak), absent-scheduled-workers (403 format), hik-central/* (tashqi HikCentral). So'ng lms → CRUD → 78 implement.
+- **Keyingi qadam:** turnstile schedule/stats-* (param kerak), hik-central/* (tashqi HikCentral). So'ng lms → CRUD → 78 implement. (403-format global HAL QILINDI.)
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -140,7 +140,7 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | GET | turnstile/schedule/departments | ✅ FIXED | orderBy (organization_id, **ctid**) — Laravel heap-scan tie order |
 | GET | turnstile/schedule/get-workers | ✅ FIXED | scheduleType har doim null (Laravel TYPO `$this->schedyleType`) |
 | GET | turnstile/schedule/stats-* (one/three/four/five/six/seven/preview), day-in-month, schedule-workers | ⏳ TODO | param kerak |
-| GET | turnstile/absent-scheduled-workers | ⏳ 403-format | (TIZIMLI #403, quyida) |
+| GET | turnstile/absent-scheduled-workers | ✅ FIXED | 403 flat Spatie format (global #403) |
 | GET | turnstile/hik-central/* (~25) | ⏳ TASHQI | HikCentral integratsiya (external) |
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
@@ -172,6 +172,6 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 4. **e2e test konvensiyasi**: loyihada `*.spec.ts` (service-unit, 18 ta) bor, lekin spec real e2e so'raydi — ikki-server diff'ni e2e qilib qo'shish kerakmi yoki `*.spec.ts` uslubida? (hozircha api-diff.sh bilan tekshirilyapti).
 5. **EXTRA 10**: NestJS qo'shgan route'lar — qoldiriladimi?
 7. **🟡 QISMAN — 422 validation-message i18n**: mexanizm bor (`laravel-validation.ts` + `.messages.ts`, ~15 qoida). `uuid` qo'shildi (`access-for-admin` ✅). Yetishmagan qoidalar (exists, regex, digits...) modul-bo'ylab qo'shiladi — yangi qoida chiqsa: CONSTRAINT_TO_RULE + VALIDATION_RULES(3 til) + RULE_PRIORITY.
-9. **🔴 TIZIMLI: 403 permission-denied format** — Laravel Spatie FLAT `{"message":"User does not have the right permissions."}` (inglizcha, error/data YO'Q). NestJS PermissionGuard wrapped+localized `{message,error:true,data:[]}`. BARCHA 403'ga taalluqli. Global fix kerak (PermissionGuard 403 → flat Spatie message, raw response). `absent-scheduled-workers` da ko'rindi. Tasdiq kerak.
+9. ✅ **HAL QILINDI — 403 permission-denied format**: PermissionGuard endi `RawHttpException(403, {message:'User does not have the right permissions.'})` (flat Spatie, inglizcha hardcoded). Barcha role/endpoint 403 MATCH (absent-scheduled-workers, WorkersView→admin/roles, TurnstileViewer→hr/commands tasdiqlandi).
 10. **ctid tie-order trick** — `paginate()` orderBy bilan (masalan organization_id) tie'larda Laravel heap-scan = fizik (ctid) tartib. NestJS secondary `sql\`ctid\`` qo'shsa mos keladi (schedule/departments, admin/roles). get-positions kabi orderBy'sizlarga ham qo'llasa bo'ladi.
 11. **⚠️ TIZIMLI: dept/position join soft-delete** — `confirmations` topgan bug (join'da `isNull(deleted_at)` yo'q → o'chirilgan dept nomi chiqib qoladi) kodda **25 ta `leftJoin(departments)`** da bo'lishi mumkin. Har birini Laravel relation (SoftDeletes qo'llaydimi) bilan tekshirib, kerak bo'lsa `isNull(deleted_at)` qo'shish kerak. Tekshirilgan/tuzatilgan: structure-tree (confirmations). Qolgan ~24: lms/certificates, integration/mobile-face, integration/main, economist/staffing, hr/worker-exports, hr/vacations, hr/worker-positions va h.k. — keyingi o'tishlarda har endpoint bilan birga.
