@@ -181,9 +181,35 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 12. **lms org-scope deviation** — `exams` (va ehtimol `groups`/`protocol`/`group-workers`) NestJS'da `OrgScopeService.ids()` (admin→barcha org) ishlatadi, Laravel esa `topic.organization_id = user.organization_id` (strict). Dev kodda izohlagan: Laravel'ning strict org_id'si HQ-userlar uchun "real bug". Spec qoidasi: *"yaxshilama — Laravel'ga aynan moslashtir"*. **Qaror:** (A) strict parity (Laravel'dek user.org) yoki (B) deviation'ni saqlash (admin→all). Hozircha B (mavjud kod). Bu endpointlar Admin token bilan diff beradi (Laravel bo'sh, NestJS to'la).
 
 ## ⛔ Laravel'da error bergan route'lar
+
+### 🔴 KATTA TOPILMA — apiResource undefined-method (GET-show + ba'zi CRUD)
+Audit'dagi "78 missing"ning katta qismi **LARAVEL_ERROR**: `apiResource` route'ni ro'yxatlaydi, lekin controllerda metod YO'Q → `Call to undefined method ...::show()` → **500**. NestJS to'g'ri 404 qaytaradi. **Implement QILMAYMIZ** (spec: LARAVEL_ERROR takrorlanmaydi).
+
+Tasdiqlangan undefined `show()`: OrganizationService, City, Command, Nationality, AdminUser, Worker controllerlar; `index()`: WorkerController (hr/workers). ➜ **43 GET-show + hr/workers index = LARAVEL_ERROR.**
+CRUD'da ham: WorkerController `destroy()` yo'q, AdminUserController `store()/update()` yo'q. ➜ Har CRUD'ni Laravel'da curl bilan (500-undefined vs real) ajratish kerak.
+
 | # | Method | Path | Status | Sabab |
 |---|--------|------|--------|-------|
-| 1 | GET | structure/positions/{id} | 500 | (spot-check; keyin tekshiriladi) |
+| 1 | GET | structure/positions/{id} + ~42 GET-show | 500 | apiResource `show()` undefined (controllerda yo'q) |
+| 2 | GET | hr/workers | 500 | WorkerController `index()` undefined |
+| 3 | DELETE | hr/workers/{id} | 500 | WorkerController `destroy()` undefined |
+| 4 | POST/PUT | admin/users | 500 | AdminUserController `store()/update()` undefined |
+
+### Controller-metod auditi (prioritet CRUD) — qaysi metod MAVJUD
+`grep 'function <m>'` natijasi (1=bor→real implement, 0=undefined→LARAVEL_ERROR):
+| Controller | store | update | destroy | show |
+|-----------|-------|--------|---------|------|
+| WorkerApplicationConfirmation | 0 | 0 | 0 | 0 |
+| WorkerPosition | 0 | **1** | 0 | **1** |
+| OrganizationService | **1** | 0 | 0 | 0 |
+| Command | **1** | 0 | **1** | 0 |
+| ContractAdditional | **1** | 0 | **1** | 0 |
+| Contract | **1** | 0 | **1** | **1** |
+| OrganizationPolyclinic | **1** | 0 | **1** | 0 |
+| ChatNewsMedia | **1** | 0 | **1** | 0 |
+| OrganizationTerminal | **1** | 0 | **1** | **1** |
+
+> Naqsh: ko'p controllerlar `update()` ni implement qilmagan (apiResource baribir PUT route'ni ro'yxatlaydi → 500). Bu PUT'lar LARAVEL_ERROR. Faqat metodi bor (1) bo'lganlar real implement uchun nomzod — ULAR NestJS'da bor-yo'qligini va Laravel javobini alohida tekshirish kerak.
 
 ## E'tibor talab qiladigan joylar
 1. ✅ **HAL QILINDI — GLOBAL header diff**: main.ts'da `res.setHeader` patch → `application/json` (charset'siz). Barcha endpointda mos.
