@@ -7,6 +7,7 @@ import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
+import { MinioService } from '@/shared/minio/minio.service';
 import {
   edu_plan_exams,
   exams,
@@ -35,6 +36,7 @@ export class LmsTeacherService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly minio: MinioService,
   ) {}
 
   private async nextId(): Promise<number> {
@@ -113,12 +115,26 @@ export class LmsTeacherService {
               subject_id: teacher_subjects.subject_id,
             })
             .from(teacher_subjects)
-            .where(inArray(teacher_subjects.teacher_id, teacherIds)),
+            .where(inArray(teacher_subjects.teacher_id, teacherIds))
+            // Laravel belongsToMany subjects — pivot (teacher_subjects) ctid order.
+            .orderBy(sql`ctid`),
           this.db
-            .select({ id: learning_centers.id, name: learning_centers.name })
+            .select({
+              id: learning_centers.id,
+              name: learning_centers.name,
+              code: learning_centers.code,
+            })
             .from(learning_centers)
             .where(inArray(learning_centers.id, lcIds)),
         ]);
+
+        // Laravel WorkerMinimalResource: photo => Helper::fileUrl(photo).
+        const photoUrls = await Promise.all(
+          workerRows.map((w) => this.minio.fileUrl(w.photo)),
+        );
+        const photoById = new Map(
+          workerRows.map((w, i) => [w.id, photoUrls[i]]),
+        );
 
         const subjectIds = [...new Set(tsLinks.map((t) => t.subject_id))];
         const subjectRows = subjectIds.length
@@ -139,11 +155,20 @@ export class LmsTeacherService {
           if (!s) continue;
           (subjectsByTeacher[link.teacher_id] ??= []).push(s);
         }
+        // Laravel belongsToMany join — subjects subjects.id tartibida qaytadi.
+        for (const arr of Object.values(subjectsByTeacher)) {
+          arr.sort((a, b) => a.id - b.id);
+        }
 
         const workerMap: Record<number, (typeof workerRows)[number]> = {};
-        for (const w of workerRows) workerMap[w.id] = w;
+        // photo'ni fileUrl bilan almashtirib joylaymiz (WorkerMinimalResource parity).
+        for (const w of workerRows)
+          workerMap[w.id] = { ...w, photo: photoById.get(w.id) ?? null };
 
-        const lcMap: Record<number, { id: number; name: string | null }> = {};
+        const lcMap: Record<
+          number,
+          { id: number; name: string | null; code: string | null }
+        > = {};
         for (const lc of lcRows) lcMap[lc.id] = lc;
 
         return rows.map((r) =>

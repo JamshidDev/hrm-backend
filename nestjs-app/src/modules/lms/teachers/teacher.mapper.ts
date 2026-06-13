@@ -17,6 +17,7 @@ export interface SubjectBrief {
 export interface LearningCenterBrief {
   id: number;
   name: string | null;
+  code: string | null;
 }
 
 export interface TeacherListItem {
