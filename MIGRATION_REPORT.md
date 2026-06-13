@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** hr/report/structure (_lft tree order) + report/optimization (raw key) + token refresh (22 role).
-- **Keyingi qadam:** 3 ta hr GET DIFFER qoldi: `dashboard` (vacation-type `id` 49≠45), `dashboard-three`, `edu-plans` (NestJS ortiqcha field — resource shakli). So'ng turnstile/lms modullari → CRUD → 78 implement.
+- **Oxirgi tugatilgan:** hr GET moduli TO'LIQ tugadi (dashboard vacation-id last-wins, edu-plans resource+natural-order, dashboard-three relative soft-delete).
+- **Keyingi qadam:** turnstile moduli GET-list batch (keyin lms) → so'ng CRUD (store/update/delete) + 78 implement.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -127,7 +127,11 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | 71 | GET | hr/get-positions | ✅ FIXED | orderBy, per_page (default/10/50/100/200 MATCH; per_page=5 Postgres plan-instability) |
 | 72 | GET | hr/report/structure | ✅ FIXED | orderBy `_lft` (NestedSet defaultOrder) — tree children tartibi |
 | 73 | GET | hr/report/optimization | ✅ FIXED | xom kalit `messages.successfully_optimizated` (Laravel lang'da yo'q → kalit) |
-| — | GET | hr/{dashboard,dashboard-three,edu-plans} | ⚠️ TODO | dashboard: vacation-type id 49≠45; edu-plans: NestJS ortiqcha field (resource shakli) — keyingi continue-ct |
+| 74 | GET | hr/dashboard | ✅ FIXED | vacation_types `id` last-wins (Laravel overwrite, natural groupBy) |
+| 75 | GET | hr/dashboard-three | ✅ FIXED | relative_disabilities: worker_relatives join'ga notDeleted (whereHas SoftDeletes) |
+| 76 | GET | hr/edu-plans | ✅ FIXED | EduPlanMinResource (type/end_date/serial olib tashlandi, code qo'shildi), main query JOIN'siz (natural order), orderBy+per_page |
+
+**✅ hr GET-list moduli TO'LIQ tekshirildi** (~40 endpoint). Keyingi: turnstile → lms → CRUD → 78 implement.
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
 
