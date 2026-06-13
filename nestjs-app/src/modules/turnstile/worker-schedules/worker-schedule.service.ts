@@ -1119,7 +1119,9 @@ export class WorkerScheduleService {
         })
         .from(departments)
         .where(where)
-        .orderBy(asc(departments.organization_id))
+        // Laravel orderBy('organization_id') + heap-scan tie order = ctid (fizik)
+        // tartibi. Parity uchun secondary `ctid` qo'shamiz.
+        .orderBy(asc(departments.organization_id), sql`ctid`)
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(departments).where(where),
@@ -1399,13 +1401,9 @@ export class WorkerScheduleService {
                 end_date: grp.end_date,
               }
             : null,
-          scheduleType: st
-            ? {
-                id: Number(st.id),
-                name: localizedSt(st),
-                type: { id: st.type, name: scheduleTypeName(st.type, lang) },
-              }
-            : null,
+          // Laravel SearchWorkersWithScheduleResource: `$this->schedyleType`
+          // (TYPO — `schedyleType`, relation mavjud emas) → HAR DOIM null.
+          scheduleType: null,
         };
       }),
     };
