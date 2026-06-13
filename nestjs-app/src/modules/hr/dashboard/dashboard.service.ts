@@ -516,6 +516,8 @@ export class DashboardService {
       })
       .from(vacations)
       .where(and(notDeleted(vacations), gte(vacations.to, today), activeWorker))
+      // Laravel groupBy('type') — orderBy YO'Q (natural order). Name guruhida
+      // OXIRGI type id bo'ladi (last-wins, quyida).
       .groupBy(vacations.type);
 
     // Group by VacationTypeEnum::get($commandType) → key.
@@ -530,6 +532,8 @@ export class DashboardService {
       const cnt = Number(r.cnt);
       if (existing) {
         existing.active_vacations += cnt;
+        // Laravel: `'id' => $key` har iteratsiyada overwrite → oxirgi type qoladi.
+        existing.id = r.type;
       } else {
         byVacationType.set(vacationTypeId, {
           // Laravel saqlaydigan $key — bu vacation.type (CommandType), not VacationTypeEnum.
