@@ -298,9 +298,12 @@ export class LmsGroupService {
   async groupWorkers(q: GroupListQueryDto) {
     const { page, perPage } = readPaging(q);
     const conds = [notDeleted(edu_plan_workers)];
-    if (q.group_id) {
-      conds.push(eq(edu_plan_workers.group_id, q.group_id));
-    }
+    // Laravel: where('group_id', $request->group_id) — yo'q bo'lsa IS NULL.
+    conds.push(
+      q.group_id
+        ? eq(edu_plan_workers.group_id, q.group_id)
+        : isNull(edu_plan_workers.group_id),
+    );
     // Laravel: when(protocol_id, whereDoesntHave('certificate')) — protocol_id
     // berilgan bo'lsa, FAQAT sertifikati YO'Q xodimlar (hasOne edu_plan_worker_id).
     if (q.protocol_id) {
@@ -321,9 +324,9 @@ export class LmsGroupService {
           worker_id: edu_plan_workers.worker_id,
           worker_position_id: edu_plan_workers.worker_position_id,
         })
+        // Laravel: EduPlanWorker::query()->where('group_id')->paginate() — orderBy YO'Q.
         .from(edu_plan_workers)
         .where(where)
-        .orderBy(asc(edu_plan_workers.id))
         .limit(perPage)
         .offset((page - 1) * perPage),
       this.db.select({ total: count() }).from(edu_plan_workers).where(where),
@@ -538,7 +541,13 @@ export class LmsGroupService {
   /** GET /lms/protocol — paginatsiya formatted number bilan. */
   async protocol(q: GroupListQueryDto) {
     const { page, perPage } = readPaging(q);
-    const where = notDeleted(lms_protocols);
+    // Laravel: where('group_id', $request->group_id) — yo'q bo'lsa IS NULL.
+    const where = and(
+      notDeleted(lms_protocols),
+      q.group_id
+        ? eq(lms_protocols.group_id, q.group_id)
+        : isNull(lms_protocols.group_id),
+    );
 
     return lmsPaginate({
       db: this.db,
