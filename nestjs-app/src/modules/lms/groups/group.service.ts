@@ -27,7 +27,6 @@ import {
   edu_plan_workers,
   edu_plans,
   exams,
-  group_workers,
   groups,
   learning_centers,
   lms_certificates,
