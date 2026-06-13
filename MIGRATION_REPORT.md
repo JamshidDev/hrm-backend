@@ -209,7 +209,17 @@ CRUD'da ham: WorkerController `destroy()` yo'q, AdminUserController `store()/upd
 | ChatNewsMedia | **1** | 0 | **1** | 0 |
 | OrganizationTerminal | **1** | 0 | **1** | **1** |
 
-> Naqsh: ko'p controllerlar `update()` ni implement qilmagan (apiResource baribir PUT route'ni ro'yxatlaydi → 500). Bu PUT'lar LARAVEL_ERROR. Faqat metodi bor (1) bo'lganlar real implement uchun nomzod — ULAR NestJS'da bor-yo'qligini va Laravel javobini alohida tekshirish kerak.
+> ⚠️ Yuqoridagi grep yolg'on-pozitiv berdi (`updatePrivilege` → "function update" match). **Aniq usul — HTTP 500-undefined testi.**
+
+### ✅ YAKUNIY XULOSA — "78 missing" deyarli BARCHASI implement qilinmaydi
+HTTP-test (Laravel javobi) aniq ko'rsatdi:
+- **PUT/POST/DELETE worker-positions** → 500 `update()/store()/destroy() undefined` → LARAVEL_ERROR (grep yanglish edi)
+- **confirmation/applications** CRUD → controller barcha metod 0 → LARAVEL_ERROR
+- **admin/users** store/update → undefined → LARAVEL_ERROR
+- **43 GET-show + hr/workers index** → undefined → LARAVEL_ERROR
+- **`admin/test`** (POST) → Laravel **200** `"success"`, lekin `ToDoController::test()` darrov `return $this->createPartitions()` — bu **DEBUG/ops tool** (partitsiya yaratish), frontend API emas. NestJS partitsiyalarni drizzle bilan boshqaradi → implement SHART EMAS (flag).
+
+**Demak:** DB-backed, Laravel-da ISHLAYDIGAN endpointlar (~870 matched + verify qilinganlar) — migratsiya to'liq. "Yo'q route"lar = Laravel-buzuq (apiResource over-registration) yoki tashqi (hik-central) yoki debug (admin/test). **Real implement qilinadigan yangi endpoint deyarli YO'Q.**
 
 ## E'tibor talab qiladigan joylar
 1. ✅ **HAL QILINDI — GLOBAL header diff**: main.ts'da `res.setHeader` patch → `application/json` (charset'siz). Barcha endpointda mos.
