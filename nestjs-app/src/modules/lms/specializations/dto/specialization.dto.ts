@@ -9,7 +9,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-
   Min,
 } from 'class-validator';
 
@@ -56,7 +55,9 @@ export class UpsertSpecializationDto {
   @IsString()
   name_en?: string;
 
+  // Laravel: direction_id required.
   @ApiProperty({ example: 1, description: 'Direction (yo`nalish) id' })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   direction_id!: number;

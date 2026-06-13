@@ -48,12 +48,15 @@ export class CreateHolidayDto {
   @MaxLength(255)
   name_en?: string;
 
+  // Laravel: holiday_date required, type required.
   @ApiProperty({ example: '2026-09-01', description: 'YYYY-MM-DD' })
+  @IsNotEmpty()
   @IsDateString()
   holiday_date!: string;
 
   // HolidayTypeEnum: 1=ONE (public holiday), 2=TWO (weekend)
   @ApiProperty({ example: 1, description: '1=public holiday, 2=weekend' })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Min(1)
