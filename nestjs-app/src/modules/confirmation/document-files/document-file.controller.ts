@@ -25,6 +25,8 @@ import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { DocumentFileService } from '@/modules/confirmation/document-files/document-file.service';
+import { WorkerApplicationService } from '@/modules/hr/worker-applications/worker-application.service';
+import { QueryWorkerApplicationDto } from '@/modules/hr/worker-applications/dto/worker-application.dto';
 import {
   CreateDocumentFileDto,
   DocumentFileIndexQueryDto,
@@ -89,11 +91,18 @@ export class DocumentFileController {
 @UseGuards(AuthHybridGuard)
 @Controller('api/v1/document')
 export class DocumentApplicationsController {
-  constructor(private readonly service: DocumentFileService) {}
+  constructor(private readonly workerApps: WorkerApplicationService) {}
 
+  // Laravel DocumentFileController::applications — WorkerApplication::organizationFilter
+  //   ->whereNotNull('worker_id')->orderByDesc('id')->paginate(per_page ?? 50).
+  //   Bu HR/applications (WorkerApplicationService::findAll) bilan AYNAN bir xil
+  //   so'rov; faqat default per_page=50. Shu service'ga delegatsiya qilamiz.
   @Get('applications')
-  @ApiOperation({ summary: 'Document files with worker_application_id' })
-  async applications(@Query() query: QueryDocumentFileDto) {
-    return buildSuccess(true, await this.service.applications(query));
+  @ApiOperation({ summary: 'Worker applications (worker_id NOT NULL, org-scope)' })
+  async applications(@Query() query: QueryWorkerApplicationDto) {
+    return buildSuccess(
+      true,
+      await this.workerApps.findAll({ ...query, per_page: query.per_page ?? 50 }),
+    );
   }
 }

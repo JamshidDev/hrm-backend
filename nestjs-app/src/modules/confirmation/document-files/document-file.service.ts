@@ -252,40 +252,10 @@ export class DocumentFileService {
       .where(eq(document_files.id, id));
   }
 
-  // GET /api/v1/document/applications — Laravel: DocumentFileController::applications.
-  async applications(filters: QueryDocumentFileDto) {
-    const perPage = filters.per_page ?? 10;
-    const page = filters.page ?? 1;
-    const offset = (page - 1) * perPage;
-
-    const where = and(
-      notDeleted(document_files),
-      sql`${document_files.worker_application_id} IS NOT NULL`,
-    );
-
-    const [rows, [{ total }]] = await Promise.all([
-      this.db
-        .select()
-        .from(document_files)
-        .where(where)
-        .orderBy(desc(document_files.id))
-        .limit(perPage)
-        .offset(offset),
-      this.db.select({ total: count() }).from(document_files).where(where),
-    ]);
-
-    return {
-      current_page: page,
-      per_page: perPage,
-      total: Number(total),
-      data: await Promise.all(
-        rows.map(async (r) => ({
-          ...r,
-          file: await this.minio.fileUrl(r.file),
-        })),
-      ),
-    };
-  }
+  // NOTE: GET /api/v1/document/applications endi WorkerApplicationService::findAll
+  // ga delegatsiya qilinadi (DocumentApplicationsController) — Laravel
+  // DocumentFileController::applications worker_applications jadvalini so'raydi,
+  // document_files emas. Eski (noto'g'ri) applications() metodi olib tashlandi.
 
   // i18n kalitini matnga aylantirish (topilmasa bo'sh satr).
   private label(key: string | undefined): string {

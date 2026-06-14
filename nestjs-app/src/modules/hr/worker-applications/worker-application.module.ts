@@ -8,5 +8,6 @@ import { WorkerApplicationService } from '@/modules/hr/worker-applications/worke
   imports: [AuthModule, MinioModule],
   controllers: [WorkerApplicationController],
   providers: [WorkerApplicationService],
+  exports: [WorkerApplicationService],
 })
 export class WorkerApplicationModule {}
