@@ -2,9 +2,18 @@
 // Public endpointlar (Laravel `economist-bot-token` middleware bilan;
 // hozircha Nest tarafda public + Bot-Token header ixtiyoriy).
 
-import { Body, Controller, Get, Headers, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '@/common/decorators/public.decorator';
+import { EconomistTelegramGuard } from '@/common/guards/economist-telegram.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { EconomistTelegramService } from '@/modules/economist/telegram/telegram.service';
 import {
@@ -15,6 +24,10 @@ import {
 } from '@/modules/economist/telegram/dto/telegram.dto';
 
 @ApiTags('Economist / Telegram')
+// Laravel EconomistTelegramMiddleware — Bot-Token → organizations.bot_token lookup,
+// topilmasa 401. @Public global sanctum'ni bypass qiladi.
+@Public()
+@UseGuards(EconomistTelegramGuard)
 @Controller('api/v1/economist/telegram')
 export class EconomistTelegramController {
   constructor(private readonly service: EconomistTelegramService) {}

@@ -12,10 +12,12 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import { Public } from '@/common/decorators/public.decorator';
+import { TelegramBotGuard } from '@/common/guards/telegram-bot.guard';
 import { buildSuccess } from '@/common/utils/response.util';
 import { TelegramBotService } from '@/modules/telegram-bot/telegram-bot.service';
 import {
@@ -26,7 +28,10 @@ import {
 } from '@/modules/telegram-bot/dto/telegram-bot.dto';
 
 @ApiTags('Telegram Bot')
+// Laravel TelegramMiddleware — Bot-Token header guard. @Public global sanctum'ni
+// bypass qiladi (telegram route'lar normal auth talab qilmaydi, faqat bot-token).
 @Public()
+@UseGuards(TelegramBotGuard)
 @Controller('api/v1/telegram')
 export class TelegramBotController {
   constructor(
