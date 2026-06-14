@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** sweep 🔴 real total-diff — **14/14 FIXED** (hammasi runtime MATCH). Faqat `economist/statements-count` count-scope qoldi (shape fixed).
-- **Keyingi qadam:** (1) statements-count count-scope · (2) 🟡 L=422 param-validatsiya (~6) · (3) 🟡 L=401 auth-artefakt tekshiruvi · (4) 🟢 stub mobil endpointlar (implement).
+- **Oxirgi tugatilgan:** 🔴 real total-diff 14/14 + statements-count = HAMMASI FIXED. 🟡 L=422 dan 3 ta FIXED (document/files, upload-histories, organization-hr).
+- **Keyingi qadam:** 🟡 L=401 auth-artefakt tekshiruvi (integration/telegram/vacancies — NestJS o'sha auth'ni talab qiladimi) · 🟢 stub mobil endpointlar (user/mobile/*) implement.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -207,7 +207,9 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 
 **🟡 Auth-artefakt (`L=401`):** integration/* · telegram/{menu,profile,petition-types} · vacancies/{applications,careers,dashboard,educations,profile} · economist/telegram/* — Laravel boshqa auth (hmac/bot/site) bilan admin sanctum token'ni rad etadi; NestJS 200 beradi. **Tekshirish:** NestJS ham shu auth'ni talab qilishi kerakmi (juda permissive bo'lishi mumkin).
 
-**🟡 Param-artefakt (`L=422`):** economist/upload-histories · user/mobile/{my-resume,turnstile-events,turnstile-show-stats} · user/organization-hr · document/files · turnstile/hik-central/worker-access-levels — Laravel required query-param kutadi (422), NestJS param'siz 200. **Validatsiya yetishmaydi.**
+**🟡 Param-artefakt (`L=422`):**
+- ✅ FIXED: `document/files` (NestJS over-validatsiya — optional+IS NULL) · `economist/upload-histories` (DTO swap → required) · `user/organization-hr` (organization_id required, data stub)
+- ⏳ QOLGAN: `user/mobile/{my-resume,turnstile-events,turnstile-show-stats}` (🟢 stub) · `turnstile/hik-central/worker-access-levels` (tashqi)
 
 **🟢 Stub shape diff (ma'lum, mobil):** user/me · user/mobile/{documents,last-event,turnstile-stats,turnstile-events,turnstile-show-stats} · telegram/{menu/get-service,profile} — NestJS `stub` field qaytaradi (to'liq implement qilinmagan mobil/telegram).
 
