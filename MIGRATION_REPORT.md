@@ -199,7 +199,12 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 **Eslatma:** non-JSON `Accept` header'da Laravel 403 HTML qaytaradi (Symfony), NestJS JSON — API client'lar doim `Accept: application/json` yuboradi, shu holda body bayt-bayt mos.
 
 ## Keng parity sweep (admin token, 315 GET list endpoint)
-`scripts` orqali avtomatik: status + total/shape signature, L vs N. **Natija: MATCH=240, DIFFER=51, LARAVEL_ERR=24.** Triage (keyingi continue-ct work-list):
+`scripts` orqali avtomatik: status + total/shape signature, L vs N.
+**Dastlab: MATCH=240, DIFFER=51, LERR=24. → Barcha fixlardan keyin: MATCH=281, DIFFER=10, LERR=24** (no regressions; auth guard'lar integration/telegram/vacancy'ni MATCH qildi).
+
+**Qolgan 10 DIFFER:** 6 mobil-stub (`user/mobile/{documents,last-event,my-resume,turnstile-events,turnstile-show-stats,turnstile-stats}` — mobil-JWT + turnstile/doc integratsiya kerak) · `user/me` (Laravel boy shape: +activityLogs/authLogs/documents) · `vacancies/profile` (NestJS route yo'q, 3-BOSQICH) · `user/mobile/my-vacations` (404/404 body-shape minor) · `turnstile/hik-central/worker-access-levels` (tashqi HikCentral).
+
+Triage (dastlabki, tarixiy):
 
 **🔴 Real total/data diff — 14/14 ✅ FIXED:**
 `lms/exams` (deviation #12, strict org) · `news` (status 1) · `hr/vacations` (activeWorkerExists) · `extra/users` (position status=2) · `document/applications` (noto'g'ri jadval→delegatsiya) · `exam/filter/topics` (topic_organizations EXISTS) · `hr/dashboard/meds` (korrelatsiya subquery) · `hr/edu-plans/attached-workers` (whereHas worker_position.worker soft-delete) · `telegram/messages` (status=2) · `vacancies/organizations` & `vacancies/report` (to>=now-1day) · `worker-application/positions` (status=2) · `worker-application/statistics` (worker_applications groupBy confirmation + bare massiv @RawResponse) · `hr/dashboard/worker-relative-disabilities/preview` (wr.deleted_at IS NULL)
