@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** lms/exam org-scope deviation #12 **HAL QILINDI** — tekshiruv: NestJS allaqachon strict Laravel parity (`scope.ids`≡`childIds`≡`allowedOrganizations`), runtime totals MATCH. Kod o'zgarishsiz; `not-passed-workers`=LARAVEL_ERROR.
-- **Keyingi qadam:** e2e testlar (test-app) YOKI hik-central (tashqi). CRUD-validation + multi-role 403 + lms/exam — hammasi tugadi.
+- **Oxirgi tugatilgan:** (1) lms/exams deviation #12 **FIXED** — strict `topics.organization_id=user.org` (admin 0/0, org-user 1/1 ids MATCH). (2) Keng parity sweep: 315 endpoint → MATCH=240, DIFFER=51, LARAVEL_ERR=24 (triage report'da).
+- **Keyingi qadam:** sweep'dagi 🔴 real total-diff'larni birma-bir tekshirish (document/applications, exam/filter/topics, extra/users, hr/vacations, news, vacancies/*, ...) + 🟡 L=422 param-validatsiya. So'ng auth-artefakt (L=401) tekshiruvi.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -198,6 +198,21 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 **113 route Laravel-perm bor lekin nest-map'da yo'q** — asosan `/create`+`/{id}/edit`+`/{id}` show (apiResource over-registration = LARAVEL_ERROR, NestJS 404, oldindan hujjatlangan).
 **Eslatma:** non-JSON `Accept` header'da Laravel 403 HTML qaytaradi (Symfony), NestJS JSON — API client'lar doim `Accept: application/json` yuboradi, shu holda body bayt-bayt mos.
 
+## Keng parity sweep (admin token, 315 GET list endpoint)
+`scripts` orqali avtomatik: status + total/shape signature, L vs N. **Natija: MATCH=240, DIFFER=51, LARAVEL_ERR=24.** Triage (keyingi continue-ct work-list):
+
+**🔴 Real total/data diff (tekshirish+fix kerak):**
+- `document/applications` 126→6 · `exam/filter/topics` 8→65 · `extra/users` 62505→66204 · `hr/dashboard/meds` 4116→4111 · `hr/dashboard/worker-relative-disabilities/preview` 26→27 · `hr/edu-plans/attached-workers` 3173→3179 · `hr/vacations` 1378→1387 · `news` 3→0 · `telegram/messages` 11671→11785 · `vacancies/organizations` 0→218 · `vacancies/report` 0→39 · `worker-application/{positions 1→2, statistics []→39}` · `economist/statements-count` (scalar→{count} shape)
+- ✅ `lms/exams` 0→2 — FIXED (deviation #12, yuqorida)
+
+**🟡 Auth-artefakt (`L=401`):** integration/* · telegram/{menu,profile,petition-types} · vacancies/{applications,careers,dashboard,educations,profile} · economist/telegram/* — Laravel boshqa auth (hmac/bot/site) bilan admin sanctum token'ni rad etadi; NestJS 200 beradi. **Tekshirish:** NestJS ham shu auth'ni talab qilishi kerakmi (juda permissive bo'lishi mumkin).
+
+**🟡 Param-artefakt (`L=422`):** economist/upload-histories · user/mobile/{my-resume,turnstile-events,turnstile-show-stats} · user/organization-hr · document/files · turnstile/hik-central/worker-access-levels — Laravel required query-param kutadi (422), NestJS param'siz 200. **Validatsiya yetishmaydi.**
+
+**🟢 Stub shape diff (ma'lum, mobil):** user/me · user/mobile/{documents,last-event,turnstile-stats,turnstile-events,turnstile-show-stats} · telegram/{menu/get-service,profile} — NestJS `stub` field qaytaradi (to'liq implement qilinmagan mobil/telegram).
+
+**⛔ LARAVEL_ERR (24):** chat/{media,translations} · document/{history,messages,show,users,base64} · economist/{statement-decoding-organizations,statements-by-positions,statements-multiple-workers} · exam/not-passed-workers · hr/{vacation-schedules-not-included,worker-passports,worker-relative-disabilities,workers} · signature/challenge · timesheet/check-worker · turnstile/{hik-central/*,terminal-logs} · user/socket/verify-token · worker-application/confirmations — Laravel 500, match QILINMAYDI (LARAVEL_ERROR).
+
 ## Topilgan buglar va tuzatishlar (bu sessiya)
 - `structure/countries` + `regions`: NestJS `orderBy: {id:'asc'}` qo'shilgan edi, Laravel `paginate()` orderBy'siz (natural order) → olib tashlandi (CLAUDE.md qoida #12)
 - `structure/organization-services`: `organization_id` majburiy (422) → optional + yo'q bo'lsa `IS NULL` (Laravel `where(col,null)`)
@@ -209,7 +224,9 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 - `user/mobile/personal-list` + `work-info`: i18n `messages.mobile.*`, `worker.marital_status`, `worker.family` qo'shildi (3 til)
 
 ## ⚠️ Ataylab Laravel'dan og'ishlar (qaror kerak)
-12. **lms/exam org-scope deviation — ✅ HAL QILINDI (A: strict parity, kod o'zgarishsiz).** Tekshiruvda aniqlandi: report'ning dastlabki tavsifi (`topic.org=user.org`, `scope.ids admin→all=yaxshilash`) NOTO'G'RI edi. Laravel haqiqiy logika: `Topic/ExamCategory::scopeFilter = where('user_id')`, `ExamResultService = hasPermissionTo('hr-workers') ? allowedOrganizations() : topics.user_id`, va `allowedOrganizations() = QueryHelper::childIds`. NestJS `scope.ids()` ≡ `childIds` ≡ `allowedOrganizations()` — ya'ni admin→all Laravel'ning O'ZIDA shunday, yaxshilash emas. Runtime (admin token): topics/categories/results/worker-exams TOTALS bayt-bayt MATCH. ⇒ A varianti allaqachon bajarilgan. (`not-passed-workers` = LARAVEL_ERROR 500; empty-childIds edge ataylab takrorlanmadi — yuqorida.)
+12. **org-scope deviation — ✅ HAL QILINDI (A: strict parity).** IKKI alohida narsa aralashgan edi:
+    - **`exam/*` moduli** (Exam: topics/categories/results/worker-exams): tekshiruvda allaqachon strict-parity. Laravel `Topic/ExamCategory::scopeFilter=where('user_id')`, `ExamResultService=hasPermissionTo('hr-workers')?allowedOrganizations():topics.user_id`, `allowedOrganizations()=QueryHelper::childIds`. NestJS `scope.ids()`≡`childIds` — admin→all Laravel'ning O'ZIDA shunday. Runtime totals MATCH. Kod o'zgarmadi.
+    - **`lms/exams`** (LMS: `EduPlanExamController::exams`) — **ASL deviation shu yerda edi.** Laravel: `whereHas('topic', fn=>where('organization_id', $user->organization_id))` — **STRICT bitta org**, childIds YO'Q, admin ham faqat o'zinikini. NestJS `scope.ids()` ishlatardi (admin→all). **FIX:** `topics.organization_id = ctx.user.organization_id` (null→IS NULL). OrgScopeService injection olib tashlandi. Runtime: admin **0/0** (edi 0/2), org-106 user **1/1 ids=[27]** MATCH.
 
 ## ⛔ Laravel'da error bergan route'lar
 

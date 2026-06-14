@@ -71,7 +71,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       await svc.attach({ edu_plan_id: 1, exam_id: 10 });
@@ -95,7 +94,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       const r = await svc.attach({ edu_plan_id: 1, exam_id: 10 });
@@ -111,7 +109,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       await svc.attach({
@@ -137,7 +134,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       const r = await svc.detach(5);
@@ -151,7 +147,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       await expect(svc.detach(999)).rejects.toThrow();
@@ -172,7 +167,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       const r = await svc.list({ page: 1, per_page: 10 });
@@ -193,7 +187,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         {} as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       const r = await svc.list({ edu_plan_id: 42 });
@@ -210,7 +203,6 @@ describe('LmsEduPlanExamService', () => {
         db,
         { lang: 'uz' } as any,
         { t: (k: string) => k } as any,
-        { ids: async () => [1] } as any,
         { fileUrl: (p: string | null) => Promise.resolve(p) } as any,
       );
       const r = await svc.results({ page: 2, per_page: 5 });

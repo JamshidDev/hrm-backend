@@ -12,7 +12,6 @@ import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
-import { OrgScopeService } from '@/common/database/org-scope.service';
 import { MinioService } from '@/shared/minio/minio.service';
 import {
   edu_plan_exams,
@@ -42,7 +41,6 @@ export class LmsEduPlanExamService {
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
     private readonly i18n: I18nService,
-    private readonly scope: OrgScopeService,
     private readonly minio: MinioService,
   ) {}
 
@@ -69,21 +67,19 @@ export class LmsEduPlanExamService {
     const perPage = Math.max(1, Number(q.per_page ?? 10));
     const offset = (page - 1) * perPage;
 
-    // EXISTS topic in user's org-scope (Laravel uses strict `user.org_id`; biz
-    // OrgScopeService bilan kengaytirilgan: admin → all, leader → subtree,
-    // default → own. Aks holda HQ-darajadagi user pastdagi orglardagi exams'larni
-    // ko'rmaydi — Laravel'da bu real bug edi).
-    const scopeIds = await this.scope.ids();
-    const orgIn = scopeIds.length
-      ? sql`AND topics.organization_id IN (${sql.join(
-          scopeIds.map((n) => sql`${n}`),
-          sql`, `,
-        )})`
-      : sql`AND FALSE`;
+    // Laravel STRICT parity (qaror #12 = A): whereHas('topic', fn =>
+    //   $q->where('organization_id', $user->organization_id)) — bitta org, childIds
+    //   YO'Q, admin ham faqat o'z org'ini ko'radi. (Laravel `where(col, null)` →
+    //   `IS NULL`, shuning uchun org_id null bo'lsa IS NULL.)
+    const userOrgId = this.ctx.user_or_fail.organization_id;
+    const orgCond =
+      userOrgId == null
+        ? sql`AND topics.organization_id IS NULL`
+        : sql`AND topics.organization_id = ${userOrgId}`;
     const topicOrgExists = sql`EXISTS (
       SELECT 1 FROM topics
       WHERE topics.id = ${exams.topic_id}
-        ${orgIn}
+        ${orgCond}
         AND topics.deleted_at IS NULL
     )`;
 
