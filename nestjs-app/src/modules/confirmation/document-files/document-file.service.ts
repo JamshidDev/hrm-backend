@@ -53,21 +53,21 @@ export class DocumentFileService {
   // GET /api/v1/document/files?model=&document_id=
   // Laravel: index() — model_type (FQCN) + model_id bo'yicha, paginatsiyasiz collection.
   async findAll(query: DocumentFileIndexQueryDto) {
-    const fqcn = MODEL_FQCN[query.model];
-    if (!fqcn) {
-      throw new BusinessException(404, this.i18n.t('error.model_not_found'));
-    }
+    // Laravel: ModelTypeEnum::tryFrom($model)?->model() — yo'q/noto'g'ri → null →
+    //   where('model_type', null) IS NULL (404 EMAS). document_id ham null → IS NULL.
+    const fqcn = query.model ? MODEL_FQCN[query.model] : undefined;
+    const modelCond = fqcn
+      ? eq(document_files.model_type, fqcn)
+      : sql`${document_files.model_type} IS NULL`;
+    const idCond =
+      query.document_id != null
+        ? eq(document_files.model_id, query.document_id)
+        : sql`${document_files.model_id} IS NULL`;
 
     const rows = await this.db
       .select()
       .from(document_files)
-      .where(
-        and(
-          notDeleted(document_files),
-          eq(document_files.model_type, fqcn),
-          eq(document_files.model_id, query.document_id),
-        ),
-      )
+      .where(and(notDeleted(document_files), modelCond, idCond))
       .orderBy(desc(document_files.id));
 
     // worker_application'larni batch yuklash (Laravel: with('worker_application')).

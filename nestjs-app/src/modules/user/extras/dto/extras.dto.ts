@@ -54,11 +54,12 @@ export class MarkNotificationsDto {
 }
 
 export class OrganizationHrsQueryDto {
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
+  // Laravel OrganizationHrsRequest — organization_id required.
+  @ApiProperty({ example: 1 })
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
-  organization_id?: number;
+  organization_id!: number;
 }
 
 export class ChangeCurrentOrganizationDto {

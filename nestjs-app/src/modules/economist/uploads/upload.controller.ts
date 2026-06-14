@@ -29,7 +29,7 @@ import { buildSuccess } from '@/common/utils/response.util';
 import { UploadService } from '@/modules/economist/uploads/upload.service';
 import {
   CreateUploadDto,
-  UploadHistoryFilterDto,
+  UploadHistoryQueryDto,
   UpdateUploadStatusDto,
   ConfirmUploadDto,
   RefreshWorkerPinsDto,
@@ -89,7 +89,7 @@ export class UploadController {
 
   @Get('upload-histories')
   @ApiOperation({ summary: 'List uploads grouped by type' })
-  async histories(@Query() q: UploadHistoryFilterDto) {
+  async histories(@Query() q: UploadHistoryQueryDto) {
     return buildSuccess(true, await this.service.histories(q));
   }
 

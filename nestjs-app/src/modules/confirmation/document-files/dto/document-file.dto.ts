@@ -15,16 +15,19 @@ export class QueryDocumentFileDto extends SearchPaginationQueryDto {
 }
 
 // GET /api/v1/document/files?model=&document_id=  — Laravel: index().
+// Laravel'da ikkala param ham OPTIONAL (FormRequest yo'q): yo'q/noto'g'ri model →
+// ModelTypeEnum::tryFrom(null)?->model() = null → where('model_type', null) IS NULL.
 export class DocumentFileIndexQueryDto {
-  @ApiProperty({ example: 'worker-application' })
+  @ApiPropertyOptional({ example: 'worker-application' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  model!: string;
+  model?: string;
 
-  @ApiProperty({ example: 569 })
+  @ApiPropertyOptional({ example: 569 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  document_id!: number;
+  document_id?: number;
 }
 
 // POST /api/v1/document/files — multipart/form-data.
