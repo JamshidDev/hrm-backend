@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
+import { IntegrationHmacGuard } from '@/common/guards/integration-hmac.guard';
 import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationStationService } from '@/modules/integration/stations/station.service';
@@ -21,7 +22,7 @@ import { StationWorkersQueryDto } from '@/modules/integration/stations/dto/stati
 
 @ApiTags('Integration / Stations')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard, PermissionGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard, IntegrationHmacGuard)
 @Permission('integration')
 @Controller('api/v1/integration/stations')
 export class IntegrationStationController {

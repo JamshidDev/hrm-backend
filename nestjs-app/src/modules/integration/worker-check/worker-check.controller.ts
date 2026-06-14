@@ -4,6 +4,7 @@ import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
 import { PermissionGuard } from '@/common/guards/permission.guard';
+import { IntegrationHmacGuard } from '@/common/guards/integration-hmac.guard';
 import { Permission } from '@/common/decorators/permission.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { IntegrationWorkerCheckService } from '@/modules/integration/worker-check/worker-check.service';
@@ -11,7 +12,7 @@ import { WorkerCheckDto } from '@/modules/integration/worker-check/dto/worker-ch
 
 @ApiTags('Integration / Worker Check')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard, PermissionGuard)
+@UseGuards(AuthHybridGuard, PermissionGuard, IntegrationHmacGuard)
 @Permission('integration|integration-worker-info')
 @Controller('api/v1/integration/worker')
 export class IntegrationWorkerCheckController {
