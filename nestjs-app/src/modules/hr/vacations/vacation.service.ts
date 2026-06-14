@@ -82,8 +82,10 @@ export class VacationService {
 
     // Laravel scopeSearchByFullName parity.
     const searchCond = buildWorkerSearchCond(filters.search);
-    // Laravel Vacation::filter — role + organizations + organization_id.
-    const inScope = await this.scope.whereOrg(vacations.organization_id, {
+    // Laravel: Vacation::whereHas('worker', whereHas('position', filter($user)))
+    //   — worker'ning ACTIVE (status=2) position'i scope ichida bo'lishi shart.
+    //   Scope vacations.organization_id BO'YICHA EMAS (Laravel'da bunday filter yo'q).
+    const inScope = await this.scope.activeWorkerExists(vacations.worker_id, {
       organizations: filters.organizations,
       organization_id: filters.organization_id,
     });

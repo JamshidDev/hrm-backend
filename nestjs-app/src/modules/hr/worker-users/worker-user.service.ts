@@ -106,7 +106,14 @@ export class WorkerUserService {
     const scopedWorkerIds = this.db
       .select({ worker_id: worker_positions.worker_id })
       .from(worker_positions)
-      .where(and(notDeleted(worker_positions), wpCond));
+      // Laravel WorkerPosition::scopeFilter — where('status', ACTIVE=2) + filterByOrganizations.
+      .where(
+        and(
+          notDeleted(worker_positions),
+          eq(worker_positions.status, 2),
+          wpCond,
+        ),
+      );
 
     // User::filter — users.organization_id org-scope.
     const userCond = await this.scope.whereOrg(

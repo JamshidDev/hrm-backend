@@ -640,7 +640,8 @@ export class ChatNewsService {
     const perPage = Number(q?.per_page ?? 5);
     const offset = (page - 1) * perPage;
 
-    const where = and(eq(chat_news.status, 2), notDeleted(chat_news));
+    // Laravel ChatNewsService::list — whereStatus(1) (publik ro'yxat status=1).
+    const where = and(eq(chat_news.status, 1), notDeleted(chat_news));
 
     const [rows, [{ total }]] = await Promise.all([
       this.db
@@ -657,7 +658,6 @@ export class ChatNewsService {
     if (!newsIds.length) {
       return {
         current_page: page,
-        per_page: perPage,
         total: Number(total),
         data: [],
       };
@@ -723,7 +723,6 @@ export class ChatNewsService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows.map((r) => {
         const userReaction = likeMap.get(r.id) ?? null;
