@@ -130,6 +130,7 @@ export class DashboardHealthService {
       sql`EXISTS (
         SELECT 1 FROM ${worker_relatives} wr
         WHERE wr.id = ${worker_relative_disabilities.worker_relative_id}
+          AND wr.deleted_at IS NULL
           AND ${activeWorker}
       )`,
       // Qidiruv — qarindoshning xodimi (worker) FIO bo'yicha.
@@ -138,6 +139,7 @@ export class DashboardHealthService {
             SELECT 1 FROM ${worker_relatives} wr2
             JOIN ${workers} ON ${workers.id} = wr2.worker_id
             WHERE wr2.id = ${worker_relative_disabilities.worker_relative_id}
+              AND wr2.deleted_at IS NULL
               AND (${searchCond})
           )`
         : undefined,

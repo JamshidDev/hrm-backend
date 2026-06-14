@@ -2,10 +2,10 @@
 
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { count, eq, and, sql } from 'drizzle-orm';
+import { count, and, sql } from 'drizzle-orm';
 import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
-import { buildSuccess } from '@/common/utils/response.util';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import {
@@ -15,46 +15,46 @@ import {
   timesheet_confirmations,
   vacation_schedule_confirmations,
   worker_application_confirmations,
+  worker_applications,
 } from '@/db/schema';
 import { notDeleted } from '@/common/database/soft-delete.helper';
 import { RequestContext } from '@/common/context/request.context';
+import { RawResponse } from '@/common/decorators/raw-response.decorator';
+import { CONFIRMATION_STATUS_LABELS } from '@/modules/hr/worker-applications/worker-application.types';
 
 @Injectable()
 class ConfirmationDashboardService {
   constructor(
     @InjectDb() private readonly db: DataSource,
     private readonly ctx: RequestContext,
+    private readonly i18n: I18nService,
   ) {}
 
+  // Laravel DashboardController::workerApplicationStatistics:
+  //   WorkerApplication::get()->groupBy('confirmation')->map(count); so'ng
+  //   ConfirmationStatusEnum::cases() bo'yicha [{id, name(trans), applications}].
+  //   FILTERSIZ (user_id YO'Q), worker_applications jadvali, `confirmation` ustuni.
   async workerApplicationStatistics() {
-    const userId = this.ctx.user_or_fail.id;
-    // Worker application confirmations assigned to current user by status.
     const rows = await this.db
       .select({
-        status: worker_application_confirmations.status,
+        confirmation: worker_applications.confirmation,
         cnt: count(),
       })
-      .from(worker_application_confirmations)
-      .where(
-        and(
-          eq(worker_application_confirmations.worker_id, userId),
-          notDeleted(worker_application_confirmations),
-        ),
-      )
-      .groupBy(worker_application_confirmations.status);
+      .from(worker_applications)
+      .where(notDeleted(worker_applications))
+      .groupBy(worker_applications.confirmation);
 
-    const byStatus: Record<number, number> = {};
-    for (const r of rows) byStatus[r.status] = Number(r.cnt);
-    const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
+    const byConfirmation: Record<number, number> = {};
+    for (const r of rows) {
+      if (r.confirmation != null) byConfirmation[r.confirmation] = Number(r.cnt);
+    }
 
-    return {
-      total,
-      process: byStatus[1] ?? 0,
-      read: byStatus[2] ?? 0,
-      success: byStatus[3] ?? 0,
-      rejected: byStatus[4] ?? 0,
-      deleted: byStatus[5] ?? 0,
-    };
+    const lang = this.ctx.lang;
+    return [1, 2, 3, 4, 5].map((id) => ({
+      id,
+      name: this.i18n.t(CONFIRMATION_STATUS_LABELS[id], { lang }),
+      applications: byConfirmation[id] ?? 0,
+    }));
   }
 
   async confirmationStats() {
@@ -93,9 +93,11 @@ export class ConfirmationDashboardController {
   constructor(private readonly service: ConfirmationDashboardService) {}
 
   @Get('statistics')
+  @RawResponse()
   @ApiOperation({ summary: 'Worker application statistics (by status)' })
+  // Laravel bare massiv qaytaradi (Helper::response O'RAMAYDI) — @RawResponse.
   async statistics() {
-    return buildSuccess(true, await this.service.workerApplicationStatistics());
+    return this.service.workerApplicationStatistics();
   }
 }
 

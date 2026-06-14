@@ -308,7 +308,8 @@ export class StatementService {
       .select({ total: count() })
       .from(statements)
       .where(notDeleted(statements));
-    return { count: Number(total) };
+    // Laravel: Helper::response(true, $count) — xom son (scalar), {count} EMAS.
+    return Number(total);
   }
 
   /**
