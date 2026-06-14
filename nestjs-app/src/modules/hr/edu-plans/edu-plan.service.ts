@@ -1,7 +1,16 @@
 // EduPlans + workers service. Laravel: LMS/EduPlanController + EduPlanWorkerController.
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from 'drizzle-orm';
 import { I18nService } from 'nestjs-i18n';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
@@ -333,6 +342,12 @@ export class EduPlanService {
         ? eq(edu_plan_workers.edu_plan_id, filters.edu_plan_id)
         : undefined,
       searchCond,
+      // Laravel: ->whereHas('worker_position.worker') — worker_position VA uning
+      //   worker'i MAVJUD + soft-delete emas (status filtri YO'Q).
+      isNotNull(worker_positions.id),
+      notDeleted(worker_positions),
+      isNotNull(workers.id),
+      notDeleted(workers),
     );
 
     const [rows, [{ total }]] = await Promise.all([

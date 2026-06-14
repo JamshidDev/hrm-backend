@@ -296,16 +296,27 @@ export class TopicService {
   async filter(q: QueryTopicDto) {
     const { page, perPage, offset } = pageOf(q);
     const nameFilter = q.search ?? (q as { name?: string }).name;
+    // Laravel: whereHas('hasOrganizations', where organization_id = user.org)
+    //   — topic_organizations pivot'da user org'iga bog'langan topic'lar (strict).
+    const userOrgId = this.ctx.user_or_fail.organization_id;
+    const orgExists = sql`EXISTS (
+      SELECT 1 FROM topic_organizations
+      WHERE topic_organizations.topic_id = ${topics.id}
+        AND topic_organizations.organization_id ${
+          userOrgId == null ? sql`IS NULL` : sql`= ${userOrgId}`
+        }
+    )`;
     const where = and(
       notDeleted(topics),
       nameFilter ? ilike(topics.name, `%${nameFilter}%`) : undefined,
+      orgExists,
     );
     const [rows, [{ total }]] = await Promise.all([
+      // Laravel paginate() — explicit orderBy yo'q (natural order).
       this.db
         .select({ id: topics.id, name: topics.name })
         .from(topics)
         .where(where)
-        .orderBy(topics.id)
         .limit(perPage)
         .offset(offset),
       this.db.select({ total: count() }).from(topics).where(where),

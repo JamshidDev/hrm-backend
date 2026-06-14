@@ -294,9 +294,14 @@ export class DashboardWorkerService {
       FROM workers w
       LEFT JOIN (
         -- Laravel raw DB::table('meds') — SoftDeletes qo'llamaydi.
-        SELECT m1.worker_id, MAX(m1."to") AS "to"
+        -- Laravel: m1.to = (SELECT MAX(m2.to) ... WHERE m2.worker_id=m1.worker_id)
+        --   — bir xil max-sanada bir nechta med bo'lsa HAMMASI qaytadi (GROUP BY
+        --   emas), shuning uchun korrelatsiyalangan subquery.
+        SELECT m1.worker_id, m1."to"
         FROM ${meds} m1
-        GROUP BY m1.worker_id
+        WHERE m1."to" = (
+          SELECT MAX(m2."to") FROM ${meds} m2 WHERE m2.worker_id = m1.worker_id
+        )
       ) latest_meds ON latest_meds.worker_id = w.id
       WHERE w.deleted_at IS NULL
         AND ${medFilter}

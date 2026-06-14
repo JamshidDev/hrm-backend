@@ -261,9 +261,11 @@ class WorkerApplicationExtrasService {
         position_id: worker_positions.position_id,
       })
       .from(worker_positions)
+      // Laravel WorkerApplicationService::myPositions — whereStatus(ACTIVE=2).
       .where(
         and(
           eq(worker_positions.worker_id, workerId),
+          eq(worker_positions.status, 2),
           notDeleted(worker_positions),
         ),
       );

@@ -3,7 +3,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { and, asc, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { InjectDb } from '@/db/drizzle.module';
 import type { DataSource } from '@/db/types';
 import { BusinessException } from '@/common/exceptions/business.exception';
@@ -20,7 +20,19 @@ export class VacancyBoardService {
   ) {}
 
   // GET /v1/vacancies/organizations — faol vakansiyasi bor tashkilotlar.
+  // Laravel: VacancyPosition::where('to','>=',now()->subDay())->where('status',true)
+  //   ->select('organization_id') → Organization::whereIn('id', $orgIds).
   async organizations() {
+    const activeOrgIds = this.db
+      .select({ org_id: vacancy_positions.organization_id })
+      .from(vacancy_positions)
+      .where(
+        and(
+          notDeleted(vacancy_positions),
+          eq(vacancy_positions.status, true),
+          sql`${vacancy_positions.to} >= (CURRENT_DATE - INTERVAL '1 day')`,
+        ),
+      );
     return this.db
       .select({
         id: organizations.id,
@@ -28,7 +40,9 @@ export class VacancyBoardService {
         group: organizations.group,
       })
       .from(organizations)
-      .where(notDeleted(organizations));
+      .where(
+        and(notDeleted(organizations), inArray(organizations.id, activeOrgIds)),
+      );
   }
 
   // GET /v1/vacancies/report — vakansiyalar ro'yxati (paginatsiya + filter).
@@ -38,6 +52,8 @@ export class VacancyBoardService {
     const where = and(
       notDeleted(vacancy_positions),
       eq(vacancy_positions.status, true),
+      // Laravel VacancyController::index — where('to','>=',now()->subDay()->toDateString()).
+      sql`${vacancy_positions.to} >= (CURRENT_DATE - INTERVAL '1 day')`,
       filters.organization_id
         ? eq(vacancy_positions.organization_id, filters.organization_id)
         : undefined,
@@ -59,7 +75,6 @@ export class VacancyBoardService {
 
     return {
       current_page: page,
-      per_page: perPage,
       total: Number(total),
       data: rows,
     };

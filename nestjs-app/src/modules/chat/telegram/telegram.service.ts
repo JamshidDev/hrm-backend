@@ -55,7 +55,10 @@ export class ChatTelegramService {
     const scopedWorkerIds = this.db
       .select({ worker_id: worker_positions.worker_id })
       .from(worker_positions)
-      .where(and(notDeleted(worker_positions), orgCond));
+      // Laravel WorkerPosition::filter — where('status', ACTIVE=2) + filterByOrganizations.
+      .where(
+        and(notDeleted(worker_positions), eq(worker_positions.status, 2), orgCond),
+      );
     const scopedUserIds = this.db
       .select({ id: users.id })
       .from(users)
