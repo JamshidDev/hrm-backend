@@ -20,8 +20,9 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** 🟡 L=401 tashqi-mijoz auth **4/4 guard implement** (telegram/economist-telegram/integration/vacancy) — admin token endi 401, Laravel bilan mos. ENV: `TELEGRAM_BOT_TOKEN` proddan kerak.
-- **Keyingi qadam:** 🟢 stub mobil endpointlar (user/mobile/*) implement · vacancy service-layer vacancy_user konteksti · `vacancies/profile` route (3-BOSQICH) · turnstile/hik-central (tashqi).
+- **Oxirgi tugatilgan:** Re-sweep tasdiqladi — **MATCH 281/315 (LERR'siz 281/291 = 96.5%)**, no regressions. Qolgan 10 DIFFER = feature-ish (parity-tweak emas).
+- **Qolgan 10 DIFFER (feature/tashqi/artefakt):** 6 mobil-stub (`user/mobile/*` — mobil-JWT + turnstile/doc/face integratsiya) · `user/me` (composite: authLogs+activityLogs[jadvallar bor]+documents-union+device-parse — sizable) · `vacancies/profile` (route yo'q, 3-BOSQICH) · `user/mobile/my-vacations` (TEST-ARTEFAKT: admin'da mobil-worker konteksti yo'q; Laravel ModelNotFound msg leak) · `turnstile/hik-central/worker-access-levels` (tashqi HikCentral).
+- **Keyingi qadam:** yuqoridagilar feature-implement talab qiladi (mobil-JWT auth + tashqi integratsiya). Quick-parity faza TUGADI.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
