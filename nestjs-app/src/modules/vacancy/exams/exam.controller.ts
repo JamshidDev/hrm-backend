@@ -1,6 +1,7 @@
 // Vacancy exam controller. Laravel: Vacancy/VacancyExamController.
 // Barcha endpointlar auth talab qiladi (Laravel: auth:vacancy).
-// ESLATMA: vacancy guard hali yo'q — hozircha AuthHybridGuard.
+// VacancyAuthGuard — vacancy_users provider token (Laravel Authenticate:vacancy).
+// NOTE: service-layer hali vacancy_user kontekstidan emas, stub-id'dan foydalanadi (follow-up).
 
 import {
   Body,
@@ -13,14 +14,16 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
-import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { VacancyAuthGuard } from '@/common/guards/vacancy-auth.guard';
+import { Public } from '@/common/decorators/public.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { VacancyExamService } from '@/modules/vacancy/exams/exam.service';
 import { StartExamDto } from '@/modules/vacancy/exams/dto/exam.dto';
 
 @ApiTags('Vacancy / Exams')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@Public()
+@UseGuards(VacancyAuthGuard)
 @Controller('api/v1/vacancies/applications')
 export class VacancyExamController {
   constructor(

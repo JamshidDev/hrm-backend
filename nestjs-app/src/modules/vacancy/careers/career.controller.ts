@@ -1,6 +1,7 @@
 // Career controller. Laravel: Vacancy/VacancyUserCareerController (resource).
 // Barcha endpointlar auth talab qiladi (Laravel: auth:vacancy).
-// ESLATMA: vacancy guard hali yo'q — hozircha AuthHybridGuard + stub user id = 0.
+// VacancyAuthGuard — vacancy_users provider token (Laravel Authenticate:vacancy).
+// NOTE: service-layer hali vacancy_user kontekstidan emas, stub-id'dan foydalanadi (follow-up).
 
 import {
   Body,
@@ -15,7 +16,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
-import { AuthHybridGuard } from '@/common/guards/auth-hybrid.guard';
+import { VacancyAuthGuard } from '@/common/guards/vacancy-auth.guard';
+import { Public } from '@/common/decorators/public.decorator';
 import { buildSuccess } from '@/common/utils/response.util';
 import { CareerService } from '@/modules/vacancy/careers/career.service';
 import {
@@ -25,7 +27,8 @@ import {
 
 @ApiTags('Vacancy / Careers')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthHybridGuard)
+@Public()
+@UseGuards(VacancyAuthGuard)
 @Controller('api/v1/vacancies/careers')
 export class CareerController {
   constructor(
