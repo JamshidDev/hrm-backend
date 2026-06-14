@@ -93,8 +93,8 @@ export class StatementController {
   // --- statement extras ---
   @Get('statements-count')
   @ApiOperation({ summary: 'Statements count' })
-  async count() {
-    return buildSuccess(true, await this.service.statementsCount());
+  async count(@Query() q: StatementListQueryDto) {
+    return buildSuccess(true, await this.service.statementsCount(q));
   }
 
   @Get('statement-decoding')

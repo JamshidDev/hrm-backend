@@ -302,12 +302,45 @@ export class StatementService {
   // EXTRAS
   // ============================================================
 
-  // GET /api/v1/economist/statements-count — umumiy son (filtersiz).
-  async statementsCount() {
+  // GET /api/v1/economist/statements-count — Laravel StatementQueryService::count
+  //   = baseQuery: filter($user,$filters) + year(default joriy) + month(default joriy)
+  //   + search. (code/hours/status YO'Q — ular faqat list'da.)
+  async statementsCount(q: StatementListQuery = {}) {
+    const year =
+      q.year !== undefined ? Number(q.year) : new Date().getFullYear();
+    const month =
+      q.month !== undefined ? Number(q.month) : new Date().getMonth() + 1;
+
+    const inScope = await this.scope.whereOrg(statements.organization_id, {
+      organizations: q.organizations,
+    });
+
+    const conds: SQL[] = [
+      notDeleted(statements),
+      eq(statements.year, year),
+      eq(statements.month, month),
+    ];
+    if (inScope) conds.push(inScope);
+
+    if (q.search) {
+      const term = `%${q.search}%`;
+      const workerCond = buildWorkerSearchCond(q.search);
+      const orParts: SQL[] = [];
+      if (workerCond) {
+        orParts.push(
+          sql`exists (select 1 from ${workers} where ${workers.id} = ${statements.worker_id} and ${workers.deleted_at} is null and (${workerCond}))`,
+        );
+      }
+      orParts.push(ilike(statements.full_name, term));
+      orParts.push(sql`cast(${statements.pin} as text) ilike ${term}`);
+      const orCond = or(...orParts);
+      if (orCond) conds.push(orCond);
+    }
+
     const [{ total }] = await this.db
       .select({ total: count() })
       .from(statements)
-      .where(notDeleted(statements));
+      .where(and(...conds));
     // Laravel: Helper::response(true, $count) — xom son (scalar), {count} EMAS.
     return Number(total);
   }
