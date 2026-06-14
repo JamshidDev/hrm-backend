@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** 🔴 real total-diff 14/14 + statements-count = HAMMASI FIXED. 🟡 L=422 dan 3 ta FIXED (document/files, upload-histories, organization-hr).
-- **Keyingi qadam:** 🟡 L=401 auth-artefakt tekshiruvi (integration/telegram/vacancies — NestJS o'sha auth'ni talab qiladimi) · 🟢 stub mobil endpointlar (user/mobile/*) implement.
+- **Oxirgi tugatilgan:** 🟡 L=401 tashqi-mijoz auth **4/4 guard implement** (telegram/economist-telegram/integration/vacancy) — admin token endi 401, Laravel bilan mos. ENV: `TELEGRAM_BOT_TOKEN` proddan kerak.
+- **Keyingi qadam:** 🟢 stub mobil endpointlar (user/mobile/*) implement · vacancy service-layer vacancy_user konteksti · `vacancies/profile` route (3-BOSQICH) · turnstile/hik-central (tashqi).
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -211,7 +211,14 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 - **vacancies/*:** `Authenticate:vacancy` — alohida guard (tekshirilmadi).
 - **integration/*:** `auth:sanctum`+`permission:integration` — admin token 401 (`{"message":""}`) beradi; sabab noaniq (ehtimol token-ability yoki hmac_user talab). NestJS'da sanctum+PermissionGuard('integration') bor (200 beradi). Qo'shimcha tekshiruv kerak.
 
-**Qaror kerak:** tashqi-auth guard'larini implement qilish (telegram/economist-telegram oddiy Bot-Token check; vacancy/integration chuqurroq) — dev ataylab qoldirgan, shuning uchun tasdiqlash kerak.
+**✅ HAL QILINDI — 4/4 tashqi-auth guard implement (qaror: hammasini implement):**
+- **TelegramBotGuard** — Bot-Token === `TELEGRAM_BOT_TOKEN` (env); telegram-bot controller. Lokal env unset → 401/401 MATCH (body `Unauthorized.`).
+- **EconomistTelegramGuard** — Bot-Token → `organizations.bot_token` lookup, topilmasa 401; req.organization_id inject. economist/telegram controller. 401/401 MATCH.
+- **IntegrationHmacGuard** — user.phone → `hmac_users(public_key=phone, sanctum_user, is_active)`; topilmasa 401 `{message:''}`. 7 integration controllerga qo'shildi. admin 401/401, legit integration user (hmac bor) buzilmadi (enums 200/200).
+- **VacancyAuthGuard** — token `personal_access_tokens.tokenable_type='Modules\Vacancy\Models\VacancyUser'` bo'lishi shart (vacancy_users provider); aks holda 401 `{message:'Unauthenticated'}`. 4 vacancy controller (careers/applications/exams/educations) AuthHybridGuard→VacancyAuthGuard. 401/401 MATCH.
+
+**ENV kerak (proddan):** `TELEGRAM_BOT_TOKEN` (telegram bot auth uchun; lokalda unset→401 mos). Qolgan 3 guard DB-asosli, env kerak emas.
+**Follow-up:** vacancy service-layer hali stub-id (user=0) ishlatadi — vacancy_user kontekstiga o'tkazish kerak (legit vacancy-user data oqimi uchun). `vacancies/profile` NestJS'da route yo'q (404, 3-BOSQICH).
 
 **🟡 Param-artefakt (`L=422`):**
 - ✅ FIXED: `document/files` (NestJS over-validatsiya — optional+IS NULL) · `economist/upload-histories` (DTO swap → required) · `user/organization-hr` (organization_id required, data stub)
