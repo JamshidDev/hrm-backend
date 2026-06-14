@@ -17,7 +17,7 @@ get_token() {
   case "$1" in
     HR)                    echo "1231487|0cND0qcHGiSc6eh6I21OAPjAtFFG0lUt3EDpEKTPc7d84433" ;;
     Worker)                echo "1231488|rwjV5YofBhYYUwvKbh0lyd3ECCA3PrN4OkeqlmpM9db052a9" ;;
-    Admin)                 echo "1231489|2wpresE1zgkm5R3sFAQlzCYD29vyeFjRbcQqtdCbb3b0bd8c" ;;
+    Admin)                 echo "1231515|H9Ew1reEQgIpxSQEz4Sl9ZsESildERCy4g8qxWd285eb015e" ;;
     Finance)               echo "1231490|Bc98NVu1lpruWyHvFU3T5nIYUjShJk084Sg739bT2d8b556a" ;;
     Economist)             echo "1231491|tm3rlkwj1LAA7uRQGaPlgNcOLUbTc1yPV4SA7x8ub9f41dd4" ;;
     Jurist)                echo "1231492|EmZBQozT54sxAxzvfUUvAGl4htVkQGuFWDHeIhhLee6c066b" ;;

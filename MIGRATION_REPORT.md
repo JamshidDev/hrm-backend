@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** Multi-role 403 permission-mapping audit **TO'LIQ — 74/74 mismatch FIXED** (DIFF=0, NONE=0). `PermissionGuard`ga `|` OR-semantikasi qo'shildi. Runtime tasdiqlandi (admin/low-priv L=N).
-- **Keyingi qadam:** e2e testlar (test-app) YOKI `lms/exams` deviation YOKI hik-central.
+- **Oxirgi tugatilgan:** lms/exam org-scope deviation #12 **HAL QILINDI** — tekshiruv: NestJS allaqachon strict Laravel parity (`scope.ids`≡`childIds`≡`allowedOrganizations`), runtime totals MATCH. Kod o'zgarishsiz; `not-passed-workers`=LARAVEL_ERROR.
+- **Keyingi qadam:** e2e testlar (test-app) YOKI hik-central (tashqi). CRUD-validation + multi-role 403 + lms/exam — hammasi tugadi.
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -156,9 +156,12 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 | lms/groups | ✅ FIXED | edu_plan_id yo'q→IS NULL (Laravel where(col,null)) |
 | lms/group-workers | ✅ FIXED | group_id yo'q→IS NULL + orderBy olib tashlandi (natural ctid) |
 | lms/protocol | ✅ FIXED | group_id filter qo'shildi (yo'q→IS NULL) |
-| lms/exams | ⚠️ DEVIATION | Laravel `topic.org = user.org` (strict), NestJS `scope.ids()` (admin→all). Dev ATAYLAB og'ishgan. **Qaror kerak (#12)** |
+| exam/{topics,categories,results,worker-exams} | ✅ MATCH | **Deviation #12 TEKSHIRILDI → strict-parity ALLAQACHON bor.** Laravel: topics/categories=`where(user_id)`, results=`hasPermissionTo('hr-workers')` ? `allowedOrganizations()` (=`QueryHelper::childIds`) : `topics.user_id`. NestJS aynan shu: topics `eq(user_id)`, categories `user_id`+`whereOrg`(=filterByOrganizations), results hasHrWorkers-branch + `scope.ids()`(=childIds) + else `topics.user_id`. `scope.ids()` ≡ `childIds` ≡ `allowedOrganizations()` — **admin→all bu Laravel'ning O'ZIDA shunday** (yaxshilash EMAS). Runtime (admin): topics 5/5, categories 5/5, results 3515/3515, worker-exams 3/3 MATCH. Qaror A (strict) — kod o'zgarishi shart emas. |
+| exam/not-passed-workers | ⛔ LARAVEL_ERROR | Laravel 500 "Server Error" (barcha param variantida). NestJS export-job qaytaradi. Match QILINMADI. |
 
-**✅ lms moduli TO'LIQ** (faqat `exams` deviation-qarori kutilmoqda).
+**Eslatma (exam empty-childIds edge):** Laravel `if($user->allowedOrganizations())` — childIds bo'sh `[]`/`null` bo'lsa falsy → whereIn YO'Q → BARCHA row (xavfli Laravel-quirk). NestJS `else FALSE` (0 row). Real userlarda (admin/hr-workers) childIds bo'sh emas → divergensiya yuzaga kelmaydi; bu edge'ni ataylab takrorlamadik (zararli bug — LARAVEL_ERROR ruhida).
+
+**✅ lms + exam moduli TO'LIQ** (deviation #12 hal qilindi — strict parity tasdiqlandi).
 
 > **Postgres plan-instability qaydi:** `paginate()` orderBy'siz + kichik LIMIT (masalan per_page=5) — Laravel `select *` (heap scan) vs NestJS kam-ustun (index-only scan) boshqa tartib beradi. Realistik per_page (10+) MATCH. Bu DB-darajasidagi cheklov.
 
@@ -206,7 +209,7 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 - `user/mobile/personal-list` + `work-info`: i18n `messages.mobile.*`, `worker.marital_status`, `worker.family` qo'shildi (3 til)
 
 ## ⚠️ Ataylab Laravel'dan og'ishlar (qaror kerak)
-12. **lms org-scope deviation** — `exams` (va ehtimol `groups`/`protocol`/`group-workers`) NestJS'da `OrgScopeService.ids()` (admin→barcha org) ishlatadi, Laravel esa `topic.organization_id = user.organization_id` (strict). Dev kodda izohlagan: Laravel'ning strict org_id'si HQ-userlar uchun "real bug". Spec qoidasi: *"yaxshilama — Laravel'ga aynan moslashtir"*. **Qaror:** (A) strict parity (Laravel'dek user.org) yoki (B) deviation'ni saqlash (admin→all). Hozircha B (mavjud kod). Bu endpointlar Admin token bilan diff beradi (Laravel bo'sh, NestJS to'la).
+12. **lms/exam org-scope deviation — ✅ HAL QILINDI (A: strict parity, kod o'zgarishsiz).** Tekshiruvda aniqlandi: report'ning dastlabki tavsifi (`topic.org=user.org`, `scope.ids admin→all=yaxshilash`) NOTO'G'RI edi. Laravel haqiqiy logika: `Topic/ExamCategory::scopeFilter = where('user_id')`, `ExamResultService = hasPermissionTo('hr-workers') ? allowedOrganizations() : topics.user_id`, va `allowedOrganizations() = QueryHelper::childIds`. NestJS `scope.ids()` ≡ `childIds` ≡ `allowedOrganizations()` — ya'ni admin→all Laravel'ning O'ZIDA shunday, yaxshilash emas. Runtime (admin token): topics/categories/results/worker-exams TOTALS bayt-bayt MATCH. ⇒ A varianti allaqachon bajarilgan. (`not-passed-workers` = LARAVEL_ERROR 500; empty-childIds edge ataylab takrorlanmadi — yuqorida.)
 
 ## ⛔ Laravel'da error bergan route'lar
 
