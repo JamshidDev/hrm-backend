@@ -20,8 +20,8 @@ Oxirgi yangilanish: 2026-06-12
 
 ## 🚧 Joriy holat (sessiya uzilsa shu yerdan davom)
 - **Bosqich:** 2-BOSQICH boshlandi (chuqur re-verify + implement). 0-BOSQICH 22/28 role tayyor.
-- **Oxirgi tugatilgan:** sweep 🔴 real total-diff'lardan **5 ta FIXED** — lms/exams, news, hr/vacations, extra/users, document/applications (hammasi runtime MATCH). 
-- **Keyingi qadam:** qolgan 🔴 total-diff: exam/filter/topics, hr/dashboard/meds, hr/dashboard/worker-relative-disabilities/preview, hr/edu-plans/attached-workers, telegram/messages, vacancies/{organizations,report}, worker-application/{positions,statistics}, economist/statements-count. So'ng 🟡 L=422 param-validatsiya + auth-artefakt (L=401).
+- **Oxirgi tugatilgan:** sweep 🔴 real total-diff — **14/14 FIXED** (hammasi runtime MATCH). Faqat `economist/statements-count` count-scope qoldi (shape fixed).
+- **Keyingi qadam:** (1) statements-count count-scope · (2) 🟡 L=422 param-validatsiya (~6) · (3) 🟡 L=401 auth-artefakt tekshiruvi · (4) 🟢 stub mobil endpointlar (implement).
 - **Eslatma:** 6 role'da vakil-user yo'q (LmsTeacher, SuperLms, TestLeader, TurnstileManagement, Test role) — kerak bo'lganda test-user yaratiladi.
 - **Disk gigiena:** `/tmp/nest-dev.log` watch-mode'da o'sib diskni to'ldiradi → vaqti-vaqti bilan `: > /tmp/nest-dev.log`.
 
@@ -201,9 +201,9 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 ## Keng parity sweep (admin token, 315 GET list endpoint)
 `scripts` orqali avtomatik: status + total/shape signature, L vs N. **Natija: MATCH=240, DIFFER=51, LARAVEL_ERR=24.** Triage (keyingi continue-ct work-list):
 
-**🔴 Real total/data diff:**
-- ✅ FIXED: `lms/exams` 0→2 (deviation #12) · `news` 0→3 (status 1) · `hr/vacations` 1387→1378 (activeWorkerExists) · `extra/users` 66204→62505 (position status=2) · `document/applications` 6→126 (noto'g'ri jadval→WorkerApplicationService delegatsiya)
-- ⏳ QOLGAN: `exam/filter/topics` 8→65 · `hr/dashboard/meds` 4116→4111 · `hr/dashboard/worker-relative-disabilities/preview` 26→27 · `hr/edu-plans/attached-workers` 3173→3179 · `telegram/messages` 11671→11785 · `vacancies/organizations` 0→218 · `vacancies/report` 0→39 · `worker-application/{positions 1→2, statistics []→39}` · `economist/statements-count` (scalar→{count} shape)
+**🔴 Real total/data diff — 14/14 ✅ FIXED:**
+`lms/exams` (deviation #12, strict org) · `news` (status 1) · `hr/vacations` (activeWorkerExists) · `extra/users` (position status=2) · `document/applications` (noto'g'ri jadval→delegatsiya) · `exam/filter/topics` (topic_organizations EXISTS) · `hr/dashboard/meds` (korrelatsiya subquery) · `hr/edu-plans/attached-workers` (whereHas worker_position.worker soft-delete) · `telegram/messages` (status=2) · `vacancies/organizations` & `vacancies/report` (to>=now-1day) · `worker-application/positions` (status=2) · `worker-application/statistics` (worker_applications groupBy confirmation + bare massiv @RawResponse) · `hr/dashboard/worker-relative-disabilities/preview` (wr.deleted_at IS NULL)
+- ⚠️ `economist/statements-count`: shape FIXED (scalar) lekin **count-qiymati hali farq** (L=0 scoped, N=1.8M all) — Laravel `count($validated,$user)` filtr/scope qo'llaydi; ALOHIDA fix kerak (qolgan yagona 🔴).
 
 **🟡 Auth-artefakt (`L=401`):** integration/* · telegram/{menu,profile,petition-types} · vacancies/{applications,careers,dashboard,educations,profile} · economist/telegram/* — Laravel boshqa auth (hmac/bot/site) bilan admin sanctum token'ni rad etadi; NestJS 200 beradi. **Tekshirish:** NestJS ham shu auth'ni talab qilishi kerakmi (juda permissive bo'lishi mumkin).
 
