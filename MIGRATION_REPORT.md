@@ -205,7 +205,13 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 `lms/exams` (deviation #12, strict org) · `news` (status 1) · `hr/vacations` (activeWorkerExists) · `extra/users` (position status=2) · `document/applications` (noto'g'ri jadval→delegatsiya) · `exam/filter/topics` (topic_organizations EXISTS) · `hr/dashboard/meds` (korrelatsiya subquery) · `hr/edu-plans/attached-workers` (whereHas worker_position.worker soft-delete) · `telegram/messages` (status=2) · `vacancies/organizations` & `vacancies/report` (to>=now-1day) · `worker-application/positions` (status=2) · `worker-application/statistics` (worker_applications groupBy confirmation + bare massiv @RawResponse) · `hr/dashboard/worker-relative-disabilities/preview` (wr.deleted_at IS NULL)
 - ✅ `economist/statements-count`: shape (scalar) + count-scope FIXED — `statementsCount(q)` baseQuery (scope+year+month+search). default 0/0, ?year=2025&month=1 71289/71289 MATCH. **🔴 to'liq tugadi.**
 
-**🟡 Auth-artefakt (`L=401`):** integration/* · telegram/{menu,profile,petition-types} · vacancies/{applications,careers,dashboard,educations,profile} · economist/telegram/* — Laravel boshqa auth (hmac/bot/site) bilan admin sanctum token'ni rad etadi; NestJS 200 beradi. **Tekshirish:** NestJS ham shu auth'ni talab qilishi kerakmi (juda permissive bo'lishi mumkin).
+**🟡 Auth-artefakt (`L=401`) — TASHQI-MIJOZ AUTH (diagnoz tugadi):** NestJS bu endpointlarni `@Public()` qoldirgan (dev ATAYLAB — economist/telegram controller izohi: "hozircha public + Bot-Token ixtiyoriy"), Laravel esa maxsus auth bilan admin sanctum token'ni RAD etadi (401). Real xavfsizlik/parity gap (NestJS juda permissive). Auth sxemalari:
+- **telegram/* (chat + bot):** `TelegramMiddleware` — `Bot-Token` header === `config('services.telegram.bot_token')`, aks holda 401. → NestJS guard kerak + ENV token (`TELEGRAM_BOT_TOKEN`).
+- **economist/telegram/*:** `EconomistTelegramMiddleware` — `Bot-Token` header → `organizations.bot_token` lookup → organization_id inject; topilmasa 401. → DB lookup, ENV kerak EMAS. Schema'da `organizations.bot_token` bor.
+- **vacancies/*:** `Authenticate:vacancy` — alohida guard (tekshirilmadi).
+- **integration/*:** `auth:sanctum`+`permission:integration` — admin token 401 (`{"message":""}`) beradi; sabab noaniq (ehtimol token-ability yoki hmac_user talab). NestJS'da sanctum+PermissionGuard('integration') bor (200 beradi). Qo'shimcha tekshiruv kerak.
+
+**Qaror kerak:** tashqi-auth guard'larini implement qilish (telegram/economist-telegram oddiy Bot-Token check; vacancy/integration chuqurroq) — dev ataylab qoldirgan, shuning uchun tasdiqlash kerak.
 
 **🟡 Param-artefakt (`L=422`):**
 - ✅ FIXED: `document/files` (NestJS over-validatsiya — optional+IS NULL) · `economist/upload-histories` (DTO swap → required) · `user/organization-hr` (organization_id required, data stub)
