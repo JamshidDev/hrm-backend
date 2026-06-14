@@ -203,7 +203,7 @@ structure/quotes, exam/categories, lms/specializations, economist/* va boshqalar
 
 **🔴 Real total/data diff — 14/14 ✅ FIXED:**
 `lms/exams` (deviation #12, strict org) · `news` (status 1) · `hr/vacations` (activeWorkerExists) · `extra/users` (position status=2) · `document/applications` (noto'g'ri jadval→delegatsiya) · `exam/filter/topics` (topic_organizations EXISTS) · `hr/dashboard/meds` (korrelatsiya subquery) · `hr/edu-plans/attached-workers` (whereHas worker_position.worker soft-delete) · `telegram/messages` (status=2) · `vacancies/organizations` & `vacancies/report` (to>=now-1day) · `worker-application/positions` (status=2) · `worker-application/statistics` (worker_applications groupBy confirmation + bare massiv @RawResponse) · `hr/dashboard/worker-relative-disabilities/preview` (wr.deleted_at IS NULL)
-- ⚠️ `economist/statements-count`: shape FIXED (scalar) lekin **count-qiymati hali farq** (L=0 scoped, N=1.8M all) — Laravel `count($validated,$user)` filtr/scope qo'llaydi; ALOHIDA fix kerak (qolgan yagona 🔴).
+- ✅ `economist/statements-count`: shape (scalar) + count-scope FIXED — `statementsCount(q)` baseQuery (scope+year+month+search). default 0/0, ?year=2025&month=1 71289/71289 MATCH. **🔴 to'liq tugadi.**
 
 **🟡 Auth-artefakt (`L=401`):** integration/* · telegram/{menu,profile,petition-types} · vacancies/{applications,careers,dashboard,educations,profile} · economist/telegram/* — Laravel boshqa auth (hmac/bot/site) bilan admin sanctum token'ni rad etadi; NestJS 200 beradi. **Tekshirish:** NestJS ham shu auth'ni talab qilishi kerakmi (juda permissive bo'lishi mumkin).
 
